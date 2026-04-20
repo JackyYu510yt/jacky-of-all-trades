@@ -15,18 +15,35 @@ Personal Claude Code skills. Four custom skills designed for KISS-first, ADHD-fr
 
 ## Install on a Fresh PC
 
-One command:
+**PowerShell / Git Bash / Mac / Linux** (the `~` is your home directory):
 
 ```bash
 git clone https://github.com/JackyYu510yt/jacky-of-all-trades ~/.claude/skills
 ```
 
-Done. Claude Code picks up all four skills on its next session.
+**Windows cmd.exe** (cmd doesn't understand `~`, use `%USERPROFILE%` instead):
+
+```cmd
+git clone https://github.com/JackyYu510yt/jacky-of-all-trades "%USERPROFILE%\.claude\skills"
+```
+
+Either way: done. Claude Code picks up all four skills on its next session.
+
+---
 
 ## Update Later
 
+**PowerShell / Git Bash / Mac / Linux:**
+
 ```bash
 cd ~/.claude/skills
+git pull
+```
+
+**Windows cmd.exe:**
+
+```cmd
+cd /d "%USERPROFILE%\.claude\skills"
 git pull
 ```
 
@@ -34,20 +51,33 @@ git pull
 
 ## If `~/.claude/skills` Already Has Stuff
 
-The clone above only works when the target is empty. If you already have skills there, use this instead:
+The clone above only works when the target is empty. If you already have skills there, clone elsewhere and copy the folders in manually.
+
+**PowerShell / Git Bash / Mac / Linux:**
 
 ```bash
-# Clone the repo somewhere else
+# Clone somewhere else
 git clone https://github.com/JackyYu510yt/jacky-of-all-trades ~/jacky-of-all-trades
 
-# Copy each skill folder into the right place
-cp -r ~/jacky-of-all-trades/explain ~/.claude/skills/
+# Copy each skill folder into place
+cp -r ~/jacky-of-all-trades/explain  ~/.claude/skills/
 cp -r ~/jacky-of-all-trades/optimize ~/.claude/skills/
-cp -r ~/jacky-of-all-trades/prep ~/.claude/skills/
-cp -r ~/jacky-of-all-trades/repair ~/.claude/skills/
+cp -r ~/jacky-of-all-trades/prep     ~/.claude/skills/
+cp -r ~/jacky-of-all-trades/repair   ~/.claude/skills/
 ```
 
-To update later: `cd ~/jacky-of-all-trades && git pull`, then re-run the `cp` lines.
+**Windows cmd.exe:**
+
+```cmd
+git clone https://github.com/JackyYu510yt/jacky-of-all-trades "%USERPROFILE%\jacky-of-all-trades"
+
+xcopy /E /I /Y "%USERPROFILE%\jacky-of-all-trades\explain"  "%USERPROFILE%\.claude\skills\explain"
+xcopy /E /I /Y "%USERPROFILE%\jacky-of-all-trades\optimize" "%USERPROFILE%\.claude\skills\optimize"
+xcopy /E /I /Y "%USERPROFILE%\jacky-of-all-trades\prep"     "%USERPROFILE%\.claude\skills\prep"
+xcopy /E /I /Y "%USERPROFILE%\jacky-of-all-trades\repair"   "%USERPROFILE%\.claude\skills\repair"
+```
+
+To update later: `git pull` in the cloned folder, then re-run the copy commands.
 
 ---
 
