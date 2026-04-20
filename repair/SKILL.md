@@ -85,29 +85,33 @@ Execute the checks in order of cheapest-first. Rule out or confirm each hypothes
 
 ### Phase 4: Build a Standalone Repro Script
 
-Create a minimal script that reproduces the bug **outside the real codebase**.
+Create a standalone script that reproduces the bug **outside the real pipeline**, using **the exact same inputs, files, and conditions that caused the original failure**.
 
 - Save it as `repair_<slug>.py` (or `.sh`) in a scratch location — not in the user's main codebase.
 
-- It must: run by itself, import only what's strictly needed, fail in the same way as the real script with the same error message.
+- **Use the real failing inputs.** The same video file that failed, the same config, the same args. Not a synthetic mini-version. A "similar" test can hide data-dependent bugs. The whole point of this phase is to prove we can reproduce *this specific failure*, not a cousin of it.
 
-- No side effects on real data. No writing to the user's actual output directories. Use a temp dir.
+- **Narrow the scope, not the inputs.** If the real pipeline has 9 stages and stage 5 failed, the repro runs *just stage 5* — not all 9. Grab the real file that was passed into stage 5 (from the pipeline's intermediate output on disk, or from a checkpoint) and call only the failing step. This keeps the repro fast even when the whole pipeline is slow.
 
-- Keep it small. If the repro is more than ~50 lines, the isolation isn't tight enough — keep reducing.
+- Read input files from their actual on-disk locations — do not copy to temp, do not synthesize fake data. If the bug only happens on that specific 47 GB video, use that specific 47 GB video.
+
+- Write output to a temp dir so the repro doesn't pollute the user's real output directories — but inputs come straight from the real source.
+
+- If the failing step is destructive on its input (mutates or moves a file), copy the file to a temp location first and run against the copy. Preserve it bit-for-bit — do not shrink it.
 
 `========================================`
 
 ### Phase 5: Confirm the Repro
 
-Run the standalone script.
+Run the standalone script against the real inputs.
 
-- **It must fail.** Same error, same symptom.
+- **It must fail with the same error as the real pipeline.** Same exception, same line (or equivalent), same symptom. A near-miss is not enough.
 
-- If it does not fail, the hypothesis is wrong. Go back to Phase 2.
+- If it does not fail, either the hypothesis is wrong OR the repro is missing context (env var, config flag, earlier-stage side effect the real pipeline provided). Go back to Phase 3, tighten the diagnosis or add the missing context to the repro.
 
-- If it fails differently, the repro is missing context. Refine and run again.
+- If it fails *differently* than the real pipeline, the narrowing stripped something important. Add it back.
 
-- Run it **three times** to confirm it fails consistently, not intermittently.
+- Run it **three times** against the same real inputs to confirm the failure is consistent, not intermittent. If intermittent, that itself is a clue worth investigating before moving to Phase 6.
 
 `========================================`
 
@@ -162,15 +166,19 @@ Emit a closing report. See template below.
 
 ## What Makes a Good Standalone Repro
 
-- **Minimal** — under ~50 lines. If longer, the isolation is weak.
+- **Same inputs as the real failure.** Same files, same paths, same params, same env. Reproduction fidelity beats test brevity. If the bug needs a 47 GB video, use the 47 GB video.
 
-- **Self-contained** — runs with `python repair_<slug>.py` and nothing else. No env vars, no project-specific paths (use hardcoded temp files).
+- **Narrow scope, not narrow inputs.** Isolate to just the failing step or function, not the whole pipeline. Real inputs going into a thin wrapper around the failing call.
 
-- **Same failure** — the error message and stack shape match the real failure, not just "it errors somewhere."
+- **Self-contained execution.** Runs as `python repair_<slug>.py` from any directory. Imports only the specific code paths needed to reach the failing line — not the orchestration layer.
 
-- **Fast** — runs in under a few seconds so you can iterate quickly.
+- **Same failure signature.** The error message, stack trace, and symptom match the real failure one-to-one.
 
-- **Temp-scoped** — writes only to `tempfile` dirs, reads only from local fixtures you create inline.
+- **Fast enough to iterate.** By narrowing to the failing step, even a 2-hour pipeline becomes a 30-second repro. If the failing step itself is slow (e.g., a large encode), that's unavoidable — but most real bugs fail within the first few seconds of the step that's broken.
+
+- **Output temp-scoped.** Inputs from real source paths, outputs to `tempfile` dirs. Never overwrites the user's real output locations.
+
+- **Inputs preserved.** Never shrink, trim, or alter the real input to make the repro "cleaner" — that defeats the purpose of using real inputs.
 
 
 ## What Counts as Conclusive Evidence
