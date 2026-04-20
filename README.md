@@ -11,26 +11,49 @@ Personal Claude Code skills. Four custom skills designed for KISS-first, ADHD-fr
 | `prep` | Plan, prototype, and pentest a new script from scratch. Includes external-audit (Codex) loop before execution. |
 | `repair` | Debug with strict discipline — gather evidence, lock in one cause with conclusive proof, build a standalone repro, verify the fix in isolation before touching the real code. |
 
+---
+
 ## Install on a New Machine
 
-```bash
-git clone https://github.com/JackyYu510yt/jacky-of-all-trades ~/.claude/skills
-```
-
-If `~/.claude/skills/` already has content you want to keep, clone elsewhere and merge:
+**Recommended (works in any scenario):**
 
 ```bash
-git clone https://github.com/JackyYu510yt/jacky-of-all-trades ~/.claude/skills-jacky
-cp -r ~/.claude/skills-jacky/* ~/.claude/skills/
+# 1. Clone anywhere convenient (NOT inside ~/.claude/skills)
+git clone https://github.com/JackyYu510yt/jacky-of-all-trades ~/jacky-of-all-trades
+
+# 2. Run the installer — creates junctions/symlinks into ~/.claude/skills/
+cd ~/jacky-of-all-trades
+
+# Windows (PowerShell):
+.\install.ps1
+
+# Mac / Linux / Git Bash:
+bash install.sh
 ```
 
-Claude Code picks up new skills live — no restart needed.
+The installer creates `~/.claude/skills/explain`, `/optimize`, `/prep`, `/repair` as **junctions (Windows) or symlinks (Unix)** pointing into the cloned repo. That means:
 
-## Update Later
+- Skills are discoverable by Claude Code immediately.
+- Editing any `SKILL.md` in this repo updates what Claude sees — no re-install.
+- `git pull` in this folder propagates updates to all skills instantly.
+- Other skills in `~/.claude/skills/` (from other sources) are left alone.
+
+**Already-cloned-to-wrong-place fix:** if you already did `git clone https://github.com/JackyYu510yt/jacky-of-all-trades ~/.claude/skills/jacky-of-all-trades` (creating an extra layer), just run the installer from inside that folder — it will set up the junctions correctly. Then you can optionally move the repo out of `~/.claude/skills/` to keep things clean.
+
+---
+
+## Updating
+
+From any PC where you've cloned and installed:
 
 ```bash
-cd ~/.claude/skills && git pull
+cd ~/jacky-of-all-trades
+git pull
 ```
+
+Skills update instantly — no re-install needed (the junctions/symlinks point at the repo, so pulling new commits updates the live files).
+
+---
 
 ## Design Principles
 
