@@ -41,6 +41,151 @@ Example of the tone:
 
 > **Checkpointing** means the script saves its progress every few steps, the way a video game saves after each level. If something crashes, we restart from the last checkpoint instead of from zero.
 
+
+## Interaction Protocol
+
+The guiding stance for this skill: **I drive. You steer. You only steer when it actually matters.**
+
+Every yes/no comes with the story baked in. No menus for the user to pick from. No commands for the user to paste. No gates for busywork. One gate per real decision — and the gate always arrives with "here's what, here's why, here's the risk."
+
+
+### The Four-Field Offer Block
+
+Every decision point prints this shape:
+
+```
+TL;DR:   [1–2 lines — what's going on + why this step]
+
+Risk:    [LOW / MEDIUM / HIGH + one-line reason]
+
+Mode:    [STEP-BY-STEP / AUTONOMOUS]   (omit for LOW defaults)
+
+Next:    [one action in plain language]
+
+Proceed?
+```
+
+- **TL;DR** is the story before the button. The user never sees "Proceed?" without first knowing what's happening and why.
+
+- **Risk** sets the stakes explicitly.
+
+- **Mode** sets expectations about who drives the next stretch.
+
+- **Next** is one concrete action, not a menu.
+
+- **Proceed?** is a yes/no gate.
+
+
+### Risk Tiers
+
+```
+LOW      Read-only or trivially reversible. No state changes,
+         or the change undoes itself on restart.
+
+MEDIUM   System state changes, but reversible. May need a reboot.
+         No data loss path.
+
+HIGH     Destructive, irreversible, or affects shared state.
+         Data loss possible, running work can be lost, or another
+         user/process is affected.
+```
+
+**Behavior by tier:**
+
+- **LOW** → may auto-proceed under a standing "yes" from the user; still print the block so a veto is possible.
+
+- **MEDIUM** → always gates. Always show the rollback path in the Risk line.
+
+- **HIGH** → always gates. Both-sides consequences spelled out (what's lost on yes, what's lost on no). Never bundled with other actions.
+
+
+### Default to Action, Not Menu
+
+Pick the obvious next move and state it in one line. Only show a menu when there are **genuinely competing directions** the user needs to choose between — and include a confident lean.
+
+Bundle safe read-only checks under a single Proceed — don't fragment into five questions.
+
+
+### Offers, Not Commands
+
+Closing questions are offers to act, not commands for the user to execute.
+
+Pattern: *"It seems like [hypothesis]. Do you want me to [action] to check?"*
+
+- Never hand the user a command to run when the skill can run it.
+
+- Every offer names a hypothesis + a specific action + the evidence it will produce.
+
+- The user remains the decider. The skill remains the hands.
+
+
+### Closing Question Must Unblock the Next Step
+
+End-of-phase questions must pass this test:
+
+> *Does answering this question advance the plan, or does it just inform me?*
+
+If it only informs, save it for a post-mortem. The closing prompt's job is to keep the work moving, never to poll preferences or ask the user to recall something from memory.
+
+
+### Autonomous Mode
+
+When all remaining steps are LOW or MEDIUM and fully reversible, offer a single four-field gate whose `Next` lists the entire chain. Mark `Mode: AUTONOMOUS` — one "proceed" authorizes the whole chain.
+
+**Auto-offer criteria** (all must hold):
+
+- All steps LOW or MEDIUM risk
+- Every step reversible without data loss
+- Fix is well-understood (no "try this and see")
+- No HIGH-risk step anywhere in the chain
+- User has given at least one prior proceed in this session
+
+**User-invoked phrases** (skip the auto-offer, go straight to one authorization gate):
+
+- "run it autonomously"
+- "autonomous mode"
+- "just do it"
+- "don't ask me again this session"
+
+**Execution tools:** shell (run commands, elevate where needed), monitor (poll logs/processes for completion), session cron (one-shot scheduled tasks that self-delete).
+
+**Tripwires that drop back to step-by-step:**
+
+- Step turns out to be HIGH-risk
+
+- Step fails mid-chain
+
+- Shell output contradicts the plan
+
+- Monitor times out
+
+- External dependency needed (credential rot, manual service start)
+
+- Step wants to install permanent state (see below)
+
+Always print a recap at the end.
+
+
+### Session Cron vs Permanent Cron
+
+```
+SESSION CRON     Lives only for the current plan/build session.
+                 Used for: poll a log, schedule a one-shot action,
+                 wake up and verify. Self-removes when the task
+                 fires OR the session ends. No lasting footprint.
+                 Safe inside autonomous mode.
+
+PERMANENT CRON   Part of the actual fix/plan output. Runs forever
+                 until removed. Creates lasting system state. NOT
+                 safe to bundle silently into autonomous mode.
+                 Always its own four-field gate, even inside an
+                 autonomous chain. Listed in the final recap with
+                 exact removal instructions.
+```
+
+Same rule applies to any permanent system state: scheduled tasks, registry keys, startup entries, services, firewall rules, env vars in user/system scope, pagefile changes.
+
+
 ## Runtime Workflow
 
 Follow these phases in order. Do not skip. Use `AskUserQuestion` for every user-facing decision so choices are explicit.
@@ -159,7 +304,101 @@ When the user returns with Codex's feedback, integrate each item explicitly:
 - For each Codex point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
 - Update the plan file with every accepted change, noted with a `> [Codex]` callout so edits are traceable.
 
-Loop until the user says they are satisfied. Do not proceed to Phase 8 without explicit user go-ahead.
+Loop until the user says they are satisfied. Do not proceed to Phase 7.5 without explicit user go-ahead.
+
+
+### Phase 7.5 — Per-Function Audit Spec
+
+For every function flagged as **risky** in Phase 5, produce a full audit-grade specification using the 15-field template below. This is the artifact Codex actually audits — every field exists to give the reviewer something specific to engage with, not rubber-stamp.
+
+Safe functions get a one-line summary. Only risky ones get the full spec.
+
+**The 15 Fields** (in this order, every time)
+
+```
+ 1. Logic                    What it does, 2–4 plain sentences.
+
+ 2. Reasoning                Why THIS approach, not the obvious
+                             generic one.
+
+ 3. Alternatives considered  2–3 rejected approaches, each with
+                             the one-line reason. Critical for
+                             audit — lets the reviewer challenge
+                             the rejection, not rubber-stamp the
+                             winner.
+
+ 4. Scenario fit             The SPECIFIC project constraints
+                             that shaped this choice. Long jobs?
+                             Large files? GPU-bound? Rate limits?
+                             Generic textbook answers die here.
+
+ 5. Pipeline integration     Upstream:    who calls, with what
+                                          input shape, what
+                                          guarantees I rely on.
+                             Downstream:  who reads my output,
+                                          what shape they expect,
+                                          what I guarantee them.
+                             Invariants:  what stays true at
+                                          every hand-off.
+
+ 6. State ownership          Owns (writes) / Reads only /
+                             Never touches. Prevents silent
+                             coupling across functions.
+
+ 7. Protocols followed       Standard 8-row checklist:
+                             [ ] Atomic write
+                             [ ] Idempotent
+                             [ ] Bounded retry with jitter
+                             [ ] Retry only on transient errors
+                             [ ] Fail-fast on non-transient
+                             [ ] Health check before heavy work
+                             [ ] Checkpoint after confirmation
+                             [ ] Structured log, no bare prints
+
+ 8. Pipelining / concurrency Streaming vs batching, parallelism
+                             cap, backpressure, place in the
+                             producer/consumer graph.
+
+ 9. Failure modes            Table: failure → self-healing path
+                             → if that fails, what next.
+
+10. Performance profile      CPU / IO / net bound? Cost per
+                             item? Where the bottleneck lives?
+                             What would make it 10x slower?
+
+11. Observability hook       What it logs (fields). ONE metric
+                             to watch on the first real run.
+
+12. Rollback plan            If this misbehaves mid-batch, how
+                             to undo. What state needs cleanup.
+
+13. Test technique           PoC: one clean check.
+                             Usecase: matches how prod runs.
+                             (See Phase 9 pentest rules.)
+
+14. KISS check               What I deliberately did NOT add,
+                             and why a future reader might be
+                             tempted to add it anyway.
+
+15. Open questions (Codex)   Explicit prompts for audit: "I'm
+                             not sure about X — can you
+                             challenge it?" Makes the review
+                             targeted, not hunt-and-peck.
+```
+
+**Header format**
+
+Each function's spec begins with:
+
+```
+================================================================
+FUNCTION:  <signature>
+PIPELINE:  stage <N> of <M> — <one-line position>
+================================================================
+```
+
+Append the 15-field block to the plan file. Phase 7.5 ends when every risky function has a completed spec.
+
 
 ### Phase 8 — Build the prototype
 
@@ -174,18 +413,67 @@ After each function, ask the user one quick question: "Does this match what you 
 
 ### Phase 9 — Pentest each part
 
-After the prototype exists, run each part under pressure. The goal: verify it is smooth, consistent, reliable, self-healing, and performant under realistic stress.
+Two steps. Both required. Neither alone is sufficient.
 
-For each non-trivial function, run at least these checks:
 
-1. **Happy path** — give it the input it's designed for. Confirm expected output.
-2. **Empty / zero input** — empty folder, empty file, zero-length list. Confirm graceful handling (no crash, sensible message).
-3. **Wrong-type input** — wrong format, corrupted file, unexpected encoding. Confirm it fails loudly, not silently.
-4. **Failure injection** — simulate the realistic failure mode (kill subprocess, disconnect network mid-call, fill disk). Confirm the self-healing path actually fires.
-5. **Repeat run (idempotency)** — run the script twice back-to-back. Confirm the second run does nothing new on already-processed items.
-6. **Stress** — if the script is a batch job, give it a batch larger than usual. Confirm it doesn't blow memory or temp disk.
+**Step 1 — Proof of Concept**
 
-Record each check's result in a short pentest log (one line per check). Any failure triggers a fix-and-rerun loop. Do not declare the prototype done while any check fails.
+One clean test per primitive. Minimum sufficient proof that the concept works at all.
+
+- Single happy-path run per function.
+
+- Pass → concept is valid, move on.
+
+- Fail → stop. Fix the primitive before touching anything else.
+
+Default is **one** PoC test per function. Expand to more than one ONLY if:
+
+- The function has **multiple distinct code paths that must each fire** (e.g. three fallback strategies — one test per strategy).
+
+- The function has a **specifically known-fragile axis** (e.g. window-size extremes known to break). One PoC at the fragile boundary, one at the normal case.
+
+Each expansion must be named with a reason. No combinatorial explosion.
+
+
+**Step 2 — Actual Usecase**
+
+The code running the way production will run it. Composition, concurrency, and scale intact — not a tidier abstraction of it.
+
+Before writing any Step 2 test, answer this in one sentence:
+
+> *"How will this actually run in production?"*
+
+That sentence IS the Step 2 test spec. Then simulate **exactly that**.
+
+Examples:
+
+- *"3–5 Chrome profiles running concurrently, hitting CF at overlapping times, sharing one mouse and one foreground window."* → Step 2 = launch 3 profiles at once and verify no race.
+
+- *"200 videos, home uplink, user asleep, 8-hour wall clock."* → Step 2 = scale run on real inputs, not a 3-item smoke test.
+
+- *"Overnight unattended during a 6-hour render."* → Step 2 = verify the fix doesn't interfere with a running render.
+
+
+**Verdict block**
+
+Print both layers explicitly. PoC-only results are never declared shippable.
+
+```
+===========================================================
+PENTEST
+
+Step 1 — PoC
+  [x] <check>                 result
+
+Step 2 — Actual usecase
+  Prod is: <one-sentence spec>
+  [x/⚠/✗] <check>            result
+
+Verdict: SHIPPABLE / NOT SHIPPABLE
+===========================================================
+```
+
+A prototype is not shippable while Step 2 is red, regardless of Step 1 status.
 
 ## Interview Template (reuse across phases 3 and 5)
 
@@ -232,10 +520,17 @@ Goal: <one-sentence goal>
 
 Plan iterations: <N>   (plan → Codex → revise → approve)
 Functions built:   <N>
-Pentest checks:    <P passed / F failed>
+Pentest verdict:   SHIPPABLE / NOT SHIPPABLE
+  Step 1 (PoC):     <P passed / F failed>
+  Step 2 (Usecase): <P passed / F failed>
 
 Self-healing hooks in place:
 - <list specific retry/checkpoint/atomic-write spots>
+
+Permanent changes installed (survive reboot):
+- <change>
+  Remove: <exact command or click-path>
+(Omit section if none installed.)
 
 Known limitations:
 - <anything the user accepted as out-of-scope>

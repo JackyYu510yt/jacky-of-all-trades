@@ -30,6 +30,150 @@ Every step produces evidence strong enough to answer three questions truthfully:
 Also: the workflow is **atomic**. Each phase must fully succeed before the next begins. No "we'll figure that out later." No integrating a fix before the isolated test passes. If a phase fails, loop back — do not proceed.
 
 
+## Interaction Protocol
+
+The guiding stance for this skill: **I drive. You steer. You only steer when it actually matters.**
+
+Every yes/no comes with the story baked in. No menus for the user to pick from. No commands for the user to paste. No gates for busywork. One gate per real decision — and the gate always arrives with "here's what, here's why, here's the risk."
+
+
+### The Four-Field Offer Block
+
+Every decision point prints this shape:
+
+```
+TL;DR:   [1–2 lines — what's going on + why this step]
+
+Risk:    [LOW / MEDIUM / HIGH + one-line reason]
+
+Mode:    [STEP-BY-STEP / AUTONOMOUS]   (omit for LOW defaults)
+
+Next:    [one action in plain language]
+
+Proceed?
+```
+
+- **TL;DR** is the story before the button. The user never sees "Proceed?" without first knowing what's happening and why.
+
+- **Risk** sets the stakes explicitly.
+
+- **Mode** sets expectations about who drives the next stretch.
+
+- **Next** is one concrete action, not a menu.
+
+- **Proceed?** is a yes/no gate.
+
+
+### Risk Tiers
+
+```
+LOW      Read-only or trivially reversible. No state changes,
+         or the change undoes itself on restart.
+
+MEDIUM   System state changes, but reversible. May need a reboot.
+         No data loss path.
+
+HIGH     Destructive, irreversible, or affects shared state.
+         Data loss possible, running work can be lost, or another
+         user/process is affected.
+```
+
+**Behavior by tier:**
+
+- **LOW** → may auto-proceed under a standing "yes" from the user; still print the block so a veto is possible.
+
+- **MEDIUM** → always gates. Always show the rollback path in the Risk line.
+
+- **HIGH** → always gates. Both-sides consequences spelled out (what's lost on yes, what's lost on no). Never bundled with other actions.
+
+
+### Default to Action, Not Menu
+
+Pick the obvious next move and state it in one line. Only show a menu when there are **genuinely competing directions** the user needs to choose between — and include a confident lean.
+
+Bundle safe read-only checks under a single Proceed — don't fragment into five questions.
+
+
+### Offers, Not Commands
+
+Closing questions are offers to act, not commands for the user to execute.
+
+Pattern: *"It seems like [hypothesis]. Do you want me to [action] to check?"*
+
+- Never hand the user a command to run when the skill can run it.
+
+- Every offer names a hypothesis + a specific action + the evidence it will produce.
+
+- The user remains the decider. The skill remains the hands.
+
+
+### Closing Question Must Unblock the Next Step
+
+End-of-phase questions must pass this test:
+
+> *Does answering this question advance the repair, or does it just inform me?*
+
+If it only informs, save it for a post-mortem. The closing prompt's job is to keep the repair moving, never to poll preferences or ask the user to recall something from memory.
+
+
+### Autonomous Mode
+
+When all remaining repair steps are LOW or MEDIUM and fully reversible, offer a single four-field gate whose `Next` lists the entire chain. Mark `Mode: AUTONOMOUS` — one "proceed" authorizes the whole chain.
+
+**Auto-offer criteria** (all must hold):
+
+- All steps LOW or MEDIUM risk
+- Every step reversible without data loss
+- Fix is well-understood (no "try this and see")
+- No HIGH-risk step anywhere in the chain
+- User has given at least one prior proceed in this session
+
+**User-invoked phrases** (skip the auto-offer, go straight to one authorization gate):
+
+- "run it autonomously"
+- "autonomous mode"
+- "just fix it, one UAC click"
+- "don't ask me again this session"
+
+**Execution tools:** shell (run commands, elevate where needed), monitor (poll logs/processes for completion), session cron (one-shot scheduled tasks that self-delete).
+
+**Tripwires that drop back to step-by-step:**
+
+- Step turns out to be HIGH-risk
+
+- Step fails mid-chain
+
+- Shell output contradicts the plan
+
+- Monitor times out
+
+- External dependency needed (credential rot, manual service start)
+
+- Step wants to install permanent state (see below)
+
+Always print a recap at the end.
+
+
+### Session Cron vs Permanent Cron
+
+```
+SESSION CRON     Lives only for the current repair session.
+                 Used for: poll a log, schedule a one-shot reboot,
+                 wake up and verify. Self-removes when the task
+                 fires OR the session ends. No lasting footprint.
+                 Safe inside autonomous mode.
+
+PERMANENT CRON   Part of the actual fix. Runs forever until
+                 removed. Creates lasting system state. NOT safe
+                 to bundle silently into autonomous mode. Always
+                 its own four-field gate, even inside an
+                 autonomous chain. Listed in the final recap with
+                 exact removal instructions.
+```
+
+Same rule applies to any permanent system state: scheduled tasks, registry keys, startup entries, services, firewall rules, env vars in user/system scope, pagefile changes.
+
+
 ## Runtime Workflow
 
 Nine phases. Do not skip. Do not reorder.
@@ -129,31 +273,72 @@ Now — and only now — try fixes.
 
 `========================================`
 
-### Phase 7: Verify the Fix Is Stable
+### Phase 7: Verify the Fix (Step 1 — Proof of Concept)
 
-Don't trust a single pass. Before calling it fixed:
+One clean run of the standalone proves the fix concept works. That's the PoC.
 
-- Run the standalone **3 times in a row**. All must pass.
+- Default: **one clean pass** of the standalone after the fix.
 
-- Run it with 2–3 different inputs (edge cases relevant to the bug). All must pass.
+- Expand to multiple runs ONLY when named:
+  - **Stability check** — fix stability is the known concern. Expand to 3 passes in a row.
+  - **Multiple code paths** — each distinct path the fix touches gets one PoC run.
+  - **Known-fragile axis** — one PoC at the fragile boundary, one at the normal case.
+  - **Intermittent bug** — run 10+ times to confirm the flake is gone.
 
-- If the bug was intermittent, run it 10+ times to confirm the flake is gone.
+- Each expansion must be named with a reason. No combinatorial explosion.
 
-- If any run fails, the fix is incomplete. Back to Phase 6.
+- If the PoC fails, the fix is wrong. Back to Phase 6.
+
 
 `========================================`
 
-### Phase 8: Integrate Into the Real Code
+### Phase 8: Integrate and Verify Actual Usecase (Step 2)
 
-Only after Phase 7 fully passes.
+Two parts. Both required.
+
+**Part A — Integration**
 
 - Apply the exact same fix pattern to the real codebase. Same logic, same change shape.
 
 - Edit only the minimum needed. Do not rewrite surrounding code.
 
-- Run the real script's existing tests, if any. Run a small sample of the real workflow.
+**Part B — Actual usecase verification**
 
-- If anything regresses, revert and go back to Phase 6 — the fix didn't translate cleanly.
+Before running any test, answer this in one sentence:
+
+> *"How will this actually run in production?"*
+
+That sentence IS the Step 2 test spec. Simulate **exactly that** — composition, concurrency, and scale intact. Not a tidier abstraction.
+
+Examples:
+
+- *"3 Chrome profiles running concurrently, hitting CF at overlapping times, sharing one mouse and foreground window."* → Step 2 = launch 3 at once and verify no race.
+
+- *"200 videos overnight, user asleep, home uplink."* → Step 2 = multi-video run, not a 1-item smoke test.
+
+- *"Unattended during a 6-hour render."* → Step 2 = verify the fix doesn't interfere with a running render.
+
+A fix is not shippable while Step 2 is red, regardless of Step 1. PoC-only results are never declared a pass.
+
+If anything regresses, revert and go back to Phase 6 — the fix didn't translate cleanly.
+
+
+**Verdict block**
+
+```
+===========================================================
+PENTEST
+
+Step 1 — PoC
+  [x] <check>                 result
+
+Step 2 — Actual usecase
+  Prod is: <one-sentence spec>
+  [x/⚠/✗] <check>            result
+
+Verdict: SHIPPABLE / NOT SHIPPABLE
+===========================================================
+```
 
 `========================================`
 
@@ -231,9 +416,17 @@ Bad evidence (do not lock in a cause based on these):
 
 **Fix applied:** <what changed, file:line>.
 
-**Verification:** <N standalone runs passed, real-script sample passed, any existing tests passed>.
+**Pentest verdict:** SHIPPABLE / NOT SHIPPABLE
+- Step 1 (PoC): <N passed / F failed>
+- Step 2 (Actual usecase): <prod spec in one sentence — N passed / F failed>
 
 **Standalone repro:** `repair_<slug>.py` — kept for regression reference.
+
+**Permanent changes installed** (survive reboot):
+- <change>
+  Remove: <exact command or click-path>
+
+(Omit this section if no permanent state was installed.)
 
 **Related concerns surfaced but not addressed:** <list, if any — user decides whether to file follow-up>.
 
@@ -262,6 +455,6 @@ Use the `explain` skill's conventions for every user-facing message:
 - **Prove one** — with evidence that's conclusive, verifiable, replicable.
 - **Build a standalone** — tiny script outside the real code that fails the same way.
 - **Fix in isolation** — try repairs on the standalone only.
-- **Verify stability** — 3+ clean runs before trusting the fix.
-- **Then integrate** — apply the same fix to the real code, confirm nothing regressed.
-- **Report** — cause, evidence, fix, verification — all written down.
+- **Step 1: PoC** — one clean pass proves the concept. Expand only with a named reason.
+- **Step 2: Actual usecase** — run the fix the way production runs. PoC-only is never shippable.
+- **Report** — cause, evidence, fix, pentest verdict, permanent changes, all written down.
