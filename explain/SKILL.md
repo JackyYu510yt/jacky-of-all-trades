@@ -146,7 +146,7 @@ The default tone is **casual but educational**. Friendly sentences a friend woul
 - If the user says "ELI5" or "dumb it down", step to Level 1 (pure analogy).
 
 
-## The Format Menu (10 formats)
+## The Format Menu (12 formats)
 
 Pick one format per explanation. If the question is compound, you may blend two. Do not use all ten for one answer.
 
@@ -310,7 +310,57 @@ Next decision: retry Stage 5 or ship as-is.
 ```
 
 
-### 11. Workflow + logic (default walkthrough format)
+### 11. Planner checkpoint
+
+A "save state" block — what's landed, what's still open, what comes next. Wrapped with `====` so it stands out as a re-entry point in a long session.
+
+Use when the user has just finished a batch of edits, paused mid-project, or asked "where are we" / "let's pick this up later" / "checkpoint this". Especially valuable before stepping away from a multi-edit session so the next conversation can resume cleanly.
+
+**Exact format:**
+
+```
+========================================
+
+**PLANNER CHECKPOINT — pick up here**
+
+<N> edits landed today:
+
+1. <change name> (<file or scope>)
+2. <change name> (<file or scope>)
+3. <change name> <one-line detail>
+4. <change name> into <file path> (<before → after> if useful)
+
+Next: <one-line next move>.
+
+========================================
+```
+
+**Rules:**
+
+- Header is exactly `**PLANNER CHECKPOINT — pick up here**` so it's grep-able and visually consistent across sessions.
+
+- Lead-in line is one sentence — count + framing, ending with a colon ("Four edits landed today:", "Two bugs fixed, one open:").
+
+- Numbered list (not bullets) — each item is one line. File / scope / detail goes in parentheses after the change name when it's a single tag. Inline phrasing is fine when the detail reads naturally as part of the sentence ("Option C few-shot injection wired into creative chunks").
+
+- Include line counts or before→after numbers in parens only when they convey scale (`124 lines`, `204 → 598 lines`). Skip them when they don't add information.
+
+- Always end with a `Next:` line — one sentence on the immediate next move. If there's no next move, write `Next: nothing pending — ready to ship.`
+
+- `====` separator above the header AND below the `Next:` line. The block is self-contained.
+
+- **TL;DR rule:**
+
+  | Message type                         | TL;DR? |
+  |--------------------------------------|--------|
+  | Whole message IS a checkpoint        | No     |
+  | Walkthrough ending in a checkpoint   | Yes    |
+  | Explanation ending in a checkpoint   | Yes    |
+
+  Why: TL;DR recaps the *content* of the answer; checkpoint recaps the *state of the work*. Different jobs, so they coexist when both apply.
+
+
+### 12. Workflow + logic (default walkthrough format)
 
 Every step gets a **simple name** as its bold headline, then one or two plain sentences underneath describing what happens and why. A `====` separator wraps the whole walkthrough — one above Step 1 AND one after the last step — with another `====` between every step.
 
@@ -414,6 +464,8 @@ Match format to the question's shape:
 - "This has two parts" → **Split-question**
 
 - "Long session, help me orient" → **Short recap** (at end only)
+
+- "Where are we / pick this up later / checkpoint this" → **Planner checkpoint**
 
 - "New concept = old concept?" → **Pattern callback**
 

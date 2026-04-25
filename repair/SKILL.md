@@ -1,369 +1,245 @@
 ---
 name: repair
-description: Debug and fix a broken script with strict discipline — gather evidence, list possible causes, lock in the one true cause with conclusive and replicable proof, build a standalone test script that reproduces the bug, try repair methods on the standalone until one works and is verified, then and only then apply the fix to the real code. Use when the user says "it's broken", "something's wrong", "I'm getting an error", "debug X", "fix Y", "why is Z failing", "this crashed", or after any failed pipeline run. Never guess-and-edit. Never ship a fix without standalone verification.
+description: Universal repair methodology. The user invokes /repair (or says "fix this", "debug this", "it's broken", "something's wrong", "I'm getting an error", "why is X failing", "this crashed") to engage a disciplined fix process for any failure — a failing test, a UI bug, a slow query, a crashed pipeline, a regression after a refactor, a function returning the wrong value, a flaky deploy, a misbehaving API client, or any random complicated issue. Repair is a methodology, not a workflow per system. It defines HOW to fix things reliably regardless of WHAT'S broken. Never guess-and-edit. Never ship a fix without verification under real conditions.
 ---
 
 # Repair
 
-A disciplined debugging workflow. Every step must produce **conclusive, verifiable, replicable** evidence before moving on. No shipping a fix based on a hunch. The standalone test script is the proof contract — the fix is not "done" until the isolated repro turns green.
+Universal repair methodology. The user invokes `/repair` to hand Claude a failure; Claude works the failure through a disciplined sequence — gather evidence, prove the cause, isolate it, fix it in isolation, integrate the fix, verify under real conditions, report.
+
+Repair is a **methodology**, not a workflow per system. It defines HOW to fix things reliably regardless of WHAT'S broken. The discipline is the same whether the failure is in a unit test, a CSS layout, a slow database query, an overnight pipeline, a deploy that flakes, or a function quietly returning the wrong value.
+
+This skill modulates how Claude debugs and fixes any work — it does not constrain what kind of work the failure lives in.
 
 
 ## When to Use This Skill
 
-- User says "it's broken", "not working", "crashed", "getting an error", "debug this", "fix Y", "why is Z failing"
+- User says "it's broken", "not working", "crashed", "getting an error", "debug this", "fix Y", "why is Z failing", "this is throwing", "this regressed", "this used to work", "something's off"
 
-- Right after a failed pipeline run or a user-reported regression
+- A test is failing, a build is red, a deploy is flaking, a query is slow, a UI is rendering wrong, an API client is returning unexpected shape, a function is returning the wrong value, a script is dying on input it shouldn't die on
 
-- Any time a fix is being proposed without a matching isolated test — stop and run `/repair` instead
+- After a failed pipeline run, a failed CI job, a failed scheduled task — any reproducible bad outcome
 
+- Any time a fix is being proposed without isolation + verification — stop and run `/repair` instead
 
-## Core Principle
+If the failure is reproducible, /repair applies. If it's a one-time event with no way to reproduce and no symptom you can recheck, this skill won't help — gather more occurrences first.
 
-Every step produces evidence strong enough to answer three questions truthfully:
 
-- **Conclusive** — does this prove the cause beyond reasonable doubt?
+## Hard Invariants
 
-- **Verifiable** — can someone else run the same check and see the same result?
+These never bend, regardless of what's being repaired or how urgent it feels.
 
-- **Replicable** — does the bug reproduce on demand, not just "sometimes"?
+1. **Evidence before theory.** Read what's actually broken — log line, error, test output, browser console, network trace, observed behavior — before forming any hypothesis. Theorizing without evidence is guessing dressed up as analysis.
 
-Also: the workflow is **atomic**. Each phase must fully succeed before the next begins. No "we'll figure that out later." No integrating a fix before the isolated test passes. If a phase fails, loop back — do not proceed.
+2. **Multiple falsifiable hypotheses, not one favorite.** Propose 2–4 concrete causes, each with a check that could rule it out. Picking one cause and chasing it is how repairs miss the actual bug.
 
+3. **Conclusive / verifiable / replicable.** A cause is "locked in" only when the evidence answers all three: it proves the cause beyond reasonable doubt, someone else running the same check sees the same result, and the failure happens on demand — not "sometimes."
 
-## Interaction Protocol
+4. **Process of elimination is not proof.** Ruling out three of four hypotheses doesn't prove the fourth. The remaining cause needs *positive* evidence — a probe that directly demonstrates it.
 
-The guiding stance for this skill: **I drive. You steer. You only steer when it actually matters.**
+5. **Isolate before you fix.** Never edit the real codebase first. Reproduce the failure in the smallest standalone context that still fails the same way. The standalone is the proof contract — a fix is real only when the standalone is green.
 
-Every yes/no comes with the story baked in. No menus for the user to pick from. No commands for the user to paste. No gates for busywork. One gate per real decision — and the gate always arrives with "here's what, here's why, here's the risk."
+6. **Real inputs, narrow scope.** When isolating, don't shrink the inputs to make the test "cleaner" — that hides data-dependent bugs. Shrink the scope around the inputs (call only the failing function/component, not the system around it). The 47 GB video that triggered the bug is the file the standalone must use.
 
+7. **Same failure signature.** The standalone must fail with the same error, the same line/symptom, the same way the real system fails. A different failure means you isolated the wrong thing — something got stripped that mattered.
 
-### The Four-Field Offer Block
+8. **Fix in isolation, then integrate.** Try repairs on the standalone only. Apply to the real codebase only after the standalone is green. Edit the minimum needed in the real code; don't rewrite surrounding logic.
 
-Every decision point prints this shape:
+9. **Two verifications, not one.** PoC verification (one clean pass of the standalone) proves the fix concept works. That alone is *not* shippable. Step 2 — actual-usecase verification — runs the fix the way it'll actually run in real conditions (the concurrency, scale, hostile inputs, slow networks, race conditions the real failure faced). PoC-only is never declared a pass.
 
-```
-TL;DR:   [1–2 lines — what's going on + why this step]
+10. **Match the test to the failure mode.** "Actual usecase" means whatever shape the real failure took. If the bug only appears under three concurrent requests, single-request testing doesn't prove it's fixed. If it only appears on the 47 GB video, the 12-second test clip doesn't prove it.
 
-Risk:    [LOW / MEDIUM / HIGH + one-line reason]
+11. **One fix, one scope.** Don't refactor while repairing. Don't add unrelated improvements. Don't "while I'm here" the surrounding code. The fix's blast radius matches the bug's blast radius.
 
-Mode:    [STEP-BY-STEP / AUTONOMOUS]   (omit for LOW defaults)
+12. **Never silence the failure.** `try/except: pass`, swallowed errors, blanket retry-until-green, log filters that hide the symptom — those are not fixes. They hide the bug, which means the bug ships.
 
-Next:    [one action in plain language]
+13. **No guessing.** If evidence is inconclusive, gather more. If you can't gather more, surface that to the user honestly — don't fill the gap with intuition.
 
-Proceed?
-```
+14. **Atomic phases.** Each phase fully succeeds before the next begins. No "we'll figure that out later." If a phase fails, loop back to the previous phase — do not advance.
 
-- **TL;DR** is the story before the button. The user never sees "Proceed?" without first knowing what's happening and why.
 
-- **Risk** sets the stakes explicitly.
+## Universal Principles
 
-- **Mode** sets expectations about who drives the next stretch.
+These principles apply to any repair, in any execution shape, on any system. Each one prevents a specific, repeatable failure mode in the *act of repairing*.
 
-- **Next** is one concrete action, not a menu.
+### 1. State the failure in one sentence before working it
 
-- **Proceed?** is a yes/no gate.
+If you can't compress what's broken into a single sentence, you don't understand the failure well enough to repair it. "Stage 4 is failing" is not enough. "Stage 4 image generation returns no_images_generated for ~12% of beats when WHISK_THREADS exceeds 80" — that's a failure statement.
 
+### 2. Define success before doing the work
 
-### Risk Tiers
+Per `principles` skill P2: success must be observable. "It works again" is vibes. "The standalone runs three times in a row with exit 0, and the real test suite passes the previously-failing test in CI under the same load conditions" — that's a success condition.
 
-```
-LOW      Read-only or trivially reversible. No state changes,
-         or the change undoes itself on restart.
+### 3. Read what's broken before theorizing
 
-MEDIUM   System state changes, but reversible. May need a reboot.
-         No data loss path.
+Logs, error messages, stack traces, screenshots, network panel, browser console, query plan, test output — whatever artifact the failure produces, read it first. The discipline is identical whether the artifact is a Python traceback or a CSS DevTools box-model overlay.
 
-HIGH     Destructive, irreversible, or affects shared state.
-         Data loss possible, running work can be lost, or another
-         user/process is affected.
-```
+Examples across domains:
 
-**Behavior by tier:**
+- Failing test → read the test output, the assertion error, the lines of the test, the lines of the code under test.
+- UI bug → read the rendered DOM, computed CSS, browser console, network panel screenshot.
+- Slow query → read the query plan (`EXPLAIN ANALYZE`), the indexes that exist, the row counts.
+- Crashed pipeline → read the last 500 lines of stdout/stderr, the stage's checkpoint files.
+- Flaky deploy → read the deploy log, the health-check output, the previous deploy's diff.
+- Wrong-value function → read the inputs, the outputs, and the intermediate values via probe.
 
-- **LOW** → may auto-proceed under a standing "yes" from the user; still print the block so a veto is possible.
+### 4. Propose 2–4 concrete, falsifiable hypotheses
 
-- **MEDIUM** → always gates. Always show the rollback path in the Risk line.
+Use the `explain` skill's tiered-options format. Each hypothesis names a specific cause and a check that would confirm or rule it out:
 
-- **HIGH** → always gates. Both-sides consequences spelled out (what's lost on yes, what's lost on no). Never bundled with other actions.
+- *Option A — Cookie expiry.* Evidence: `_strict_accounts` reports cooldown active. Check: print the cookie expiry timestamp from the session cache and compare to wall-clock.
+- *Option B — Quota exhaustion.* Evidence: prompt-counts log shows account hit 300 in last 3h. Check: query `prompt_counts.json` for the account name with the failing prompts.
+- *Option C — Network jitter.* Evidence: failures cluster in 30-second bursts. Check: time-series the failures and compare to a `ping -t` log.
 
+Rank by likelihood given the evidence so far. Never lock in a single hypothesis without checking the others.
 
-### Default to Action, Not Menu
+### 5. Lock the cause with positive evidence
 
-Pick the obvious next move and state it in one line. Only show a menu when there are **genuinely competing directions** the user needs to choose between — and include a confident lean.
+Run the cheapest check first. Each check confirms or rules out one hypothesis. Stop when:
 
-Bundle safe read-only checks under a single Proceed — don't fragment into five questions.
+- Exactly one hypothesis remains AND
+- That one hypothesis has at least one piece of evidence that *directly proves it* (not just "everything else is ruled out").
 
+If the surviving hypothesis has no positive proof, the cause is not locked. Loop back, add candidates, run more checks. Process-of-elimination alone has shipped more wrong fixes than any other shortcut.
 
-### Offers, Not Commands
+### 6. Isolate the failure in the smallest context that still fails
 
-Closing questions are offers to act, not commands for the user to execute.
+The standalone reproduces the bug *outside* the real system, using the *same* inputs, the *same* failure-triggering conditions.
 
-Pattern: *"It seems like [hypothesis]. Do you want me to [action] to check?"*
+- A failing test? The standalone is just that test, run in a minimal harness.
+- A UI bug? A tiny HTML page with the same component, the same CSS, the same data shape.
+- A slow query? The exact query against the same database, the same row count, the same indexes.
+- A pipeline stage? Just that stage, called with the actual files the parent stage emitted.
+- A wrong-value function? A 10-line script that calls the function with the input that produced the wrong output.
 
-- Never hand the user a command to run when the skill can run it.
+The narrowing is *scope*, not *inputs*. Real inputs go through a thin shell around the failing call. If the bug only shows up with the real 47 GB video, use the real 47 GB video. Don't trim it. Don't synthesize a "similar" file. The whole point is to prove we can reproduce *this specific failure*.
 
-- Every offer names a hypothesis + a specific action + the evidence it will produce.
+### 7. Confirm the repro before trying any fix
 
-- The user remains the decider. The skill remains the hands.
+Run the standalone three times against the real inputs. It must fail every run, with the same signature as the real system. If:
 
+- It doesn't fail → the diagnosis is wrong, or the standalone is missing context.
+- It fails differently → the narrowing stripped something important.
+- It fails sometimes → the bug is intermittent; that itself is a clue worth investigating before moving on.
 
-### Closing Question Must Unblock the Next Step
+Don't accept a 2-out-of-3 repro as good enough. Intermittency hides bugs.
 
-End-of-phase questions must pass this test:
+### 8. Fix in isolation, prove the concept
 
-> *Does answering this question advance the repair, or does it just inform me?*
+Now — and only now — try fixes. KISS applies: simplest approach first. Apply only to the standalone. Run it. If it passes once cleanly, that's the PoC.
 
-If it only informs, save it for a post-mortem. The closing prompt's job is to keep the repair moving, never to poll preferences or ask the user to recall something from memory.
+Default: one clean pass. Expand only with a *named reason*:
 
+- **Stability check** — fix stability is the known concern → 3 passes in a row.
+- **Multiple code paths** — fix touches >1 path → one PoC per path.
+- **Known-fragile axis** — boundary conditions matter → one PoC at the boundary, one at the normal case.
+- **Intermittent bug** — flake was the original symptom → 10+ passes to confirm the flake is gone.
 
-### Autonomous Mode
+If none of the proposed fixes work, the diagnosis is wrong. Loop back to hypothesis-listing.
 
-When all remaining repair steps are LOW or MEDIUM and fully reversible, offer a single four-field gate whose `Next` lists the entire chain. Mark `Mode: AUTONOMOUS` — one "proceed" authorizes the whole chain.
+### 9. Integrate with minimum scope
 
-**Auto-offer criteria** (all must hold):
+Apply the same fix pattern to the real codebase. Same logic, same shape. Edit the minimum lines required. No surrounding cleanup, no "while I'm here" improvements, no new abstractions. The bug had a blast radius; the fix matches it.
 
-- All steps LOW or MEDIUM risk
-- Every step reversible without data loss
-- Fix is well-understood (no "try this and see")
-- No HIGH-risk step anywhere in the chain
-- User has given at least one prior proceed in this session
+### 10. Verify under real conditions (Step 2)
 
-**User-invoked phrases** (skip the auto-offer, go straight to one authorization gate):
+Before running anything, answer in one sentence: *"How will this actually run in production?"*
 
-- "run it autonomously"
-- "autonomous mode"
-- "just fix it, one UAC click"
-- "don't ask me again this session"
-
-**Execution tools:** shell (run commands, elevate where needed), monitor (poll logs/processes for completion), session cron (one-shot scheduled tasks that self-delete).
-
-**Tripwires that drop back to step-by-step:**
-
-- Step turns out to be HIGH-risk
-
-- Step fails mid-chain
-
-- Shell output contradicts the plan
-
-- Monitor times out
-
-- External dependency needed (credential rot, manual service start)
-
-- Step wants to install permanent state (see below)
-
-Always print a recap at the end.
-
-
-### Session Cron vs Permanent Cron
-
-```
-SESSION CRON     Lives only for the current repair session.
-                 Used for: poll a log, schedule a one-shot reboot,
-                 wake up and verify. Self-removes when the task
-                 fires OR the session ends. No lasting footprint.
-                 Safe inside autonomous mode.
-
-PERMANENT CRON   Part of the actual fix. Runs forever until
-                 removed. Creates lasting system state. NOT safe
-                 to bundle silently into autonomous mode. Always
-                 its own four-field gate, even inside an
-                 autonomous chain. Listed in the final recap with
-                 exact removal instructions.
-```
-
-Same rule applies to any permanent system state: scheduled tasks, registry keys, startup entries, services, firewall rules, env vars in user/system scope, pagefile changes.
-
-
-## Runtime Workflow
-
-Nine phases. Do not skip. Do not reorder.
-
-
-`========================================`
-
-### Phase 1: Gather Evidence
-
-Before forming any theory, collect what's already known.
-
-- **Logs first.** If a log file exists (stdout capture, app log, error dump), read it. Look for: stack traces, error messages, timestamps of the failure, what was running just before, any recent warnings.
-
-- **If no log, read the code.** Start from the file the user identifies as broken, or the entry point of the pipeline, or the function named in the error they mention.
-
-- **Ask the user** (via AskUserQuestion) what they observed: what they ran, what they expected, what they got instead. Exact command and exact output if available.
-
-Phase 1 ends when you have at least one concrete artifact (log line, error message, stack trace, user-described symptom).
-
-`========================================`
-
-### Phase 2: List Possible Causes
-
-Propose 2–4 specific hypotheses. Each must be:
-
-- **Concrete** — not "something's wrong in Stage 5", but "the Gemini call returns None because the API key is expired".
-
-- **Falsifiable** — there must be a check that could disprove it.
-
-- **Ranked** by likelihood given the evidence so far.
-
-Present them to the user using the `explain` skill's tiered-options format (`Option A / B / C`) — each option one sentence, with its evidence-so-far and the check that would confirm or rule it out.
-
-`========================================`
-
-### Phase 3: Lock In One Cause With Conclusive Evidence
-
-For each hypothesis, design a specific **check** that would either confirm or rule it out. Acceptable checks include:
-
-- Reading a specific line or branch in the code.
-
-- Running a probe command (`print`, `type()`, a single `ffprobe`, etc.).
-
-- Inspecting a file's contents or permissions.
-
-- Reproducing the exact call with known-good inputs.
-
-Execute the checks in order of cheapest-first. Rule out or confirm each hypothesis.
-
-**Stopping condition:** exactly one hypothesis remains AND there is at least one piece of evidence that directly proves it (not just "everything else is ruled out"). If the last-remaining hypothesis has no positive proof, loop back to Phase 2 and add more candidates.
-
-`========================================`
-
-### Phase 4: Build a Standalone Repro Script
-
-Create a standalone script that reproduces the bug **outside the real pipeline**, using **the exact same inputs, files, and conditions that caused the original failure**.
-
-- Save it as `repair_<slug>.py` (or `.sh`) in a scratch location — not in the user's main codebase.
-
-- **Use the real failing inputs.** The same video file that failed, the same config, the same args. Not a synthetic mini-version. A "similar" test can hide data-dependent bugs. The whole point of this phase is to prove we can reproduce *this specific failure*, not a cousin of it.
-
-- **Narrow the scope, not the inputs.** If the real pipeline has 9 stages and stage 5 failed, the repro runs *just stage 5* — not all 9. Grab the real file that was passed into stage 5 (from the pipeline's intermediate output on disk, or from a checkpoint) and call only the failing step. This keeps the repro fast even when the whole pipeline is slow.
-
-- Read input files from their actual on-disk locations — do not copy to temp, do not synthesize fake data. If the bug only happens on that specific 47 GB video, use that specific 47 GB video.
-
-- Write output to a temp dir so the repro doesn't pollute the user's real output directories — but inputs come straight from the real source.
-
-- If the failing step is destructive on its input (mutates or moves a file), copy the file to a temp location first and run against the copy. Preserve it bit-for-bit — do not shrink it.
-
-`========================================`
-
-### Phase 5: Confirm the Repro
-
-Run the standalone script against the real inputs.
-
-- **It must fail with the same error as the real pipeline.** Same exception, same line (or equivalent), same symptom. A near-miss is not enough.
-
-- If it does not fail, either the hypothesis is wrong OR the repro is missing context (env var, config flag, earlier-stage side effect the real pipeline provided). Go back to Phase 3, tighten the diagnosis or add the missing context to the repro.
-
-- If it fails *differently* than the real pipeline, the narrowing stripped something important. Add it back.
-
-- Run it **three times** against the same real inputs to confirm the failure is consistent, not intermittent. If intermittent, that itself is a clue worth investigating before moving to Phase 6.
-
-`========================================`
-
-### Phase 6: Try Repair Methods on the Standalone
-
-Now — and only now — try fixes.
-
-- Propose 1–3 repair approaches. Pick the simplest one first (KISS applies here too).
-
-- Apply the fix ONLY to the standalone script. Do not touch the real code yet.
-
-- Run the standalone. If it passes, move to Phase 7. If not, try the next approach.
-
-- If none work, loop back to Phase 3 — the diagnosis was wrong.
-
-`========================================`
-
-### Phase 7: Verify the Fix (Step 1 — Proof of Concept)
-
-One clean run of the standalone proves the fix concept works. That's the PoC.
-
-- Default: **one clean pass** of the standalone after the fix.
-
-- Expand to multiple runs ONLY when named:
-  - **Stability check** — fix stability is the known concern. Expand to 3 passes in a row.
-  - **Multiple code paths** — each distinct path the fix touches gets one PoC run.
-  - **Known-fragile axis** — one PoC at the fragile boundary, one at the normal case.
-  - **Intermittent bug** — run 10+ times to confirm the flake is gone.
-
-- Each expansion must be named with a reason. No combinatorial explosion.
-
-- If the PoC fails, the fix is wrong. Back to Phase 6.
-
-
-`========================================`
-
-### Phase 8: Integrate and Verify Actual Usecase (Step 2)
-
-Two parts. Both required.
-
-**Part A — Integration**
-
-- Apply the exact same fix pattern to the real codebase. Same logic, same change shape.
-
-- Edit only the minimum needed. Do not rewrite surrounding code.
-
-**Part B — Actual usecase verification**
-
-Before running any test, answer this in one sentence:
-
-> *"How will this actually run in production?"*
-
-That sentence IS the Step 2 test spec. Simulate **exactly that** — composition, concurrency, and scale intact. Not a tidier abstraction.
+That sentence IS the Step 2 test spec. Simulate exactly that — the composition, the concurrency, the scale, the hostile-input mix the real failure faced.
 
 Examples:
 
-- *"3 Chrome profiles running concurrently, hitting CF at overlapping times, sharing one mouse and foreground window."* → Step 2 = launch 3 at once and verify no race.
+- Failing test in CI → run the full test suite in CI conditions, not just the previously-failing test locally.
+- UI bug under specific browser → run on that browser, that version, that resolution.
+- Slow query under load → run with realistic concurrent connections, not just one query in isolation.
+- Pipeline stage that died at 47 GB → re-run the stage with the 47 GB file, not a 200 MB sample.
+- Concurrency bug with 3 workers → launch 3 concurrent workers, not one.
+- Bug that hits at scale → run at scale.
 
-- *"200 videos overnight, user asleep, home uplink."* → Step 2 = multi-video run, not a 1-item smoke test.
+A fix is not shippable while Step 2 is red, regardless of Step 1.
 
-- *"Unattended during a 6-hour render."* → Step 2 = verify the fix doesn't interfere with a running render.
+### 11. Report honestly
 
-A fix is not shippable while Step 2 is red, regardless of Step 1. PoC-only results are never declared a pass.
-
-If anything regresses, revert and go back to Phase 6 — the fix didn't translate cleanly.
+The final report names the cause, the evidence that proved it, the exact fix applied, and the verification results — both PoC and actual-usecase. If anything regressed during integration, the report says so. Half-fixes get labeled PARTIAL, not DONE.
 
 
-**Verdict block**
+## Execution Shapes
+
+The methodology is universal. The amount of ceremony scales with the scope of what's broken. Pick one based on the failure's complexity.
+
+### Quick — clear cause + obvious fix
+
+For a failure where the cause is genuinely obvious from the first read of the evidence: a typo, an off-by-one, a missing import, a wrong variable name. The cause is named, the fix is one line, and "could it be something else?" honestly returns no.
+
+- Read the evidence.
+- Name the cause and the fix in one sentence each.
+- Verify with the smallest test that proves the fix (often a quick re-run of the failing case).
+- Report.
+
+Skip the standalone-repro phase ONLY when the fix is verifiably one line and verification is single-step. The first time you find yourself thinking "let me just try this" — you're past Quick. Drop to Standard.
+
+### Standard — most bugs
+
+For any repair where the cause is not immediately obvious or the fix touches more than one place: the full discipline applies.
+
+- All 14 hard invariants.
+- All 11 universal principles.
+- Standalone repro required.
+- PoC + actual-usecase verification both required.
+
+Standard is the default. When in doubt, use Standard.
+
+### Multi-Stage — failure spans systems / pipelines / multi-stage flows
+
+For failures that span multiple stages, processes, or systems — the original "pipeline" framing belongs here. The methodology is the same, with one extension:
+
+- **Stage isolation in addition to scope isolation.** When the failure is in stage 5 of a 9-stage flow, the standalone calls only stage 5 with the *real intermediate output* that stage 4 produced (read from disk, from a checkpoint, or from a captured trace). This keeps the repro fast even when the upstream pipeline is slow.
+- **Real intermediate inputs.** Same rule as Real Inputs — don't synthesize stage-4-shaped data; use what stage 4 actually wrote.
+- **Cross-stage hypotheses are valid.** "Stage 5 fails because stage 4 emits malformed checkpoints under load" is a legitimate hypothesis. The repro then includes a stage-4-under-load trigger.
+
+Multi-Stage is opt-in based on the failure's structure. Most repairs are Standard.
+
+
+## Repair Heads-Up Format
+
+Before each substantive action — running a probe, building a standalone, applying a fix to the real codebase, kicking off a verification run — print a one-line heads-up so the user sees the discipline unfolding:
 
 ```
-===========================================================
-PENTEST
-
-Step 1 — PoC
-  [x] <check>                 result
-
-Step 2 — Actual usecase
-  Prod is: <one-sentence spec>
-  [x/⚠/✗] <check>            result
-
-Verdict: SHIPPABLE / NOT SHIPPABLE
-===========================================================
+[repair] <phase>: <action> — <why>
 ```
 
-`========================================`
+Examples:
 
-### Phase 9: Final Report
+- `[repair] Evidence: reading stage_4_image_gen.log lines 2400-end — last 200 before the crash`
+- `[repair] Hypotheses: 3 candidates — content-filter / quota / cookie expiry`
+- `[repair] Lock: probing cookie expiry first (cheapest check)`
+- `[repair] Isolate: building repair_stage4_no_images.py with the real beat that failed`
+- `[repair] PoC: standalone passes 1/1 — fix concept holds`
+- `[repair] Integrate: editing gemini_worker.py:413 — same change as standalone`
+- `[repair] Step 2: re-running the originally-failing CI job under real load`
 
-Emit a closing report. See template below.
-
-`========================================`
+This is *not* a "do you approve?" gate. It is "FYI, here's where the repair is." Continue immediately.
 
 
-## What Makes a Good Standalone Repro
+## Repair Does NOT Waive
 
-- **Same inputs as the real failure.** Same files, same paths, same params, same env. Reproduction fidelity beats test brevity. If the bug needs a 47 GB video, use the 47 GB video.
+Even mid-repair, certain actions still get a one-line heads-up before execution — not a yes/no gate, just acknowledgment so the user can object within the same turn if they want:
 
-- **Narrow scope, not narrow inputs.** Isolate to just the failing step or function, not the whole pipeline. Real inputs going into a thin wrapper around the failing call.
+- **Destructive operations on shared state**: dropping a production table, force-pushing to a remote main branch, deleting files outside the project tree, modifying credentials others depend on.
 
-- **Self-contained execution.** Runs as `python repair_<slug>.py` from any directory. Imports only the specific code paths needed to reach the failing line — not the orchestration layer.
+- **Operations that cost real money**: spinning up cloud resources, large external API jobs, anything billable past a small budget.
 
-- **Same failure signature.** The error message, stack trace, and symptom match the real failure one-to-one.
+- **External messages**: posting to Slack/Discord, sending email, opening PRs against public repos.
 
-- **Fast enough to iterate.** By narrowing to the failing step, even a 2-hour pipeline becomes a 30-second repro. If the failing step itself is slow (e.g., a large encode), that's unavoidable — but most real bugs fail within the first few seconds of the step that's broken.
+- **System-level config changes**: registry, firewall, services, scheduled tasks (those CAN be installed as part of a fix but are flagged in the recap).
 
-- **Output temp-scoped.** Inputs from real source paths, outputs to `tempfile` dirs. Never overwrites the user's real output locations.
+Format:
 
-- **Inputs preserved.** Never shrink, trim, or alter the real input to make the repro "cleaner" — that defeats the purpose of using real inputs.
+```
+[repair] About to drop the prod table `sessions_old` — irreversible without restore. Continuing.
+```
+
+Then proceed unless the user interrupts. Default is forward motion.
 
 
 ## What Counts as Conclusive Evidence
@@ -371,90 +247,115 @@ Emit a closing report. See template below.
 Good evidence:
 
 - A log line that directly shows the failure with a timestamp and stack.
-
-- A variable value printed from the standalone that matches the failure condition.
-
-- A specific branch of code proven to execute via a probe.
-
-- A reproduction that fails every run on the current codebase and passes every run after the fix.
+- A variable value printed from a probe that matches the failure condition.
+- A specific branch of code proven to execute via instrumentation.
+- A standalone that fails every run on the current codebase and passes every run after the fix.
+- A query plan that shows the index isn't being used.
+- A network trace that shows the request shape mismatch.
+- A screenshot of the broken UI alongside the rendered DOM.
 
 Bad evidence (do not lock in a cause based on these):
 
 - "It usually fails around this point."
-
 - "I think it's probably X."
-
 - "We saw this once last week."
-
-- Process of elimination alone, with no positive proof of the remaining candidate.
+- "The other engineer said this is the cause."
+- Process of elimination alone, with no positive proof of the surviving candidate.
 
 
 ## Hard NOs
 
-- Do not edit the real codebase before Phase 8.
-
-- Do not skip the standalone repro because "the bug is obvious".
-
-- Do not accept "it passed once" as a fix being verified — Phase 7 requires 3+ passes.
-
-- Do not introduce unrelated refactors while fixing the bug. One fix, one scope.
-
-- Do not wrap the failing code in `try/except: pass` as a "fix" — that hides the bug, it doesn't repair it.
-
-- Do not guess. If evidence is inconclusive, gather more. If you can't gather more, tell the user and ask.
-
-- Do not ship a fix based only on process of elimination.
+- **No guess-and-edit.** Editing the real codebase before the diagnosis is locked.
+- **No skipping the standalone repro because "the bug is obvious"** — drop to Quick mode if it really is obvious, but don't fake it.
+- **No "it passed once" claims** — single PoC proves only the concept, not stability or actual-usecase.
+- **No `try/except: pass` "fixes."** That's hiding, not repairing.
+- **No silent retry-until-green wrappers.** That's papering over an underlying failure.
+- **No unrelated refactors during a repair.** One fix, one scope.
+- **No declaring DONE without Step 2 verification.** PoC-only is never shippable.
+- **No advancing past 5 failed approaches without declaring STUCK.** Bounded effort. After 5 distinct approaches that all fail, the diagnosis or assumptions are likely wrong — surface and stop.
 
 
-## Final Report Template
+## Final Report Templates
 
-`========================================`
+Repair always ends with one of three reports.
 
-**Cause:** <one plain-language sentence>.
+### DONE — fix shipped, verified
 
-**Evidence:** <the log line / probe output / standalone result that proved it>.
+```
+=== REPAIR DONE ===
 
-**Fix applied:** <what changed, file:line>.
+Failure:        <one sentence>
+Cause:          <one plain-language sentence>
+Evidence:       <log line / probe output / standalone result that proved it>
 
-**Pentest verdict:** SHIPPABLE / NOT SHIPPABLE
-- Step 1 (PoC): <N passed / F failed>
-- Step 2 (Actual usecase): <prod spec in one sentence — N passed / F failed>
+Fix applied:    <what changed, file:line>
+Standalone:     <path to the repro script — kept for regression reference>
 
-**Standalone repro:** `repair_<slug>.py` — kept for regression reference.
+PoC:            <N passed / 0 failed>
+Actual usecase: <prod spec in one sentence — N passed / 0 failed>
 
-**Permanent changes installed** (survive reboot):
-- <change>
-  Remove: <exact command or click-path>
+Verdict:        SHIPPABLE
+```
 
-(Omit this section if no permanent state was installed.)
+### PARTIAL — fix landed, something still off
 
-**Related concerns surfaced but not addressed:** <list, if any — user decides whether to file follow-up>.
+```
+=== REPAIR PARTIAL ===
 
-`========================================`
+Failure:        <one sentence>
+Cause:          <one sentence>
+Evidence:       <what proved it>
+
+Fix applied:    <what changed, file:line>
+
+PoC:            <result>
+Actual usecase: <result — what failed>
+
+Still off:      <what's still wrong + reason>
+Next:           <concrete suggested move>
+
+Verdict:        NOT SHIPPABLE
+```
+
+### STUCK — diagnosis or fix exhausted
+
+```
+=== REPAIR STUCK ===
+
+Failure:        <one sentence>
+Hypotheses tried (N):
+  1. <hypothesis> → <why ruled out / why fix didn't hold>
+  2. <hypothesis> → <why ruled out / why fix didn't hold>
+  ...
+Why I'm stopping: <why no honest 6th approach exists>
+
+Best guess remaining:  <if any — clearly labeled as guess, not conclusion>
+Recommend:             <best concrete next step for the user>
+
+Hand back to user.
+```
 
 
-## Presentation Style
+## Composition With Other Skills
 
-Use the `explain` skill's conventions for every user-facing message:
+- **Under `/auto`** — `/auto` invokes /repair as one phase of a larger autonomous task. The repair methodology runs to completion (DONE / PARTIAL / STUCK) and the auto report incorporates the outcome. /repair never asks for permission inside /auto.
 
-- Wrap phase summaries with `====` separators.
+- **Before `/audit`** — when a repair produces edits to the real codebase, /audit can be run on the proposed integration before it lands. Optional; /audit is the safety belt, not a requirement.
 
-- Bold step/phase names. One plain-sentence body under each.
+- **Pairs with `principles`** — every claim a repair makes ("evidence is conclusive", "fix is verified", "repair is done") routes through the principles checkpoint: P1 test-at-scale (Step 2 enforces this), P2 conditions-upfront (success defined before work), P3 end-goal-in-sight (one fix one scope), P4 audit-before-handback (the report IS the handback verdict).
 
-- Use Casual + Learning language level — inline definitions for any technical term on first use.
-
-- End every multi-phase report with a TL;DR bullet list in plain language.
-
-- Never print a ruled-out hypothesis as if it might still be right — once ruled out, it's gone.
+- **After `deep-audit`** — if `deep-audit` surfaces a latent failure that the user wants fixed, /repair takes the surfaced issue and works it through the methodology.
 
 
 ## TL;DR
 
-- **Evidence first** — read logs or code before theorizing.
-- **List causes** — 2 to 4 concrete, falsifiable hypotheses.
-- **Prove one** — with evidence that's conclusive, verifiable, replicable.
-- **Build a standalone** — tiny script outside the real code that fails the same way.
-- **Fix in isolation** — try repairs on the standalone only.
-- **Step 1: PoC** — one clean pass proves the concept. Expand only with a named reason.
-- **Step 2: Actual usecase** — run the fix the way production runs. PoC-only is never shippable.
-- **Report** — cause, evidence, fix, pentest verdict, permanent changes, all written down.
+- **Repair is a methodology, not a workflow per system.** Same discipline for a failing test, a UI bug, a slow query, a crashed pipeline, a wrong-value function.
+- **Evidence first.** Read what's broken before theorizing.
+- **Multiple falsifiable hypotheses.** 2–4 candidates, each with a check.
+- **Lock the cause with positive evidence.** Process of elimination is not proof.
+- **Isolate before you fix.** Standalone with real inputs, narrow scope.
+- **Same failure signature.** Near-miss is not a repro.
+- **Fix in isolation, then integrate.** Real code only after standalone is green.
+- **Two verifications: PoC and actual-usecase.** PoC alone is never shippable.
+- **One fix, one scope.** No refactoring while repairing. No silencing the failure.
+- **DONE / PARTIAL / STUCK.** Honest reports, every time.

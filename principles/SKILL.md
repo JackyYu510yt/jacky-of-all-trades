@@ -419,34 +419,51 @@ Before writing the verdict, run these 4 steps:
 
 ### Verdict block format
 
-Pick one of the four states and fill its fields. Nothing else.
+Pick one of the four states. Headline says what's true or what's needed. Body splits into **Done** (what now exists, observable) and **Pending / Blocker / Ambiguity** (what's still open, named concretely). Always end with **Next** — one concrete action.
 
 ```
-✅ DONE
-Result — <observable output / artifact / state that now exists>
-Toward goal — fully there (confirmed by <evidence>)
-Next — nothing; you are at the end goal  |  optional: <X>
-```
+**✅ DONE — <one-line summary of what's now true>.**
 
-```
-🟡 PARTIAL
-Result — <what was actually produced or changed>
-Toward goal — <how close we are, what's still missing>
-Next — <the specific next move that would close the gap>
+Done:
+- <observable artifact / state 1>
+- <observable artifact / state 2>
+
+Next: nothing. Optional: <X>.
 ```
 
 ```
-🔴 BLOCKED
-Result — <progress made before the block>
-Blocker — <what stopped it, with evidence>
-Next — <what would unblock — you do X, or I retry with Y>
+**🟡 PARTIAL — <one-line summary of what still needs to happen>.**
+
+Done:
+- <change / artifact 1>
+- <change / artifact 2>
+
+Pending:
+- <gap, named concretely>
+
+Next: <specific action that closes the gap>.
 ```
 
 ```
-❓ UNCLEAR
-Result — <what was attempted>
-Ambiguity — <the one thing I cannot decide without more info>
-Next — <the one piece of info that would resolve it>
+**🔴 BLOCKED — <one-line summary of what's stopping it>.**
+
+Done:
+- <progress made before the block>
+
+Blocker: <what stopped it, with evidence>.
+
+Next: <what would unblock — you do X, or I retry with Y>.
+```
+
+```
+**❓ UNCLEAR — need your call on <one-line headline>.**
+
+Done:
+- <what was attempted>
+
+Ambiguity: <the one thing I can't decide without more info>.
+
+Next: <the one piece of info that resolves it>.
 ```
 
 ### Rendering style
@@ -485,9 +502,9 @@ Before sending the response, answer each:
 
 2. **Is every line in the verdict decision-useful?** Would the user use each line to pick a next move? If a line wouldn't change their action, cut it.
 
-3. **Does the "Result" field name an observable thing, not a claim?** "Config updated" is a claim. "`retry_count=3` in `config.yaml`, service restarted" is observable.
+3. **Does each "Done:" bullet name an observable thing, not a claim?** "Config updated" is a claim. "`retry_count=3` in `config.yaml`, service restarted" is observable.
 
-4. **Does the "Toward goal" field contrast current state with the original end goal, not with the sub-step?** Sub-step wins are waypoints; the goal is the destination.
+4. **Does the headline contrast current state with the original end goal, not with the sub-step?** Sub-step wins are waypoints; the goal is the destination. The headline should be true at the level of the user's actual ask.
 
 5. **If not DONE, does "Next" name one concrete action?** Not "probably need to X" — the actual action the user or I would take next.
 
@@ -544,10 +561,16 @@ Wrong:
 Right:
 
 ```
-🟡 PARTIAL
-Result — Redis timeout raised from 2s → 10s in config.yaml, service restarted.
-Toward goal — unblocks the likely cause of the render hang, but the original failing render has not been re-run.
-Next — rerun render_test.py with the failing clip; if it passes, update to DONE.
+**🟡 PARTIAL — render not yet re-run with the new timeout.**
+
+Done:
+- Redis timeout raised from 2s → 10s in config.yaml.
+- Service restarted; new value confirmed in /healthz.
+
+Pending:
+- Original failing render (clip_42.mp4) has not been re-run against the patched config.
+
+Next: rerun render_test.py with clip_42.mp4. If it passes, update to DONE.
 ```
 
 **Example 2 — DONE handback (feature added and verified)**
@@ -561,10 +584,14 @@ Wrong:
 Right:
 
 ```
-✅ DONE
-Result — /videos?page=N&per_page=M parameters added; default page=1, per_page=20; response body includes total, page, per_page. Integration test test_pagination.py passes.
-Toward goal — fully there (endpoint now supports the paginated shape).
-Next — nothing. Optional: update the client SDK if it's in use.
+**✅ DONE — /videos endpoint now supports pagination.**
+
+Done:
+- /videos?page=N&per_page=M parameters wired; defaults page=1, per_page=20.
+- Response body includes total, page, per_page.
+- Integration test test_pagination.py passes.
+
+Next: nothing. Optional: update the client SDK if it's in use.
 ```
 
 **Example 3 — BLOCKED handback (prod deploy)**
@@ -578,10 +605,14 @@ Wrong:
 Right:
 
 ```
-🔴 BLOCKED
-Result — staging deploy succeeded; production deploy failed at the secrets-lookup step.
-Blocker — prod IAM role missing secrets:GetSecretValue on AUTH_SIGNING_KEY (403 from secretsmanager).
-Next — grant the prod deploy role access to the new key, OR rotate the key into the existing accessible bundle; then rerun the prod deploy step.
+**🔴 BLOCKED — prod deploy failed at the secrets-lookup step.**
+
+Done:
+- Staging deploy succeeded; auth middleware running on staging.
+
+Blocker: prod IAM role missing secrets:GetSecretValue on AUTH_SIGNING_KEY (403 from secretsmanager).
+
+Next: grant the prod deploy role access to the new key, OR rotate the key into the existing accessible bundle, then rerun the prod deploy step.
 ```
 
 ### Relationship to the other principles
