@@ -1190,6 +1190,16 @@ can judge whether the rule still applies in edge cases }}
 
 4. If the current task would violate a **Hard NO**, stop and flag it to the user before proceeding.
 
+5. **Acknowledging the stop hook.** When a `principles-check.py` Stop hook fires (the user sees `Stop hook feedback: P4 checkpoint.`) and you respond with a bare acknowledgment, format it exactly as:
+
+   ```
+   Acknowledged — principles.
+
+   =====
+   ```
+
+   The trailing `=====` separator gives the user a visual landmark to scroll past the enforcement chain (which can fire several times in a row) and resume the conversation. Do NOT add the separator when the response is a full P4 verdict block — the verdict block already serves as its own visual landmark. The separator applies only to bare acks where the entire reply is the acknowledgment line.
+
 
 ## Relationship to other skills
 
