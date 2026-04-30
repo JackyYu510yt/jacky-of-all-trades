@@ -33,29 +33,67 @@ These never bend, regardless of what's being repaired or how urgent it feels.
 
 2. **Multiple falsifiable hypotheses, not one favorite.** Propose 2–4 concrete causes, each with a check that could rule it out. Picking one cause and chasing it is how repairs miss the actual bug.
 
-3. **Conclusive / verifiable / replicable.** A cause is "locked in" only when the evidence answers all three: it proves the cause beyond reasonable doubt, someone else running the same check sees the same result, and the failure happens on demand — not "sometimes."
+3. **Push back on weak diagnoses.** If the user's stated cause is contradicted by evidence, or a simpler cause better fits the observed failure, surface it before fixing. "I think it's the cookie" gets a "noted, but the evidence says X — recommend probing X first." Don't silently implement a fix the evidence doesn't support, and don't silently substitute a different fix without saying so (P6 + P7).
 
-4. **Process of elimination is not proof.** Ruling out three of four hypotheses doesn't prove the fourth. The remaining cause needs *positive* evidence — a probe that directly demonstrates it.
+4. **Conclusive / verifiable / replicable.** A cause is "locked in" only when the evidence answers all three: it proves the cause beyond reasonable doubt, someone else running the same check sees the same result, and the failure happens on demand — not "sometimes."
 
-5. **Isolate before you fix.** Never edit the real codebase first. Reproduce the failure in the smallest standalone context that still fails the same way. The standalone is the proof contract — a fix is real only when the standalone is green.
+5. **Process of elimination is not proof.** Ruling out three of four hypotheses doesn't prove the fourth. The remaining cause needs *positive* evidence — a probe that directly demonstrates it.
 
-6. **Real inputs, narrow scope.** When isolating, don't shrink the inputs to make the test "cleaner" — that hides data-dependent bugs. Shrink the scope around the inputs (call only the failing function/component, not the system around it). The 47 GB video that triggered the bug is the file the standalone must use.
+6. **Isolate before you fix.** Never edit the real codebase first. Reproduce the failure in the smallest standalone context that still fails the same way. The standalone is the proof contract — a fix is real only when the standalone is green.
 
-7. **Same failure signature.** The standalone must fail with the same error, the same line/symptom, the same way the real system fails. A different failure means you isolated the wrong thing — something got stripped that mattered.
+7. **Real inputs, narrow scope.** When isolating, don't shrink the inputs to make the test "cleaner" — that hides data-dependent bugs. Shrink the scope around the inputs (call only the failing function/component, not the system around it). The 47 GB video that triggered the bug is the file the standalone must use.
 
-8. **Fix in isolation, then integrate.** Try repairs on the standalone only. Apply to the real codebase only after the standalone is green. Edit the minimum needed in the real code; don't rewrite surrounding logic.
+8. **Same failure signature.** The standalone must fail with the same error, the same line/symptom, the same way the real system fails. A different failure means you isolated the wrong thing — something got stripped that mattered.
 
-9. **Two verifications, not one.** PoC verification (one clean pass of the standalone) proves the fix concept works. That alone is *not* shippable. Step 2 — actual-usecase verification — runs the fix the way it'll actually run in real conditions (the concurrency, scale, hostile inputs, slow networks, race conditions the real failure faced). PoC-only is never declared a pass.
+9. **Fix in isolation, then integrate.** Try repairs on the standalone only. Apply to the real codebase only after the standalone is green. Edit the minimum needed in the real code; don't rewrite surrounding logic.
 
-10. **Match the test to the failure mode.** "Actual usecase" means whatever shape the real failure took. If the bug only appears under three concurrent requests, single-request testing doesn't prove it's fixed. If it only appears on the 47 GB video, the 12-second test clip doesn't prove it.
+10. **Two verifications, not one.** PoC verification (one clean pass of the standalone) proves the fix concept works. That alone is *not* shippable. Step 2 — actual-usecase verification — runs the fix the way it'll actually run in real conditions (the concurrency, scale, hostile inputs, slow networks, race conditions the real failure faced). PoC-only is never declared a pass.
 
-11. **One fix, one scope.** Don't refactor while repairing. Don't add unrelated improvements. Don't "while I'm here" the surrounding code. The fix's blast radius matches the bug's blast radius.
+11. **Match the test to the failure mode.** "Actual usecase" means whatever shape the real failure took. If the bug only appears under three concurrent requests, single-request testing doesn't prove it's fixed. If it only appears on the 47 GB video, the 12-second test clip doesn't prove it.
 
-12. **Never silence the failure.** `try/except: pass`, swallowed errors, blanket retry-until-green, log filters that hide the symptom — those are not fixes. They hide the bug, which means the bug ships.
+12. **One fix, one scope.** Don't refactor while repairing. Don't add unrelated improvements. Don't "while I'm here" the surrounding code. The fix's blast radius matches the bug's blast radius.
 
-13. **No guessing.** If evidence is inconclusive, gather more. If you can't gather more, surface that to the user honestly — don't fill the gap with intuition.
+13. **Never silence the failure.** `try/except: pass`, swallowed errors, blanket retry-until-green, log filters that hide the symptom — those are not fixes. They hide the bug, which means the bug ships.
 
-14. **Atomic phases.** Each phase fully succeeds before the next begins. No "we'll figure that out later." If a phase fails, loop back to the previous phase — do not advance.
+14. **No guessing.** If evidence is inconclusive, gather more. If you can't gather more, surface that to the user honestly — don't fill the gap with intuition.
+
+15. **Atomic phases.** Each phase fully succeeds before the next begins. No "we'll figure that out later." If a phase fails, loop back to the previous phase — do not advance.
+
+
+## The Repair Loop in P8 Form
+
+Every repair is an instance of P8 (goal-driven execution): transform the imperative ("fix the bug") into a declarative goal with an observable check, then loop until the check clears.
+
+Repair's transform — always the same shape:
+
+```
+"Fix the bug"   →   "test_repro.py currently FAILS (proves the bug
+                     exists in the real codebase).
+                     Standalone-pass when test_repro.py PASSES on the
+                     fix.
+                     Step 2-pass when the same fix holds under the
+                     real production-shape conditions the bug faced.
+                     DONE = standalone-pass AND step-2-pass AND no
+                     existing tests regressed."
+```
+
+The repair loop is then:
+
+```
+ 1. Transform        → declarative goal stated above
+ 2. Hypothesize      → 2-4 falsifiable causes, each with a check
+ 3. Lock the cause   → positive evidence for one survivor
+ 4. Isolate          → standalone with real inputs, same signature
+ 5. RED              → standalone fails 3x with same signature
+ 6. GREEN (PoC)      → standalone passes after fix
+ 7. Integrate        → minimum edit to real codebase
+ 8. Step 2           → fix holds under real conditions
+ 9. Audit            → DONE / PARTIAL / STUCK verdict
+```
+
+Every step is gated. If a step fails, loop back to the previous one — do not advance. The user only intervenes when a step refuses to clear after bounded effort (STUCK) or when a Hard Invariant trips.
+
+This is what makes repair runnable under `/auto`: the goal is checkable and every step has its own verify. The model can run the loop without pausing for guidance unless something genuinely blocks.
 
 
 ## Universal Principles
@@ -182,7 +220,7 @@ Skip the standalone-repro phase ONLY when the fix is verifiably one line and ver
 
 For any repair where the cause is not immediately obvious or the fix touches more than one place: the full discipline applies.
 
-- All 14 hard invariants.
+- All 15 hard invariants.
 - All 11 universal principles.
 - Standalone repro required.
 - PoC + actual-usecase verification both required.
@@ -342,13 +380,22 @@ Hand back to user.
 
 - **Before `/audit`** — when a repair produces edits to the real codebase, /audit can be run on the proposed integration before it lands. Optional; /audit is the safety belt, not a requirement.
 
-- **Pairs with `principles`** — every claim a repair makes ("evidence is conclusive", "fix is verified", "repair is done") routes through the principles checkpoint: P1 test-at-scale (Step 2 enforces this), P2 conditions-upfront (success defined before work), P3 end-goal-in-sight (one fix one scope), P4 audit-before-handback (the report IS the handback verdict).
+- **Pairs with `principles`** — every claim a repair makes ("evidence is conclusive", "fix is verified", "repair is done") routes through the principles checkpoint:
+    - **P1 test-at-scale** — Step 2 enforces "test the actual condition," not a smaller proxy
+    - **P2 conditions-upfront** — success defined before work begins
+    - **P3 end-goal-in-sight** — one fix, one scope; no drift mid-repair
+    - **P4 audit-before-handback** — the DONE/PARTIAL/STUCK report IS the handback verdict
+    - **P5 KISS** — simplest fix that clears the goal wins; no rewrites in a debugging context
+    - **P6 think-before-coding** — push back on weak diagnoses; surface alternative causes; don't guess-and-edit
+    - **P7 surgical-changes** — fix's blast radius matches the bug's; no "while I'm here" cleanup
+    - **P8 goal-driven-execution** — the repair loop IS the P8 loop; standalone-fails-then-passes is the per-step verify
 
 - **After `deep-audit`** — if `deep-audit` surfaces a latent failure that the user wants fixed, /repair takes the surfaced issue and works it through the methodology.
 
 
 ## TL;DR
 
+- **Repair is a P8 loop.** Transform "fix it" → "test_repro fails → fix → test_repro passes AND Step 2 green." Loop until both clear.
 - **Repair is a methodology, not a workflow per system.** Same discipline for a failing test, a UI bug, a slow query, a crashed pipeline, a wrong-value function.
 - **Evidence first.** Read what's broken before theorizing.
 - **Multiple falsifiable hypotheses.** 2–4 candidates, each with a check.
