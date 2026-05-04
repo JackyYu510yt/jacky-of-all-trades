@@ -42,6 +42,107 @@ Example of the tone:
 > **Checkpointing** means the script saves its progress every few steps, the way a video game saves after each level. If something crashes, we restart from the last checkpoint instead of from zero.
 
 
+## Runtime Autonomy Rule — "Autonomous Engine, Optional Startup Gate"
+
+(Hard invariant — applies to every artifact /prep produces.)
+
+Every script /prep designs has an **autonomous engine** that runs blind once it fires. Some scripts also have an **optional startup gate** before the engine — others don't need one. Which shape applies depends on the script and pipeline:
+
+```
+Shape A: With startup gate         Shape B: No startup gate
+─────────────────────────          ─────────────────────────
+
+┌─────────────────┐                ┌──────────────────────┐
+│  STARTUP GATE   │                │  AUTONOMOUS ENGINE   │
+│                 │                │                      │
+│  Human input    │                │  Auto-detects work   │
+│  OK. Pick       │                │  from inputs / queue │
+│  config, how    │                │  / drop-folder /     │
+│  many, etc.     │                │  watcher state.      │
+└────────┬────────┘                │                      │
+         ↓                         │  Zero human input.   │
+┌────────────────────────┐         │  Runs to DONE,       │
+│  AUTONOMOUS ENGINE     │         │  FAILED, or          │
+│                        │         │  checkpoint-resume.  │
+│  Zero human input.     │         └──────────────────────┘
+│  All decisions resolve │              cron-ready
+│  from gate config +    │              by default
+│  computed state.       │
+└────────────────────────┘
+   walk away after gate
+```
+
+**Examples by shape:**
+
+- **Shape A (with gate)** — interactive video-script generator: asks at startup which config and how many videos, then runs the generation pipeline blind.
+- **Shape B (no gate)** — drop-folder ingest pipeline: detects whatever appears in `input/`, knows exactly what to do, processes it, exits. No setup question; the inputs ARE the configuration.
+- **Shape B (no gate)** — cron-driven worker: wakes on schedule, scans queue, processes pending items, exits. The schedule + queue state IS the configuration.
+
+**The non-negotiable part.** The engine — the part that does the actual work — runs blind. No `input()`, no `getpass()`, no GUI dialog, no "press Y to continue" between stages. Whether a startup gate exists or not, **once the engine fires, no human input.**
+
+**The optional part.** A startup gate is a tool for resolving choices the inputs alone can't. Use it when:
+
+- The user picks among multiple configs / modes / accounts
+- The user provides a credential or a one-shot parameter
+- The user confirms a destructive op before the engine runs
+
+Skip it when:
+
+- The script auto-detects work from filesystem / queue / watcher state
+- The script runs on cron and reads a fixed config
+- All inputs are already determined by the environment when the script starts
+
+**The user's test:** *"After whatever startup it has — does the rest of the run work without me?"* If the script asks for input mid-pipeline, it has failed. If the script asked at startup OR didn't need to ask at all, both are fine.
+
+**The user's test:**
+
+> *"After I answer the startup questions and walk away — does the rest of the run work without me?"*
+
+If the answer is "no, it'll ask me something at hour 3," the design has failed this rule.
+
+**What's allowed in the startup gate (before the engine starts):**
+
+- `input()`, `getpass()`, `Read-Host`, CLI prompts, simple TUI menus
+- "Which config?" / "How many videos?" / "Which account?" / "Confirm destructive action?"
+- Anything that resolves a one-shot setup choice
+- Reading from env vars, config files, CLI flags — preferred when the answer is reusable
+
+**What's forbidden in the autonomous engine (after the engine starts):**
+
+- ANY blocking call on human input — no `input()`, no `getpass()`, no GUI dialog mid-run
+- "Press Y to continue" between stages, "Approve this batch?", "Retry?" prompts
+- Waiting on stdin to be ready when there is no terminal
+- Any path where the engine halts and a human must intervene to resume
+
+**What replaces in-engine prompts:**
+
+| Decision the engine would have asked about | Where it resolves from instead |
+|---|---|
+| Retry the failed step? | Bounded retry policy with backoff — captured at startup |
+| Continue past a flaky stage? | Checkpoint + auto-resume — no human in the loop |
+| Pick between two paths mid-run? | Decision computed from current state (input size, prior outcome) |
+| Confirm a destructive action mid-run | Resolved at startup as `--yes` flag or config policy |
+| Wait for an external system? | Monitor + retry with timeout, then fail-fast or skip |
+
+**Boundary check during planning.** Every function spec must declare which phase it lives in:
+
+- **Startup-gate function** — runs once before the engine fires. May ask the user. Returns a config object the engine consumes.
+- **Engine function** — runs inside the autonomous loop. May NOT ask the user. All inputs come from the startup-gate config or computed state.
+
+A library helper that calls `input()` deep inside an engine chain breaks the rule just as badly as a top-level prompt. The boundary is enforced per-function at field 16 of the per-function card.
+
+**The engine's only valid stopping conditions:** DONE (success), FAILED (irrecoverable, with state preserved for post-mortem), or checkpoint-pause (work-so-far saved, next run resumes from the saved state). Never "waiting for human input."
+
+
+## Tool Preload (light)
+
+At the start of every `/prep` session:
+
+**Run `ToolSearch` with `select:Monitor,CronCreate,CronList,CronDelete` to load these tool schemas.** They are not loaded by default and are needed during the pentest phase when prototypes are run live.
+
+There is no mandatory arm step in `/prep` — the prototypes built here are usually short. But during pentest, if a prototype runs >30 seconds, arm a `Monitor` on its output with a filter covering both completion and failure signatures. If the script being designed IS a scheduled job (cron-driven, recurring), use `CronCreate` during pentest to test the scheduling behavior end-to-end rather than just the script body.
+
+
 ## Interaction Protocol
 
 The guiding stance for this skill: **I drive. You steer. You only steer when it actually matters.**
@@ -391,7 +492,7 @@ Use the **card-stack format** (Style C). Every section is its own bounded card w
 12. **Files the script reads/writes** — explicit paths and formats
 13. **Dependencies** — libraries and external tools, versions if they matter
 14. **Open questions** — for Codex to weigh in on
-15. **Per-function specs** — Phase 7.5 16-field cards appended below, one per RISKY function
+15. **Per-function specs** — Phase 7.5 17-field cards appended below, one per RISKY function
 16. **BUILD STATUS** — progress tracker, updated by Phase 8 after each cycle phase clears (see format below)
 
 Cards 1–7 lock in WHAT we're building before any function-level design appears. Every later phase (function specs, build cycles, pentest checks) points back at these front-matter cards. Card 16 lets the user (and Phase 8 itself) see exactly where the build is at any moment — and lets a resumed Phase 8 pick up where it left off.
@@ -450,11 +551,11 @@ Loop until the user says they are satisfied. Do not proceed to Phase 7.5 without
 
 ### Phase 7.5 — Per-Function Audit Spec
 
-For every function flagged as **risky** in Phase 5, produce a full audit-grade specification using the 15-field template below. This is the artifact Codex actually audits — every field exists to give the reviewer something specific to engage with, not rubber-stamp.
+For every function flagged as **risky** in Phase 5, produce a full audit-grade specification using the 17-field template below. This is the artifact Codex actually audits — every field exists to give the reviewer something specific to engage with, not rubber-stamp.
 
 Safe functions get a one-line summary. Only risky ones get the full spec.
 
-**The 16 Fields** (in this order, every time)
+**The 17 Fields** (in this order, every time)
 
 ```
  0. Traces to goal           One sentence: how this function
@@ -555,6 +656,53 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              not sure about X — can you
                              challenge it?" Makes the review
                              targeted, not hunt-and-peck.
+
+16. Runtime autonomy         Where in the script's lifecycle does
+                             this function run, and how does it
+                             resolve every decision without asking
+                             a human mid-pipeline?
+
+                             Phase: STARTUP-GATE | ENGINE
+                                    - STARTUP-GATE — runs once
+                                      before the engine fires; may
+                                      ask the user. Optional —
+                                      omit if the script has no
+                                      gate (drop-folder, watcher,
+                                      cron-driven scripts).
+                                    - ENGINE — runs inside the
+                                      autonomous loop; may NOT ask
+                                      the user.
+
+                             For ENGINE functions, list every
+                             decision the function makes and where
+                             its answer comes from:
+                               - <decision>: <default | env var |
+                                 CLI flag | config | computed-from-
+                                 input-files | computed-from-state |
+                                 retry-policy>
+
+                             If any decision can only be answered
+                             by a human at runtime, the function is
+                             not engine-safe. Either:
+                               (a) move the decision to a startup
+                                   gate (if the script has one), OR
+                               (b) compute it from the input files
+                                   / queue / state (preferred for
+                                   gate-less scripts), OR
+                               (c) reclassify the function as
+                                   STARTUP-GATE, OR
+                               (d) replace the human decision with
+                                   a computed default + log the
+                                   default that fired.
+
+                             Stop conditions (ENGINE only):
+                                 [ ] DONE — success path checkable
+                                 [ ] FAILED — irrecoverable, state
+                                     preserved for post-mortem
+                                 [ ] CHECKPOINT — work-so-far saved,
+                                     next run resumes
+                             At least one must be checked. None of
+                             them may be "wait for human input."
 ```
 
 **Header format**
@@ -568,7 +716,7 @@ PIPELINE:  stage <N> of <M> — <one-line position>
 ================================================================
 ```
 
-Append the 16-field block to the plan file. Phase 7.5 ends when every risky function has a completed spec.
+Append the 17-field block to the plan file. Phase 7.5 ends when every risky function has a completed spec.
 
 
 ### Phase 8 — Build the prototype
@@ -726,6 +874,7 @@ Same list as the `optimize` skill, plus these specific to Phase 8:
 - Do not skip Phase 7 (Codex audit) because "the plan looks fine to me."
 - Do not declare Phase 9 done while any pentest check is failing.
 - Do not invent requirements the user did not ask for — if uncertain, ask.
+- Do not put `input()` / `getpass()` / `Read-Host` / GUI prompts inside any ENGINE function (post-startup-gate). The pipeline runs blind once the engine fires — every decision must resolve from startup-gate config, env vars, CLI flags, defaults, or computed state. Field 16 of every per-function spec must declare this explicitly.
 
 ## Final Report (end of Phase 9)
 

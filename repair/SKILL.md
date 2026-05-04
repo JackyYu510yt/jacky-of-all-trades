@@ -25,6 +25,17 @@ This skill modulates how Claude debugs and fixes any work — it does not constr
 If the failure is reproducible, /repair applies. If it's a one-time event with no way to reproduce and no symptom you can recheck, this skill won't help — gather more occurrences first.
 
 
+## Tool Preload (mandatory first action)
+
+Before forming hypotheses or running any repro:
+
+**Run `ToolSearch` with `select:Monitor,CronCreate,CronList,CronDelete` to load these tool schemas.** They are not loaded by default.
+
+**When the repro is a shell command expected to take >30 seconds** (a build, a test run, a render, a deploy, a long script), launch it in the background and arm a `Monitor` on its output. The filter must cover BOTH the failure signature you're chasing AND completion markers — silence ≠ progress. This surfaces the failure live instead of waiting for the background job to exit, which matters when the bug fires partway through.
+
+`CronCreate` is rarely needed during repair, but load it so it's available if the bug involves scheduling or retry logic.
+
+
 ## Hard Invariants
 
 These never bend, regardless of what's being repaired or how urgent it feels.
@@ -51,13 +62,15 @@ These never bend, regardless of what's being repaired or how urgent it feels.
 
 11. **Match the test to the failure mode.** "Actual usecase" means whatever shape the real failure took. If the bug only appears under three concurrent requests, single-request testing doesn't prove it's fixed. If it only appears on the 47 GB video, the 12-second test clip doesn't prove it.
 
-12. **One fix, one scope.** Don't refactor while repairing. Don't add unrelated improvements. Don't "while I'm here" the surrounding code. The fix's blast radius matches the bug's blast radius.
+12. **One fix, one scope.** Don't refactor while repairing. Don't add unrelated improvements. Don't "while I'm here" the surrounding code. The fix's blast radius matches the cause's blast radius — and the cause is structural (HI #16), not the proximate trigger.
 
 13. **Never silence the failure.** `try/except: pass`, swallowed errors, blanket retry-until-green, log filters that hide the symptom — those are not fixes. They hide the bug, which means the bug ships.
 
 14. **No guessing.** If evidence is inconclusive, gather more. If you can't gather more, surface that to the user honestly — don't fill the gap with intuition.
 
 15. **Atomic phases.** Each phase fully succeeds before the next begins. No "we'll figure that out later." If a phase fails, loop back to the previous phase — do not advance.
+
+16. **Lock the *structural* cause, not the proximate trigger.** "Function returned None on this input" is a trigger; "the function has no validation for empty payloads, and three callers can produce empty payloads" is the structural cause. Step 3 (Lock the cause) is not satisfied until you've climbed one layer up and asked: *"If I fix only this exact line, does the condition that produced this line still exist?"* If yes, the cause is the layer above — keep climbing until "no." The fix targets that layer. A repair that locks the trigger and edits only the trigger is, by definition, symptomatic — and the next workflow run will hit the same failure mode on a different instance. That is not DONE.
 
 
 ## The Repair Loop in P8 Form
@@ -82,12 +95,25 @@ The repair loop is then:
 ```
  1. Transform        → declarative goal stated above
  2. Hypothesize      → 2-4 falsifiable causes, each with a check
- 3. Lock the cause   → positive evidence for one survivor
- 4. Isolate          → standalone with real inputs, same signature
+ 3. Lock the cause   → positive evidence for one survivor AND
+                       climb-one-layer test passes (HI #16):
+                       "If I fix this exact line, does the condition
+                        that produced it still exist?"
+                       Keep climbing until the answer is NO. The
+                       layer where the answer turns NO is the
+                       structural cause.
+ 4. Isolate          → standalone with real inputs, same signature,
+                       at the structural layer (not the trigger)
  5. RED              → standalone fails 3x with same signature
  6. GREEN (PoC)      → standalone passes after fix
- 7. Integrate        → minimum edit to real codebase
- 8. Step 2           → fix holds under real conditions
+ 7. Integrate        → minimum edit at the structural layer
+ 8. Step 2           → fix holds under real conditions, INCLUDING
+                       a different-instance probe: re-run with a
+                       different input / state / shard. The same
+                       failure mode must NOT fire on the different
+                       instance. If it does, the cause was locked
+                       at the trigger — loop back to step 3 and
+                       climb another layer.
  9. Audit            → DONE / PARTIAL / STUCK verdict
 ```
 
@@ -200,6 +226,55 @@ A fix is not shippable while Step 2 is red, regardless of Step 1.
 
 The final report names the cause, the evidence that proved it, the exact fix applied, and the verification results — both PoC and actual-usecase. If anything regressed during integration, the report says so. Half-fixes get labeled PARTIAL, not DONE.
 
+### 12. Lock the *structural* cause, not the proximate trigger
+
+The whole methodology — isolate, repro, fix-in-isolation, integrate — only produces a real repair if step 3 locks the *structural* cause. Lock the trigger and the rest of the loop dutifully ships a symptomatic patch that the next workflow run blows past on a different instance.
+
+**The climb-one-layer test (run during step 3, before declaring the cause locked):**
+
+> "If I fix only this exact line, does the condition that produced this line still exist?"
+
+- **NO** → you are at the structural layer. Lock it.
+- **YES** → the cause is the layer above. Restate the failure as *"the condition that allowed `<current-cause>` to occur"* and re-run hypothesize → lock at the new layer. Keep climbing until the answer is NO.
+
+Examples of climbing:
+
+```
+Trigger        : `paginate(items, page=3)` returned 11 items, expected 10.
+Climb 1        : `len(items) - 1` was used where `len(items)` was correct.
+Climb 1 test   : "If I fix this line, does the condition still exist?"
+                 YES — paginate has no contract test for boundary pages.
+Climb 2        : The pagination module has no contract test covering the
+                 (page_size, total_items) boundary.
+Climb 2 test   : "If I add a contract test, does the condition still exist?"
+                 NO — locked.
+Structural fix : Fix the off-by-one + add the contract test. Both edits.
+```
+
+```
+Trigger        : Stage 4 image gen returned no_images_generated for one beat.
+Climb 1        : Cookie expired silently; the code took the no-cookie path.
+Climb 1 test   : "If I refresh the cookie, does the condition still exist?"
+                 YES — every account's cookie can silently expire mid-run
+                 with no detection.
+Climb 2        : There is no expiry probe before any image-gen call.
+Climb 2 test   : "If I add an expiry probe, does the condition still exist?"
+                 NO — locked.
+Structural fix : Add a pre-call expiry probe + auto-refresh on stale.
+```
+
+**The different-instance probe (run during step 8, before declaring Step 2 passed):**
+
+After the standalone is green AND the originally-failing real test is green, run the fix against a **different instance** of the same failure mode:
+
+- A different input that takes the same code path
+- A different account / shard / state that meets the same precondition
+- A freshly-cleaned environment, not the warm one from the original repro
+
+If the same failure mode fires on the different instance, the lock at step 3 was at the trigger, not the structural cause. Loop back to step 3 with the new evidence and climb another layer. Do not declare Step 2 passed.
+
+This is what makes /repair root-fix natively. The methodology was always meant to do this; principle 12 names the two specific places where autonomous mode used to short-circuit it.
+
 
 ## Execution Shapes
 
@@ -310,6 +385,8 @@ Bad evidence (do not lock in a cause based on these):
 - **No silent retry-until-green wrappers.** That's papering over an underlying failure.
 - **No unrelated refactors during a repair.** One fix, one scope.
 - **No declaring DONE without Step 2 verification.** PoC-only is never shippable.
+- **No locking the trigger as the cause.** Step 3 is not satisfied until the climb-one-layer test (HI #16, principle 12) returns NO. Locking the proximate trigger and editing only the trigger is, by definition, a symptomatic patch — Step 8's different-instance probe will catch it; do not ship past it.
+- **No declaring Step 2 passed on the same input that produced the original RED.** Step 2 must include a different-instance probe. If the same failure mode fires on a different input / state / shard, the lock was at the trigger — loop back to step 3 and climb another layer.
 - **No advancing past 5 failed approaches without declaring STUCK.** Bounded effort. After 5 distinct approaches that all fail, the diagnosis or assumptions are likely wrong — surface and stop.
 
 
@@ -322,17 +399,22 @@ Repair always ends with one of three reports.
 ```
 === REPAIR DONE ===
 
-Failure:        <one sentence>
-Cause:          <one plain-language sentence>
-Evidence:       <log line / probe output / standalone result that proved it>
+Failure:                  <one sentence>
+Trigger:                  <the proximate symptom — what surfaced>
+Structural cause:         <what was actually wrong, after climbing>
+Climb trail:              <trigger → layer 1 → ... → structural cause>
+Evidence:                 <log line / probe output / standalone result
+                            that proved the structural cause>
 
-Fix applied:    <what changed, file:line>
-Standalone:     <path to the repro script — kept for regression reference>
+Fix applied:              <what changed, file:line>
+Standalone:               <path to the repro script — kept for regression>
 
-PoC:            <N passed / 0 failed>
-Actual usecase: <prod spec in one sentence — N passed / 0 failed>
+PoC:                      <N passed / 0 failed>
+Actual usecase:           <prod spec in one sentence — N passed / 0 failed>
+Different-instance probe: <input/state used — same failure mode did
+                            NOT fire — N passed / 0 failed>
 
-Verdict:        SHIPPABLE
+Verdict:                  SHIPPABLE
 ```
 
 ### PARTIAL — fix landed, something still off
@@ -403,6 +485,7 @@ Hand back to user.
 - **Isolate before you fix.** Standalone with real inputs, narrow scope.
 - **Same failure signature.** Near-miss is not a repro.
 - **Fix in isolation, then integrate.** Real code only after standalone is green.
-- **Two verifications: PoC and actual-usecase.** PoC alone is never shippable.
+- **Two verifications: PoC and actual-usecase + different-instance probe.** PoC alone is never shippable. Step 2 must include a different-instance probe (different input / state / shard); same failure mode must NOT fire there.
 - **One fix, one scope.** No refactoring while repairing. No silencing the failure.
+- **Lock the structural cause, not the proximate trigger.** Step 3 isn't satisfied until the climb-one-layer test ("if I fix this exact line, does the condition still exist?") returns NO. Keep climbing until it does.
 - **DONE / PARTIAL / STUCK.** Honest reports, every time.

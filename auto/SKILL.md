@@ -59,6 +59,27 @@ The invocation **is** the authorization. There is no Phase-0-confirm-the-plan ga
 This skill is a **mode**, not a tool. It modulates how Claude executes any work, not what work to do.
 
 
+## Phase −1 — Tool Preload (mandatory, before any other action)
+
+Before Phase 0, before plan ingestion, before any tool call other than this one:
+
+**Run `ToolSearch` with `select:Monitor,CronCreate,CronList,CronDelete` to load these tool schemas.**
+
+These tools are mandatory for autonomous work and are NOT loaded by default. Skipping this step means:
+
+- Long-running shell jobs only notify on exit — a 3-minute crash isn't seen until the 15-minute background-job timeout
+
+- No way to schedule retries or periodic checkins for unattended jobs
+
+- `/auto` degrades to "shell with extra confidence" — no live failure detection, no self-healing
+
+**Every time you launch a long-running shell job in the background, immediately arm a `Monitor` on its log/output.** The filter MUST cover BOTH success markers AND failure signatures (`Traceback|Error|Killed|FAILED|OOM|assert` plus domain-specific completion markers like `[DONE]`, `Successful:`). Silence ≠ success — a filter that matches only the happy path makes a crash look identical to "still running."
+
+**Use `CronCreate`** for scheduled retries, periodic state checks, deferred re-runs, or any "check back later" pattern that would otherwise require the user to remember.
+
+This phase has NO output to the user. Load the tools, then continue to Phase 0.
+
+
 ## Phase 0 — Plan Ingestion + Activation Gate (mandatory first action)
 
 Before anything else, /auto must lock in the end goal and at least one observable success condition. If it can't, /auto refuses to activate.
@@ -327,6 +348,46 @@ When this pattern is detected (recent `/principles` skill invocation OR principl
 
 /auto is most often run on top of /prep, /repair, or both. The runbook structure changes based on what /auto is consuming.
 
+### Skill chaining contract (applies to any chain — /auto /X /Y, /auto /X /Y /Z)
+
+When /auto is invoked with multiple methodology skills chained — `/auto /prep /repair`, `/auto /repair /audit`, `/auto /prep /optimize`, etc. — position determines role:
+
+```
+/auto /<lens> /<phase-1> [/<phase-2> ...]
+
+  /<lens>     The planning methodology. Owns Phase 0.5 runbook
+              generation. Its loop dictates the plan's STRUCTURE.
+
+  /<phase-N>  Each later skill is BOTH a principle source AND a
+              named phase under the lens. Its principles inform the
+              plan's CONTENT; its loop runs as a named phase of the
+              runbook (proactively in planning, reactively in fix mode).
+```
+
+Before generating the runbook, /auto MUST:
+
+```
+1. Read the lens skill's SKILL.md           (drives plan structure)
+2. Read each subsequent skill's SKILL.md    (informs plan content)
+3. Generate a plan where:
+   - Structure follows the lens
+     (e.g., /prep's 16-field per-function cards when /prep is the lens)
+   - Content is enriched by every later skill's principles
+     (e.g., RED tests are reproduction probes when /repair is chained;
+      GREEN is minimal isolation; REAL is production-shaped verification;
+      AUDIT traces back to the failure signature)
+   - Runbook steps explicitly name which chained skill owns each phase
+     (e.g., "Step 3 — /repair RED: reproduce the failure")
+4. On verify failure during execution, /auto invokes the matching
+   chained skill's loop as the sub-loop (not generic rotation).
+   The chained skill's principles were already in the plan, so the
+   sub-loop is continuation, not context switch.
+```
+
+**Compatibility check.** If a chained skill's principles can't meaningfully apply to the lens (e.g., `/auto /audit /prep` — audit reviews finished work, prep designs new work), /auto refuses to generate the runbook and surfaces the conflict at the Phase 0 activation gate.
+
+**Why this works.** The user already proved `/auto /prep` works because /prep's loop maps cleanly to runbook steps and /auto's fix mode handles deviations. Chaining a third skill works the same way IF the third skill's principles get baked into the plan upfront — not bolted on reactively. That's the whole contract.
+
 ### /auto on top of /prep
 
 ```
@@ -371,13 +432,55 @@ When this pattern is detected (recent `/principles` skill invocation OR principl
 
 ### /auto on top of /prep + /repair
 
-The common case: /prep builds a function, the build cycle hits a RED-stays-failing or REAL-fails-in-pipeline situation, /auto invokes /repair as a sub-loop on that one failing step, then resumes the build runbook.
+There are two distinct ways /prep and /repair compose under /auto. They are NOT the same and the user's invocation tells you which one to run.
+
+**Mode A — Chained invocation (`/auto /prep /repair`): proactive — repair informs prep**
+
+The user wants the prep file itself to be repair-aware before any execution. Per the Skill chaining contract above:
+
+```
+Lens:    /prep         (drives plan structure)
+Phase:   /repair       (informs plan content + owns fix phase)
+
+Plan generation enriches /prep's 16-field cards with /repair principles:
+  - field 13.RED    → reproduction probe (must reproduce a failure mode
+                      under realistic inputs, not just verify the
+                      happy path)
+  - field 13.GREEN  → fix the STRUCTURAL cause, not the proximate
+                      trigger (/repair HI #16 + Principle 12 — the
+                      climb-one-layer test must return NO before
+                      the cause is locked)
+  - field 13.REAL   → production-shaped verification (real data,
+                      real paths — not toy fixtures) AND a
+                      different-instance probe (different input /
+                      state / shard) — the same failure mode must
+                      not fire there
+  - field 13.AUDIT  → traces the fix back to the structural cause
+                      (logged climb trail), not just the failure
+                      signature
+
+Runbook execution:
+  - Each function's Red/Green/Real/Audit cycle runs as planned
+  - On verify failure, /auto enters fix mode and invokes /repair's
+    9-step loop as a sub-loop (Mode B below kicks in for that step).
+    The sub-loop's step 3 climbs to the structural cause; its step 8
+    different-instance probe catches symptomatic patches before they
+    ship.
+  - Because /repair's structural-cause principle was already baked
+    into the plan, the sub-loop is continuation, not context switch
+```
+
+This is what makes `/auto /prep /repair` distinct from `/auto /prep` followed by ad-hoc /repair: the prep file is repair-shaped from the start, and structural-fix is the verification bar — not symptom-pass.
+
+**Mode B — Reactive sub-loop (the common case during execution)**
+
+Whether the user invoked `/auto /prep` or `/auto /prep /repair`, when a step's verify fails mid-runbook, /auto invokes /repair as a sub-loop on that step:
 
 ```
 1. /auto walks the prep-derived runbook
 2. Step N — function W's GREEN — fails verify (test won't pass)
-3. /auto enters fix mode, but instead of generic rotation, recognizes
-   this as a repair situation and invokes /repair as a sub-loop
+3. /auto enters fix mode, recognizes this as a repair situation, and
+   invokes /repair as a sub-loop instead of generic rotation
 4. /repair runs its 9-step loop on the failing test
 5. /repair returns DONE (or STUCK)
 6. /auto resumes the build runbook at step N+1 (or PARKs and continues
@@ -385,6 +488,8 @@ The common case: /prep builds a function, the build cycle hits a RED-stays-faili
 ```
 
 The runbook tracks ALL of this — the original prep-derived steps stay; a /repair sub-loop is logged as a single step's "Approaches tried" entries with the diagnosis trail.
+
+**Mode A and Mode B work together.** Mode A makes the plan anticipate failure; Mode B handles the failures that happen anyway. Chained invocation activates both. Plain `/auto /prep` activates only Mode B.
 
 
 ## Hard Invariants
