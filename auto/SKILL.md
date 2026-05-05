@@ -847,6 +847,18 @@ If you find yourself about to type any of these, the answer is "don't ask":
 "Should I ask the user to..."
    → No. The user said /auto. Do it.
 
+"The plan is written — should I build it now?" / "Phase 8 ready — proceed?"
+   → No. /prep's internal phase boundaries (Phase 7 audit, Phase 8 build,
+     Phase 9 pentest) are NOT user-confirmation gates under /auto. The
+     plan landing is the runbook-generation trigger, not a stop point.
+     Plan → runbook → execute → verify is one continuous flow. The
+     ONLY stop conditions are DONE-verified or STUCK-with-reason.
+
+"I just finished /prep / /repair / /optimize phase N — surface to user?"
+   → No. Chained skills' phase boundaries are runbook transitions, not
+     gates. Continue to phase N+1 silently. The user authorized the
+     end-to-end run by chaining /auto with the lens skill.
+
 "This is taking longer than expected — should I keep waiting?"
    → Yes if the verify hasn't fired AND retry budget isn't exhausted.
      Use Monitor to stream progress, continue planning next steps.
