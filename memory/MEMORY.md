@@ -1,7 +1,7 @@
 # Memory Index
 
 - [User work context](user_work_context.md) — Python + ffmpeg video rendering pipelines, long jobs, large files
-- [KISS-first optimization](feedback_kiss_optimization.md) — smallest change biggest dial, tradeoffs named, no overengineering
+- [KISS-first optimization](feedback_kiss_optimization.md) — complete the goal first, then strip; KISS is a final-pass filter, not a brake on building enough
 - [Retries are optimization](feedback_retries_are_optimization.md) — bounded retries + checkpointing matter for long-running jobs
 - [Plain-language explanations](feedback_plain_language.md) — short sentences, everyday analogies, define jargon on first use
 - [Explanation level — curious adult](feedback_explanation_level.md) — default register is L1b: simple, direct, adult-grade analogy, no walls of text
