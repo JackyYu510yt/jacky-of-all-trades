@@ -15,3 +15,4 @@
 - [Autonomous engine, optional startup gate](feedback_startup_gate_autonomous_engine.md) — engine runs blind, no input() mid-pipeline; startup gate is optional (some scripts auto-detect from inputs)
 - [Structural fix vs patch](feedback_structural_fix_vs_patch.md) — DONE only if next run, different input, no Claude in loop, doesn't hit same failure
 - [/auto has no phase gates](feedback_auto_no_phase_gates.md) — under /auto, skill phase boundaries are not confirmation gates; only DONE or STUCK ends the loop
+- ["Leaning toward" is a question](feedback_leaning_toward_not_authorization.md) — tentative phrasings ask for more info; wait for explicit "apply / go / do it / yes" before acting
