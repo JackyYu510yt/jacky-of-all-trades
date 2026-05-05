@@ -899,6 +899,7 @@ The key thing to remember when reading older docs or code that still references 
 
 - **No "Phase 0: present plan for confirmation."** That phase is gone. The user already authorized by saying `/auto`.
 - **No "should I proceed?" / "want me to do X?" / "ready to continue?"** These all violate hard invariant #1.
+- **No asking after a plan is written.** When /auto is chained with a planning skill (`/auto /prep`, `/auto /optimize`, `/auto /repair`), the plan landing is the runbook-generation trigger — NOT a confirmation point. Asking "should I build the plan now?" or "Phase 8 ready, proceed?" is a hard-invariant violation. Plan → runbook → execute is one continuous flow.
 - **No silently advancing on bad output.** If a step failed, say so and rotate the approach.
 - **No declaring DONE without evidence.** "I think it worked" is not done.
 - **No requiring cron/monitor/shell for every /auto.** That architecture is for unattended overnight jobs only. Most /auto tasks are inline.
