@@ -14,3 +14,4 @@
 - ["Push to git" implies setup permission](feedback_push_to_git_implies_setup.md) — "push to git" includes setting local user.email/user.name; don't gate on a separate ask
 - [Autonomous engine, optional startup gate](feedback_startup_gate_autonomous_engine.md) — engine runs blind, no input() mid-pipeline; startup gate is optional (some scripts auto-detect from inputs)
 - [Structural fix vs patch](feedback_structural_fix_vs_patch.md) — DONE only if next run, different input, no Claude in loop, doesn't hit same failure
+- [/auto has no phase gates](feedback_auto_no_phase_gates.md) — under /auto, skill phase boundaries are not confirmation gates; only DONE or STUCK ends the loop
