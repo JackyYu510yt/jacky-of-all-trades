@@ -1,8 +1,10 @@
-"""PostToolUse hook: auto-append every tool call to ./auto-log.txt.
+"""PostToolUse hook: auto-append every tool call to ./auto-log-<slug>.txt.
 
 Fires after every tool invocation in claude code. If the chat's CWD has an
-active /auto run (./auto-runbook.txt OR ./auto/RUNBOOK.md), append a one-line
-event to ./auto-log.txt (or ./auto/logs/run.log for Pattern 3).
+active /auto run (./auto-runbook-*.txt OR ./auto-*/RUNBOOK.md), append a
+one-line event to ./auto-log-<slug>.txt (or ./auto-<slug>/logs/run.log for
+Pattern 3). If multiple active runs exist in the same directory, the most
+recently modified runbook wins.
 
 This converts log-appending from "model discipline" into a harness guarantee.
 Even if the assistant forgets to write a log line, this hook captures the
@@ -47,20 +49,39 @@ SKIPPED_TOOLS = {
 def find_runbook(cwd: Path) -> tuple[Path, Path] | None:
     """Return (log_path, runbook_path) if an active /auto run exists, else None.
 
-    Pattern 1/2: ./auto-runbook.txt + ./auto-log.txt
-    Pattern 3:   ./auto/RUNBOOK.md + ./auto/logs/run.log
+    Pattern 1/2: ./auto-runbook-<slug>.txt -> ./auto-log-<slug>.txt
+    Pattern 3:   ./auto-<slug>/RUNBOOK.md  -> ./auto-<slug>/logs/run.log
+
+    If multiple active runs exist in the same dir, the most recently modified
+    runbook wins (assumption: that's the run currently doing tool calls).
     """
-    p3_runbook = cwd / "auto" / "RUNBOOK.md"
-    if p3_runbook.is_file():
-        log_dir = cwd / "auto" / "logs"
-        log_dir.mkdir(exist_ok=True)
-        return (log_dir / "run.log", p3_runbook)
+    if not cwd.is_dir():
+        return None
 
-    p12_runbook = cwd / "auto-runbook.txt"
-    if p12_runbook.is_file():
-        return (cwd / "auto-log.txt", p12_runbook)
+    candidates: list[tuple[Path, Path]] = []  # (runbook, log)
 
-    return None
+    # Pattern 3 — auto-<slug>/RUNBOOK.md
+    for entry in cwd.iterdir():
+        if not entry.is_dir() or not entry.name.startswith("auto-"):
+            continue
+        runbook = entry / "RUNBOOK.md"
+        if runbook.is_file():
+            log_dir = entry / "logs"
+            log_dir.mkdir(exist_ok=True)
+            candidates.append((runbook, log_dir / "run.log"))
+
+    # Pattern 1/2 — auto-runbook-<slug>.txt
+    for runbook in cwd.glob("auto-runbook-*.txt"):
+        if runbook.is_file():
+            slug = runbook.stem.removeprefix("auto-runbook-")
+            candidates.append((runbook, cwd / f"auto-log-{slug}.txt"))
+
+    if not candidates:
+        return None
+
+    # Pick the most recently modified runbook
+    runbook, log = max(candidates, key=lambda c: c[0].stat().st_mtime)
+    return (log, runbook)
 
 
 def summarize_bash(tool_input: dict) -> str:

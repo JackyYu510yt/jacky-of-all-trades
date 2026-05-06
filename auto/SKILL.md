@@ -10,7 +10,7 @@ Universal autonomous mode. The user invokes `/auto` to hand Claude a task; Claud
 
 ## Installation (one-time, per machine)
 
-The `/auto` skill ships with a hook script — `hooks/auto-log-hook.py` — that auto-appends every state-changing tool call to `./auto-log.txt` (or `./auto/logs/run.log` for Pattern 3) when an active /auto run is detected. Without this hook, log appending falls back to model discipline and gets unreliable on long runs.
+The `/auto` skill ships with a hook script — `hooks/auto-log-hook.py` — that auto-appends every state-changing tool call to `./auto-log-<slug>.txt` (or `./auto-<slug>/logs/run.log` for Pattern 3) when an active /auto run is detected. Without this hook, log appending falls back to model discipline and gets unreliable on long runs.
 
 To wire it up on a fresh install (or new PC), add this block to your `~/.claude/settings.json` under `hooks` (merge with existing hooks if any):
 
@@ -42,7 +42,7 @@ Linux    →  /home/<your-username>
 
 Empty `"matcher": ""` means "fire on every tool call" — the hook itself filters down to state-changing tools (Bash, Edit, Write, NotebookEdit, PowerShell). Read-only tools (Read, Glob, Grep, etc.) are skipped at the hook level so the log stays focused.
 
-**Verification:** after wiring, run `/auto` on a small task in any folder. After it generates the runbook, check `./auto-log.txt` — every tool call should appear as a one-line `[timestamp] [tool] <summary>` entry without the model having to remember to write them.
+**Verification:** after wiring, run `/auto` on a small task in any folder. After it generates the runbook, check the matching `./auto-log-<slug>.txt` — every tool call should appear as a one-line `[timestamp] [tool] <summary>` entry without the model having to remember to write them.
 
 The invocation **is** the authorization. There is no Phase-0-confirm-the-plan gate. There are no "should I proceed?" checkpoints. There are no "want me to run X to verify Y?" offers. Claude states what it's about to do in one or two sentences, then does it, and reports back when DONE or STUCK.
 
@@ -89,7 +89,7 @@ Before anything else, /auto must lock in the end goal and at least one observabl
 Glob the working directory in this priority order:
 
 ```
-1. ./auto/GOAL.md           (prior cron-mode auto)
+1. ./auto-*/GOAL.md         (prior cron-mode auto — most recently modified wins)
 2. ./prep-*.txt             (output of /prep)
 3. ./PLAN.md                (manual plan)
 4. ./.claude/plans/*.md     (older /prep outputs)
@@ -174,11 +174,29 @@ Once the gate clears, the rule is permanent for the rest of the run: no further 
 
 After the activation gate clears, /auto writes a runbook file BEFORE any step runs. The runbook is the contract /auto follows — every step lists the action and the observable check that means "step done." /auto executes the runbook deterministically, only entering "fix mode" (diagnose + rotate) when a step's verify check fails.
 
+### Slug derivation
+
+Every /auto run gets a **slug** — a short identifier suffixed onto the runbook file, the log file, and (for Pattern 3) the state folder. This prevents collision when multiple /auto runs happen in the same directory.
+
+Slug rules: lowercase, hyphenated, 2-4 words, no special chars. Source priority:
+
+1. If the plan came from `./prep-<slug>.txt`, **reuse that slug** (e.g., `prep-stagger-distribution.txt` → slug = `stagger-distribution`).
+2. Otherwise, derive from the goal sentence — pick 2-4 keywords, lowercase, hyphenate.
+
+Examples:
+
+- Goal "Fix the off-by-one in paginate()" → slug `paginate-off-by-one`
+  - Files: `./auto-runbook-paginate-off-by-one.txt`, `./auto-log-paginate-off-by-one.txt`
+- Goal "Build the staggered distribution system" → slug `stagger-distribution`
+  - Pattern 3 folder: `./auto-stagger-distribution/`
+
+Once chosen at Phase 0, the slug is **frozen for the run** — no renames mid-run. If a prior run with the same slug exists in the directory, /auto resumes it (per the resumability rules below) rather than starting a new one.
+
 ### Runbook file location
 
 ```
-./auto-runbook.txt        Patterns 1 & 2 (inline / background+monitor)
-./auto/RUNBOOK.md         Pattern 3 (cron+monitor+shell — lives with state files)
+./auto-runbook-<slug>.txt   Patterns 1 & 2 (inline / background+monitor)
+./auto-<slug>/RUNBOOK.md    Pattern 3 (cron+monitor+shell — lives with state files)
 ```
 
 ### Runbook format
@@ -258,8 +276,9 @@ This is what makes Pattern 3 (cron mode) actually survive a chat going silent �
                               (Red / Green / Real / Audit per RISKY
                               function; Green + smoke per SAFE function)
 
-2. ./auto/RUNBOOK.md      — prior runbook from a resumed cron-mode auto
-   ./auto-runbook.txt        (resume in place; do NOT regenerate)
+2. ./auto-*/RUNBOOK.md    — prior runbook from a resumed cron-mode auto
+   ./auto-runbook-*.txt      (resume in place; pick most-recently-modified
+                              if multiple exist; do NOT regenerate)
 
 3. ./PLAN.md              — manual plan with explicit steps
 
@@ -279,8 +298,8 @@ Alongside the runbook, /auto keeps an append-only activity log. Where the runboo
 ### Log file location
 
 ```
-./auto-log.txt          Patterns 1 & 2
-./auto/logs/run.log     Pattern 3 (with per-tick logs in ./auto/logs/<ts>.txt)
+./auto-log-<slug>.txt        Patterns 1 & 2
+./auto-<slug>/logs/run.log   Pattern 3 (with per-tick logs in ./auto-<slug>/logs/<ts>.txt)
 ```
 
 ### Log entry format
@@ -305,7 +324,7 @@ Sibling note          P7 violation parked for later
 Cron tick             tick start and tick end (Pattern 3 only)
 ```
 
-Long stderr / large diffs do NOT go on the log line. They go in per-action files in `./auto/logs/<timestamp>.txt` (Pattern 3) or stay in conversation (Patterns 1–2). The log line only references them: `[stderr in logs/2026-04-30T22-01-08.txt]`.
+Long stderr / large diffs do NOT go on the log line. They go in per-action files in `./auto-<slug>/logs/<timestamp>.txt` (Pattern 3) or stay in conversation (Patterns 1–2). The log line only references them: `[stderr in logs/2026-04-30T22-01-08.txt]`.
 
 ### When the log is read
 
@@ -331,7 +350,7 @@ In Pattern 3 cron mode, every cron tick begins with reading the log tail before 
 [2026-04-30T22:02:35Z] [NORMAL] [Step 2] DONE
 ```
 
-The user can `tail -f ./auto-log.txt` during a run to watch live, OR `cat` it after for a complete audit trail of what was done, tested, tried, and why.
+The user can `tail -f ./auto-log-<slug>.txt` during a run to watch live, OR `cat` it after for a complete audit trail of what was done, tested, tried, and why.
 
 
 ## Composition with /principles, /prep, and /repair
@@ -531,7 +550,7 @@ These never bend.
    - Every 5 tool calls since last re-read (compression hedge)
    - First action of every cron tick (Pattern 3 — mandatory)
 
-   Re-read scope: `./auto-runbook.txt` (state) OR `./auto/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), and the last ~30 lines of `./auto-log.txt` (recent history). If the files disagree with conversation memory, trust the files and acknowledge the file truth in the next text output.
+   Re-read scope: `./auto-runbook-<slug>.txt` (state) OR `./auto-<slug>/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), and the last ~30 lines of `./auto-log-<slug>.txt` (recent history). If the files disagree with conversation memory, trust the files and acknowledge the file truth in the next text output.
 
 
 ## Pre-Action One-Liner Format
@@ -609,34 +628,34 @@ Trigger conditions (any of these → Pattern 3):
 State files (created by /auto on Pattern 3 setup):
 
 ```
-auto/GOAL.md            Frozen goal + success conditions
-                        Written once at setup. Never modified.
+auto-<slug>/GOAL.md       Frozen goal + success conditions
+                          Written once at setup. Never modified.
 
-auto/RUNBOOK.md         Step list + current state + mode
-                        Updated after every step transition.
+auto-<slug>/RUNBOOK.md    Step list + current state + mode
+                          Updated after every step transition.
 
-auto/PROGRESS.md        Last-tick summary (what fired this tick,
-                        what's next). Helps the next tick orient.
+auto-<slug>/PROGRESS.md   Last-tick summary (what fired this tick,
+                          what's next). Helps the next tick orient.
 
-auto/APPROACHES.md      Append-only retry log — every approach
-                        tried for every step, with the reason it
-                        failed.
+auto-<slug>/APPROACHES.md Append-only retry log — every approach
+                          tried for every step, with the reason it
+                          failed.
 
-auto-log.txt            Append-only activity log (also lives at
-                        auto/logs/run.log under Pattern 3 for
-                        per-tick separation).
+auto-log-<slug>.txt       Append-only activity log (also lives at
+                          auto-<slug>/logs/run.log under Pattern 3
+                          for per-tick separation).
 
-auto/VERDICT_DONE       Touched on terminal success.
-                        On detection at start of any tick,
-                        /auto invokes CronDelete and exits.
+auto-<slug>/VERDICT_DONE  Touched on terminal success.
+                          On detection at start of any tick,
+                          /auto invokes CronDelete and exits.
 
-auto/VERDICT_STUCK      Touched on terminal failure (5 approaches
-                        per blocking step, all parked).
-                        On detection, CronDelete + exit.
+auto-<slug>/VERDICT_STUCK Touched on terminal failure (5 approaches
+                          per blocking step, all parked).
+                          On detection, CronDelete + exit.
 
-auto/logs/              Per-tick logs:
-  tick-<ISO>.log        One file per cron tick.
-  cron.log              Append-only summary of every tick start/end.
+auto-<slug>/logs/         Per-tick logs:
+  tick-<ISO>.log          One file per cron tick.
+  cron.log                Append-only summary of every tick start/end.
 ```
 
 ### How a cron tick actually flows
@@ -644,10 +663,10 @@ auto/logs/              Per-tick logs:
 ```
 Tick fires → fresh claude code session → /auto re-invoked
 
-  1. Read auto/RUNBOOK.md (state, current step, mode)
-  2. Read auto/GOAL.md (frozen goal — never trust memory)
-  3. Read tail of auto-log.txt (~30 lines of recent history)
-  4. Check for auto/VERDICT_DONE or auto/VERDICT_STUCK
+  1. Read auto-<slug>/RUNBOOK.md (state, current step, mode)
+  2. Read auto-<slug>/GOAL.md (frozen goal — never trust memory)
+  3. Read tail of auto-<slug>/logs/run.log (~30 lines of recent history)
+  4. Check for auto-<slug>/VERDICT_DONE or auto-<slug>/VERDICT_STUCK
        If either exists → CronDelete + exit (loop self-uninstalls)
   5. Pick first non-DONE / non-PARKED step from runbook
   6. Execute that step:
@@ -657,8 +676,8 @@ Tick fires → fresh claude code session → /auto re-invoked
   7. Verify: run the step's verify check
        Pass → mark step DONE in runbook, append log line
        Fail → enter fix mode, /repair sub-loop, rotate up to 5x
-  8. Update auto/RUNBOOK.md and auto-log.txt
-  9. Write auto/PROGRESS.md with one-line "this tick did X" summary
+  8. Update auto-<slug>/RUNBOOK.md and auto-<slug>/logs/run.log
+  9. Write auto-<slug>/PROGRESS.md with one-line "this tick did X" summary
  10. Exit. Next tick fires N min later.
 ```
 
@@ -678,7 +697,7 @@ Don't tick faster than the work can finish — overlapping ticks just stack. If 
 
 ### Self-uninstall
 
-On every tick start, /auto checks for `auto/VERDICT_DONE` or `auto/VERDICT_STUCK`. If either exists:
+On every tick start, /auto checks for `auto-<slug>/VERDICT_DONE` or `auto-<slug>/VERDICT_STUCK`. If either exists:
 
 ```
 1. Invoke CronDelete with the cron name (e.g., auto_<slug>)
@@ -938,7 +957,7 @@ Hand back to user — recommend: <best concrete next step>
 ```
 
 ### Cron auto, on terminal verdict
-Same shape, but written to `auto/VERDICT_DONE` or `auto/VERDICT_STUCK` and the cron self-uninstalls.
+Same shape, but written to `auto-<slug>/VERDICT_DONE` or `auto-<slug>/VERDICT_STUCK` and the cron self-uninstalls.
 
 
 ## TL;DR
