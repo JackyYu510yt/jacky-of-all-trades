@@ -776,6 +776,82 @@ Next:        <concrete next move if status != DONE,
 The report is the contract. If it says DONE, it's done. If it says PARTIAL, it lists exactly what's missing.
 
 
+## Operational Heuristics — patterns from production runs
+
+The principles above are abstract. These six are the tactical patterns that make /auto trustworthy on long-running, real-world systems (pipelines, services, vendors). Born from real incidents.
+
+### 8. Disk is source of truth when logs go silent
+
+Logs lie, get redirected, or get lost (e.g., a background process launched with hidden window loses stdout). When the log isn't moving, do NOT assume work has stopped. Go to the artifact layer:
+
+- File counts in the output directory
+- File mtimes on intermediate state files
+- Manifest `status` fields written by the worker
+- Database row counts, S3 object counts
+
+The artifact is the contract. The log is commentary on the artifact. If they disagree, trust the artifact.
+
+### 9. Cite the incident in every patch comment
+
+Every fix landed under /auto should have a one-line comment naming the **incident** that motivated it — date + failure signature + verified evidence. Not "fix bug" but:
+
+```python
+# Bumped 15→30 on 2026-05-12 — vendor's shared-pool/assign can take
+# 20+ seconds under load (verified: crashed Spanish V3 stage 3).
+```
+
+Future readers (including future Claude) see WHY, not just WHAT. P5/P7 KISS-surgical changes are good, but a surgical change with no rationale becomes mysterious in a year.
+
+### 10. Hand-test the recovery before baking it in
+
+When diagnosing a stall and designing a fix, the order is:
+
+1. Diagnose the failure mode with read-only probes
+2. **Hand-test the fix** via direct API calls / shell commands / one-shot scripts
+3. Observe recovery (artifact-level evidence — not just "200 OK")
+4. **Then** write the code that automates the recovery
+
+Hand-testing first means the patch is grounded in a *working sequence*, not a guess. The cost is ~10 minutes; the benefit is committing code that's been proven against the live failure mode. This is P1 (test-at-scale) applied in reverse — verify the manual fix, then commit.
+
+### 11. Name what changes apply to THIS run vs NEXT run
+
+When patching code that's loaded by a live process (Python imports cached at module load, services with hot-reload disabled, daemons holding old binaries), explicitly state in the report:
+
+```
+Live farmer (PID 63700) won't pick up these changes — Python imported
+the modules at 09:57. The patch takes effect on next farmer restart.
+V3 + GoT will finish on the old code; FG V5-V9 (after the planner
+swap restart) will get the new self-healing.
+```
+
+Avoids the trap of "I patched it" → user assumes the live run is fixed. Let the user choose: restart now to get the fix, or defer to a natural restart point. P8 — keep the goal in sight, including "when does the fix actually land."
+
+### 12. One stall teaches a class of failures (adjacent-issue radar)
+
+P7 says surgical changes — don't expand scope. This heuristic carves a disciplined exception: when fixing a specific stall reveals an **upstream trigger gap** that would let the same class of failures recur, fix both.
+
+Example: a vendor pool got stuck on one account. The hand-tested fix was a force-rotation API sequence. But reading the existing rotation code revealed: the trigger condition only fired on `HTTP_403` or `THROTTLE_ERROR`, not on `ReadTimeout` — which is what we'd just seen. The patch added both the new helper AND extended the trigger to catch timeouts. One stall, two surgical edits, a whole class of stalls now handled.
+
+The bar: the adjacent fix must be (a) one or two lines, (b) directly visible from the code path of the original fix, and (c) demonstrably needed by the same incident. Anything bigger = back to strict P7.
+
+### 13. Escalation tree under stalls — cheapest action first, never restart first
+
+When something stops making forward progress:
+
+```
+1. Diagnose       — what changed? (Service alive? Disk writes? Network?)
+2. Differentiate  — slow (just wait) vs. stuck (intervene)?
+3. Cheapest first — read-only probe, info endpoint, single-call test
+4. Escalate       — release → release+assign → stop-all+release+assign
+                    → service restart → host restart
+5. Verify recovery via artifacts — not API success codes alone
+6. Bake the fix in — the next time this happens, the system should
+                     self-heal (heuristic #10 + #12)
+```
+
+Never restart the farmer / vendor / database / host as a first move. That's the loudest hammer; reach for it last. Cheap actions can succeed silently and teach you about the failure mode for free.
+
+
 ## Auto Does NOT Waive
 
 Even under /auto, these still get flagged before execution (briefly — one sentence, then proceed unless the user objects within the same turn):
@@ -968,3 +1044,4 @@ Same shape, but written to `auto-<slug>/VERDICT_DONE` or `auto-<slug>/VERDICT_ST
 - Diagnose, rotate approaches, never advance on lies, stop on DONE or STUCK.
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes.
+- Operational heuristics #8-13: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree.
