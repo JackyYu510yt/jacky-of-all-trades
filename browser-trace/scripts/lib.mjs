@@ -5,7 +5,27 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
+
+// On Windows, npm installs `.cmd` shims that Node's spawn() can't resolve
+// without `shell: true` — and shell mode breaks PID tracking for detached
+// processes. Resolve the underlying JS once and invoke it via `node` directly.
+let _browseExec = null;
+export function browseExec() {
+  if (_browseExec) return _browseExec;
+  if (process.platform === 'win32') {
+    try {
+      const npmRoot = execSync('npm root -g', { encoding: 'utf8' }).trim();
+      const js = path.join(npmRoot, '@browserbasehq', 'browse-cli', 'dist', 'index.js');
+      if (fs.existsSync(js)) {
+        _browseExec = { cmd: process.execPath, prefix: [js] };
+        return _browseExec;
+      }
+    } catch { /* fall through to PATH lookup */ }
+  }
+  _browseExec = { cmd: 'browse', prefix: [] };
+  return _browseExec;
+}
 
 export function runRoot() {
   return process.env.O11Y_ROOT || '.o11y';

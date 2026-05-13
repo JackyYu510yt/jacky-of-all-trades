@@ -14,7 +14,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import {
-  runDir, ensureDir, isoUtcSeconds, isAlive, sleepMs, writeJson,
+  runDir, ensureDir, isoUtcSeconds, isAlive, sleepMs, writeJson, browseExec,
 } from './lib.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -47,7 +47,8 @@ writeJson(path.join(RD, 'manifest.json'), {
 // process exiting. browse cdp writes one JSON object per line to stdout.
 const rawFd = fs.openSync(path.join(RD, 'cdp', 'raw.ndjson'), 'w');
 const errFd = fs.openSync(path.join(RD, 'cdp', 'stderr.log'), 'w');
-const cdp = spawn('browse', ['cdp', target, ...domainArgs], {
+const _b = browseExec();
+const cdp = spawn(_b.cmd, [..._b.prefix, 'cdp', target, ...domainArgs], {
   detached: true,
   stdio: ['ignore', rawFd, errFd],
 });

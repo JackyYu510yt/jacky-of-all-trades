@@ -9,7 +9,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-import { isoStampForFilename, sleepMs } from './lib.mjs';
+import { isoStampForFilename, sleepMs, browseExec } from './lib.mjs';
+
+const _b = browseExec();
 
 const [target, RD, intervalArg] = process.argv.slice(2);
 if (!target || !RD) {
@@ -31,14 +33,14 @@ while (!stopping) {
   const tmp  = `${html}.partial`;
 
   // Best-effort screenshot. If browse fails we just don't get one this tick.
-  spawnSync('browse', ['--ws', target, 'screenshot', png], { stdio: 'ignore' });
+  spawnSync(_b.cmd, [..._b.prefix, '--ws', target, 'screenshot', png], { stdio: 'ignore' });
   if (fs.existsSync(png) && fs.statSync(png).size === 0) {
     fs.unlinkSync(png);
   }
 
   // DOM dump via temp file → rename, so we never leave a 0-byte HTML behind.
   try {
-    const r = spawnSync('browse', ['--ws', target, 'get', 'html', 'body'], { encoding: 'utf8' });
+    const r = spawnSync(_b.cmd, [..._b.prefix, '--ws', target, 'get', 'html', 'body'], { encoding: 'utf8' });
     if (r.stdout && r.stdout.length) {
       fs.writeFileSync(tmp, r.stdout);
       fs.renameSync(tmp, html);
@@ -51,7 +53,7 @@ while (!stopping) {
 
   // URL via the daemon-bypassing one-shot. Returns {"url": "..."}.
   let urlValue = '';
-  const u = spawnSync('browse', ['--ws', target, '--json', 'get', 'url'], { encoding: 'utf8' });
+  const u = spawnSync(_b.cmd, [..._b.prefix, '--ws', target, '--json', 'get', 'url'], { encoding: 'utf8' });
   if (u.stdout) {
     try { urlValue = JSON.parse(u.stdout).url || ''; } catch {}
   }
