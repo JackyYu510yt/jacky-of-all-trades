@@ -89,9 +89,6 @@ Before anything else, /auto must lock in the end goal and at least one observabl
 Glob the working directory in this priority order:
 
 ```
-0. Active /goal condition   (run `/goal` with no args — if a goal is
-                             active, its condition IS the frozen success
-                             criterion; skip activation gate and proceed)
 1. ./auto-*/GOAL.md         (prior cron-mode auto — most recently modified wins)
 2. ./prep-*.txt             (output of /prep)
 3. ./PLAN.md                (manual plan)
