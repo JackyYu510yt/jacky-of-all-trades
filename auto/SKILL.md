@@ -290,6 +290,77 @@ Steps must be **atomic and verifiable**. "Implement the feature" is the GOAL, no
 
 If a step's verify can't be expressed as an observable check, the step is not atomic enough — split it.
 
+### Stage-mode runbook (auto-detected for build tasks)
+
+When the goal is to build a multi-stage script or program, /auto generates a **stage-shaped runbook** instead of a monolithic build. Each stage becomes a standalone-runnable puzzle piece under `./stages/`, and the final `main.py` is a thin orchestrator that imports them. If one piece breaks later, you re-run that one stage by itself and the line of blame is one file long.
+
+**Trigger — ALL of these must hold:**
+
+- Goal verb is one of: `build`, `create`, `make`, `write`, `generate`, `automate`, `set up`
+- Deliverable is a script/program (not a refactor, rename, bug fix, config tweak, single-file edit)
+- Task has **3+ distinct operations** (`load → upload → prompt → download` qualifies; a one-shot single-purpose script does not)
+
+If any condition fails, use the standard runbook format from "sources in priority order" above.
+
+**Stage decomposition.** Break the goal into 3-N stages, each with one clear job, each exercisable with a hardcoded test input, each producing an observable artifact (return value, printed line, file written) the next stage would consume. Name stages in short kebab-case: `load-config`, `upload-image`, `send-prompt`, `download-result`.
+
+**File layout (frozen at runbook generation):**
+
+```
+./stages/
+  stage_1_<name>.py
+  stage_2_<name>.py
+  ...
+  stage_N_<name>.py
+./main.py        (written last, imports from stages/)
+```
+
+Each stage file follows this shape (Python example — mirror in the project's language):
+
+```python
+"""Stage K — <name>. Runnable standalone for debug."""
+
+def <name>(<inputs>) -> <output>:
+    ...   # the actual stage logic
+
+if __name__ == "__main__":
+    result = <name>(<hardcoded test input>)
+    assert <observable check on result>, f"stage K failed: {result!r}"
+    print(f"[stage K OK] {<short summary>}")
+```
+
+The `__main__` block IS the verify check. `python stages/stage_K_<name>.py` exits 0 iff the stage works alone.
+
+**Stage-mode runbook shape:**
+
+```
+Steps:
+  1. [PENDING] Write stages/stage_1_<name>.py
+        verify: python stages/stage_1_<name>.py exits 0, prints "[stage 1 OK]"
+  2. [PENDING] Write stages/stage_2_<name>.py
+        verify: python stages/stage_2_<name>.py exits 0, prints "[stage 2 OK]"
+  ...
+  N. [PENDING] Write stages/stage_N_<name>.py
+        verify: python stages/stage_N_<name>.py exits 0, prints "[stage N OK]"
+  N+1. [PENDING] Write main.py — import stages/, compose pipeline
+        verify: python main.py exits 0 producing the success-condition artifact
+  N+2. [PENDING] End-to-end re-run with a different input
+        verify: produces a different valid artifact (proves not hardcoded)
+```
+
+**Why this shape.** If step N+1 fails but stages 1..N still pass alone, the blame is the integration layer — not a puzzle piece. If a stage's standalone verify fails, the failure is contained to one file and one command. Each stage's `__main__` block doubles as a permanent smoke test for future regressions: any later breakage can be re-isolated by re-running that one stage.
+
+**Skill-chain interaction.**
+
+- `/auto /prep` — /prep's function list takes precedence over generic stage decomp. Each RISKY function becomes its own stage; SAFE functions can share a stage. File layout (`./stages/`) and standalone-runnable shape still apply.
+- `/auto /repair` and `/auto /optimize` — not builds; stage mode does not apply.
+
+**When NOT to use stage mode** (even if the goal verb matches):
+
+- One-file scripts under ~50 lines with a single clear operation
+- Adding a feature to an existing pipeline (not a from-scratch build)
+- "Write a quick X" / "give me a one-shot Y"
+
 
 ## The Activity Log
 
