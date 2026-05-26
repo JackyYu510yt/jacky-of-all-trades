@@ -176,21 +176,25 @@ After the activation gate clears, /auto writes a runbook file BEFORE any step ru
 
 ### Slug derivation
 
-Every /auto run gets a **slug** — a short identifier suffixed onto the runbook file, the log file, and (for Pattern 3) the state folder. This prevents collision when multiple /auto runs happen in the same directory.
+Every /auto run gets a **slug** — a short identifier suffixed onto the runbook file, the log file, and (for Pattern 3) the state folder. The slug uniquely identifies ONE /auto run for the rest of that run's life. Two parallel chats in the same directory must never resolve to the same slug.
 
-Slug rules: lowercase, hyphenated, 2-4 words, no special chars. Source priority:
+Slug shape: `<keywords>-<HHMMSS>` where `<keywords>` is 2-4 lowercase hyphenated words derived from the task, and `<HHMMSS>` is the local time at Phase 0 to second precision.
 
-1. If the plan came from `./prep-<slug>.txt`, **reuse that slug** (e.g., `prep-stagger-distribution.txt` → slug = `stagger-distribution`).
+Keyword source priority:
+
+1. If the plan came from `./prep-<keywords>.txt`, **reuse those keywords** (e.g., `prep-stagger-distribution.txt` → keywords = `stagger-distribution`).
 2. Otherwise, derive from the goal sentence — pick 2-4 keywords, lowercase, hyphenate.
+
+The `-HHMMSS` suffix is appended in both cases. Two parallel chats can legitimately derive the same keywords from the same prep file or a similar goal — the timestamp is what guarantees their slugs differ.
 
 Examples:
 
-- Goal "Fix the off-by-one in paginate()" → slug `paginate-off-by-one`
-  - Files: `./auto-runbook-paginate-off-by-one.txt`, `./auto-log-paginate-off-by-one.txt`
-- Goal "Build the staggered distribution system" → slug `stagger-distribution`
-  - Pattern 3 folder: `./auto-stagger-distribution/`
+- Goal "Fix the off-by-one in paginate()" at 14:32:05 → slug `paginate-off-by-one-143205`
+  - Files: `./auto-runbook-paginate-off-by-one-143205.txt`, `./auto-log-paginate-off-by-one-143205.txt`
+- Goal "Build the staggered distribution system" at 02:18:44 → slug `stagger-distribution-021844`
+  - Pattern 3 folder: `./auto-stagger-distribution-021844/`
 
-Once chosen at Phase 0, the slug is **frozen for the run** — no renames mid-run. If a prior run with the same slug exists in the directory, /auto resumes it (per the resumability rules below) rather than starting a new one.
+Once chosen at Phase 0, the slug is **frozen for the run** — no renames mid-run, and a new /auto invocation never adopts a prior run's slug by reading it off disk. Resumption of an interrupted run is explicit-only (see Resumability below).
 
 ### Runbook file location
 
