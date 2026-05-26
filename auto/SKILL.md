@@ -86,15 +86,18 @@ Before anything else, /auto must lock in the end goal and at least one observabl
 
 ### Step 1 — Scan for an existing plan
 
-Glob the working directory in this priority order:
+/auto NEVER picks up another run's runbook or `auto-*/GOAL.md` from disk. A new invocation always means a new slug and a new runbook. The one exception is explicit resumption (see Resumability below).
+
+Glob the working directory for **input plans only** (not state from prior or parallel /auto runs):
 
 ```
-1. ./auto-*/GOAL.md         (prior cron-mode auto — most recently modified wins)
-2. ./prep-*.txt             (output of /prep)
-3. ./PLAN.md                (manual plan)
-4. ./.claude/plans/*.md     (older /prep outputs)
-5. User's invocation message + recent context
+1. ./prep-*.txt             (output of /prep — most recently modified wins)
+2. ./PLAN.md                (manual plan)
+3. ./.claude/plans/*.md     (older /prep outputs)
+4. User's invocation message + recent context
 ```
+
+Existing `./auto-runbook-*.txt`, `./auto-*/RUNBOOK.md`, and `./auto-*/GOAL.md` files are state from prior or parallel /auto runs and are deliberately ignored here. This is what makes parallel chats in the same directory safe — each gets its own slug and its own runbook with no glob-based crosstalk.
 
 ### Step 1.5 — If no plan exists AND task is non-trivial, invoke /prep autonomously
 
@@ -196,6 +199,20 @@ Examples:
 
 Once chosen at Phase 0, the slug is **frozen for the run** — no renames mid-run, and a new /auto invocation never adopts a prior run's slug by reading it off disk. Resumption of an interrupted run is explicit-only (see Resumability below).
 
+### Session marker
+
+Right after the slug is frozen and before the runbook is written, /auto creates a session-marker file in the working directory:
+
+```
+./.auto-session-<session_id>
+```
+
+The file contains the slug as its single line of content. `<session_id>` is the claude code session ID available in the conversation environment (the same value the harness passes to PostToolUse hooks).
+
+The PostToolUse hook (`hooks/auto-log-hook.py`) reads this marker on every tool call. If a marker for the firing session exists, the hook routes the log line to that session's slug-specific log file. Without the marker, two parallel chats in the same directory writing to `auto-log-*.txt` would race for the "most recently modified" runbook and trample each other's logs. With the marker, each session's tool calls flow only to its own log.
+
+On DONE or STUCK, /auto deletes its session marker as part of the final report step. If the chat closes mid-run without a terminal verdict, the marker file is harmless leftover — the next /auto run will overwrite it (same session) or ignore it (different session).
+
 ### Runbook file location
 
 ```
@@ -262,15 +279,28 @@ In NORMAL mode, /auto follows the runbook step by step without diagnosis or rota
 
 ### Resumability
 
-If /auto is interrupted (chat closes, reboot, cron tick missed), the runbook is the source of truth on resume:
+Resumption is **explicit-only** — /auto never auto-resumes a prior run by globbing for runbooks. The slug must be supplied by the invocation itself. Two ways this happens:
 
 ```
-1. Read the runbook file
+1. Pattern 3 cron tick — the CronCreate command encodes the slug
+   in its prompt (e.g., "/auto resume slug=paginate-off-by-one-143205").
+   Each tick reads ONLY the runbook matching that exact slug.
+
+2. User-initiated resume — the user types
+   "/auto resume <slug>" to manually pick up a prior interrupted run.
+```
+
+On resume, the runbook file is the source of truth:
+
+```
+1. Read ./auto-runbook-<slug>.txt (or ./auto-<slug>/RUNBOOK.md)
 2. Find the first step that is not DONE and not PARKED
 3. Resume from that step
 ```
 
-This is what makes Pattern 3 (cron mode) actually survive a chat going silent — the runbook is the contract; the cron heartbeat just keeps reading it.
+If no slug is supplied, /auto generates a fresh one and starts a new run — parallel chats and accidental re-invocations never collide on someone else's state.
+
+This is what makes Pattern 3 (cron mode) survive a chat going silent — the cron schedule carries the slug, and the heartbeat keeps reading the exact runbook it owns.
 
 ### Generating the runbook — sources in priority order
 
@@ -794,6 +824,11 @@ Use whenever the work needs the heartbeat + stateless tick architecture: build p
 ```
 CronCreate    Schedules wake-ups every N minutes. Each fire spawns
               a fresh claude code session that re-invokes /auto.
+              The cron's prompt MUST encode the slug, e.g.
+              "/auto resume slug=<slug>" — so every tick targets
+              the exact runbook this cron owns. Without the explicit
+              slug, parallel /auto runs in the same directory would
+              collide on Phase 0 slug derivation.
 
 Monitor       In-session: streams events from a Bash background
               process so /auto can wait on a "done" pattern in a
