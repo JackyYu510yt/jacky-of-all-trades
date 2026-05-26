@@ -424,6 +424,121 @@ In Pattern 3 cron mode, every cron tick begins with reading the log tail before 
 The user can `tail -f ./auto-log-<slug>.txt` during a run to watch live, OR `cat` it after for a complete audit trail of what was done, tested, tried, and why.
 
 
+## The Implementation Notes (per-run narrative)
+
+Alongside the runbook (state) and activity log (mechanical history), /auto maintains a per-run **implementation notes** file. Where the activity log records *what happened*, the notes capture *why* — the decisions /auto made that the spec didn't pin down, deviations from the planned path, tradeoffs considered, and questions the user should review.
+
+### Time window (the strict rule)
+
+The notes file covers **exactly one /auto run**:
+
+- **Created** at Phase 0.5, right after the runbook is written
+- **Appended to** throughout execution as decisions are made
+- **Finalized** at DONE or STUCK with a closing summary section
+- **Resumed** (not recreated) if /auto re-enters on the same slug — chat closes mid-run and a cron tick continues; Pattern 3 ticks against an existing runbook; etc.
+
+The notes do NOT span multiple /auto runs. A new /auto with a different slug gets its own notes file. A prior run's notes are never modified after that run's terminal verdict — the file is sealed by the Final Summary section.
+
+### File location
+
+```
+./auto-notes-<slug>.md           Patterns 1 & 2
+./auto-<slug>/NOTES.md           Pattern 3 (lives with state files)
+```
+
+Markdown by default — universally readable, renders in editors and `cat`. Use `.html` instead only if the user explicitly asks for browser-friendly output.
+
+### File structure
+
+The file is initialized with four narrative sections:
+
+```markdown
+# Implementation Notes — <slug>
+
+Started: <ISO timestamp>
+Goal:    <one observable sentence — copy from runbook>
+Success: <checkable bar — copy from runbook>
+
+## Design Decisions
+Choices made where the spec or runbook was ambiguous.
+
+## Deviations
+Places where execution intentionally departed from the runbook, and why.
+
+## Tradeoffs
+Alternatives considered and why the chosen path won.
+
+## Open Questions
+Anything the user should confirm or revise.
+
+---
+(entries appended below as the run progresses)
+```
+
+### When to append an entry
+
+Append a dated entry under the matching section when:
+
+- **Design decision** — a step's action wasn't fully specified (default values, edge-case handling, choice of library/API, file naming) and /auto picked one
+- **Deviation** — /auto departed from the runbook (added a step, skipped one, swapped an approach mid-step); log it here AND mark the runbook
+- **Tradeoff** — more than one valid path existed and /auto picked one; name the alternatives and the reason
+- **Open question** — something /auto resolved tentatively but the user might want to revise (library version, API timeout, file naming, a guessed default)
+
+Entry format:
+
+```markdown
+### <ISO timestamp> — <one-line summary>
+
+**Context:**     <step or situation>
+**Choice:**      <what was decided>
+**Why:**         <reason — usually grounded in spec, principle, or a probe result>
+**Alternatives:** <only on tradeoff entries>
+```
+
+Keep entries short — 4-8 lines. The notes file is for human skim, not exhaustive log. Mechanical tool-call detail belongs in the activity log.
+
+### Closing summary at DONE or STUCK
+
+When /auto reaches terminal verdict, append a Final Summary section that seals the file:
+
+```markdown
+---
+## Final Summary
+
+Ended:    <ISO timestamp>
+Status:   DONE | PARTIAL | STUCK
+Duration: <wall-clock from Started>
+
+### Headline
+<one-paragraph plain-language summary of what landed>
+
+### By the numbers
+- Design decisions logged: N
+- Deviations logged:       N
+- Tradeoffs logged:        N
+- Open questions pending:  N
+
+### Open questions worth your review
+- <one-line summary per open question entry>
+
+### Next move (if not DONE)
+<concrete suggested next step — mirrors AUTO REPORT's Next field>
+```
+
+This summary is the deliverable handed to the user. The in-chat AUTO REPORT stays short; the notes file is the deeper read with provenance for every non-obvious choice.
+
+### Relationship to the other artifacts
+
+```
+Runbook         current state of steps (mutable, source of truth for "where am I")
+Activity log    every state-changing tool call (append-only, mechanical, for replay)
+Notes (this)    the WHY (narrative, decisions, open questions, sealed at terminal verdict)
+AUTO REPORT     terminal in-chat summary that points at the notes file
+```
+
+A user who reads only the notes file should still understand what /auto did and why, without needing to crawl the activity log.
+
+
 ## Composition with /principles, /prep, and /repair
 
 The user's standard invocation pattern is:
@@ -1080,6 +1195,7 @@ The key thing to remember when reading older docs or code that still references 
 Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
+Notes:   ./auto-notes-<slug>.md  (decisions + open questions)
 ```
 
 ### Inline auto, partial
@@ -1089,6 +1205,7 @@ Goal:        <one sentence>
 Done:        <what landed>
 Missing:     <what didn't, with reason>
 Next:        <concrete suggested move>
+Notes:       ./auto-notes-<slug>.md  (decisions + open questions)
 ```
 
 ### Inline auto, stuck
@@ -1101,6 +1218,7 @@ Approaches tried (N):
   ...
 Why I'm stopping: <why no 6th approach exists>
 Hand back to user — recommend: <best concrete next step>
+Notes:       ./auto-notes-<slug>.md  (decisions + open questions)
 ```
 
 ### Cron auto, on terminal verdict
