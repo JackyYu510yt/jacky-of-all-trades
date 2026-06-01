@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Review proposed changes one last time before they're applied. Lists every change, checks scope match to the discussed intent, flags destructive or irreversible actions, surfaces silent assumptions and regression risks, and presents a final go/revise/stop verdict. Use right before executing any non-trivial change — edits to multiple files, deletions, refactors, config changes, git operations, external API calls, or any action the user might regret. Acts as a safety gate between "plan" and "execute". Use when the user says "audit this", "before you do that", "double check", "what are you about to do", "hold on — review first", or any pause-before-action prompt.
+description: Review proposed changes one last time before they're applied, using an independent AUDITOR second-brain (a fresh reviewer subagent that re-derives risk from the actual files, not the same context that proposed the change). Lists every change, checks scope match to the discussed intent, flags destructive or irreversible actions, surfaces silent assumptions and regression risks, and presents a final go/revise/stop verdict. Use right before executing any non-trivial change — edits to multiple files, deletions, refactors, config changes, git operations, external API calls, or any action the user might regret. Acts as a safety gate between "plan" and "execute". Use when the user says "audit this", "before you do that", "double check", "what are you about to do", "hold on — review first", or any pause-before-action prompt.
 ---
 
 # Audit
@@ -27,6 +27,8 @@ Last-chance safety gate. Before any non-trivial change is applied, enumerate exa
 ## Core Principle
 
 **Before you apply, prove you understood.** Audit forces an explicit enumeration of every change and a deliberate match-check against the user's stated goal. No "trust me, I got it." No silent side effects. No surprises.
+
+**The second-brain rule.** The brain that proposed the change is the wrong brain to clear it — it shares every blind spot that produced the plan. So the core review is run by an **independent AUDITOR**: a fresh reviewer subagent that did NOT author the plan, is handed only the stated goal + the enumerated changes, and **reads the actual target files itself** to re-derive scope, reversibility, assumptions, and regressions from source. Same-context "re-reading" is not an audit — it's the same brain agreeing with itself.
 
 Three questions every proposed change must answer truthfully:
 
@@ -138,6 +140,51 @@ Flag each concrete regression risk. If the answer is "probably fine," say "proba
 
 `========================================`
 
+### Phase 5.5: Dispatch the Independent Reviewer (Second Brain)
+
+This is the heart of the audit. Phases 1–5 are *your* pass — the same brain that proposed the change. Now hand it to a brain that didn't.
+
+**Dispatch an independent reviewer (in priority order):**
+
+1. **Preferred — a fresh reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available). Give it ONLY:
+   - the user's stated goal, in the user's own words (not your paraphrase),
+   - the enumerated list of proposed changes (Phase 1) — the *what*, with exact file paths and commands,
+   - the explicit instruction below.
+
+   Crucially, do **not** feed it your scope/assumption/regression conclusions — those are what you want it to re-derive independently. It must form its own view.
+
+2. **Fallback — only if subagents are unavailable.** Open a section headed `=== AUDITOR (second brain) ===`, drop the author's stance, and review as a skeptic whose job is to catch what the author missed. State clearly that this was a same-context fallback, not a true independent pass.
+
+**The brief handed to the reviewer:**
+
+```
+You are the AUDITOR — an independent reviewer. You did NOT write this
+plan and must not assume it is correct. Below is a user's stated goal
+and a list of changes someone is about to apply.
+
+Your job:
+1. READ each target file yourself (current state on disk) before
+   judging — do not trust the change descriptions.
+2. SCOPE — does each change trace to the stated goal? Flag anything
+   out of scope or missing.
+3. REVERSIBILITY — classify each change's blast radius (safe /
+   reversible / irreversible-local / external / destructive).
+4. ASSUMPTIONS — what is the plan treating as true that the files
+   don't actually support right now? (stale reads, wrong signatures,
+   missing deps, unset env, wrong paths.)
+5. REGRESSIONS — what currently works that this could break? Name
+   concrete callers / tests / consumers.
+Return ranked findings (BLOCKER / CONCERN / NOTE), each with the
+evidence you found in the files. Do not rubber-stamp.
+
+Stated goal: <verbatim>
+Proposed changes: <Phase 1 enumeration>
+```
+
+**Reconcile.** When the reviewer returns, merge its findings with your own Phase 1–5 pass. Anything the reviewer flagged that you missed is exactly the value of the second brain — surface it prominently. Disagreements get shown to the user, not silently resolved.
+
+`========================================`
+
 ### Phase 6: Present the Verdict
 
 Emit a structured audit report. Template:
@@ -165,8 +212,17 @@ Unchecked assumptions (2):
 Regression risk (1):
  - retry_count key added — no existing code reads this key, so no behavior changes for existing runs. Probably fine.
 
+Independent reviewer (second brain):
+ - [BLOCKER] config.json already has retry_count=5 at line 12 — item 2
+   would overwrite a real setting (the author's pass missed this).
+ - [CONCERN] item 1 rename: 3 callers in jobs/ reference `foo`.
+ - Agreed with author on items 3, 4.
+ - (or: "fallback same-context review — no subagent available")
+
 Verdict: NEEDS REVISION
-Recommendation: drop item 4 from the plan. Re-read pipeline.py before applying item 1. Then re-audit.
+Recommendation: drop item 4 (out of scope); reviewer found item 2
+clobbers an existing key — re-check before applying; update the 3
+callers for item 1. Then re-audit.
 ```
 
 Verdict options:
@@ -227,6 +283,8 @@ Audit IS required for:
 
 - Do not skip audit because "the changes are obvious."
 
+- Do not skip the independent reviewer (Phase 5.5) and call your own Phase 1–5 pass "the audit." The author brain re-reading its own plan is not a second brain. If a subagent truly can't run, say so explicitly and mark the review as a same-context fallback.
+
 - Do not approve-and-proceed in the same breath — the user gets to see the audit and decide.
 
 - Do not continue past a NEEDS REVISION verdict without the user's explicit acknowledgement.
@@ -238,7 +296,7 @@ Audit IS required for:
 
 ## Relationship to Other Skills
 
-- **`prep`** — plans new work from scratch, pauses for external Codex audit before execution. `audit` is the inline equivalent that Claude runs itself, right before executing any non-trivial plan.
+- **`prep`** — plans new work from scratch, runs an independent AUDITOR second-brain review before execution. `audit` is the inline equivalent, run right before executing any non-trivial plan — and it uses the same independent-reviewer second brain (Phase 5.5).
 
 - **`repair`** — after a failure. `audit` is before an execution. Opposite ends of the same principle: prove what you think is true.
 
@@ -250,6 +308,7 @@ Audit IS required for:
 ## TL;DR
 
 - **Pre-execution gate** — runs right before any non-trivial change is applied.
+- **Independent second brain** — a fresh reviewer subagent reads the real files and re-derives the risks, so the audit isn't the same brain agreeing with itself.
 - **Lists every change** — files, commands, external calls, state modifications.
 - **Checks scope** — match to what the user actually asked for, flag out-of-scope.
 - **Classifies risk** — safe, reversible, irreversible, external, destructive.
