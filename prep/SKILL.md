@@ -1,18 +1,18 @@
 ---
 name: prep
-description: Interactively plan, prototype, and pentest a new script from scratch. Captures the end goal, breaks it into specifics, asks the user broad preferences, proposes a plain-language structure, interviews the user on risky or high-impact functions, drafts a full plan, pauses for external audit (typically Codex) and iterates on feedback, then builds a first prototype and pentests each part. Use when the user says "let's plan X", "prep a new script", "help me design Y", "plan a project", or wants a collaborative plan + external-audit + build + test loop. Every artifact this skill produces must be smooth, consistent, reliable, self-healing, and optimized for speed.
+description: Interactively plan, prototype, and pentest a new script from scratch. Captures the end goal, breaks it into specifics, asks the user broad preferences, proposes a plain-language structure, interviews the user on risky or high-impact functions, drafts a full plan, runs an independent AUDITOR second-brain review and iterates on its feedback, then builds a first prototype and pentests each part. Use when the user says "let's plan X", "prep a new script", "help me design Y", "plan a project", or wants a collaborative plan + auditor-review + build + test loop. Every artifact this skill produces must be smooth, consistent, reliable, self-healing, and optimized for speed.
 ---
 
 # Prep
 
-A guided, collaborative workflow for creating new scripts from a blank page. Unlike `optimize`, which improves existing code, `prep` starts with nothing but an end goal and walks the user through a disciplined path: clarify → structure → explain in plain terms → interview on risky pieces → plan → external audit loop → prototype → pentest.
+A guided, collaborative workflow for creating new scripts from a blank page. Unlike `optimize`, which improves existing code, `prep` starts with nothing but an end goal and walks the user through a disciplined path: clarify → structure → explain in plain terms → interview on risky pieces → plan → AUDITOR review loop → prototype → pentest.
 
 ## When to Use This Skill
 
 - User wants to plan or design a new script or tool from scratch
 - Explicit phrases: "let's plan X", "prep a script for Y", "help me design Z", "plan out a new project"
 - User has a fuzzy goal and needs it broken down into specifics before coding
-- User wants an external review step (e.g. Codex) built into the workflow
+- User wants an independent review step (an AUDITOR second-brain pass) built into the workflow
 
 ## Core Principle
 
@@ -331,13 +331,13 @@ Phase 5 (risky-function interviews)
            priority). Document the rationale in field 2 (Reasoning)
            of that function's spec.
 
-Phase 7 (Codex audit)
-  Normal:  Pause for the user to run Codex and paste feedback.
-  Auto:    Either (a) invoke the `Agent` tool with subagent_type
-           "code-reviewer" as a stand-in reviewer, integrate its
-           feedback automatically with `> [Auto-review]` callouts,
-           or (b) skip if no reviewer agent is configured. Note
-           which path was taken in the plan's open-questions card.
+Phase 7 (AUDITOR audit)
+  Normal:  Dispatch the AUDITOR second-brain, then pause to walk the
+           user through its findings one at a time.
+  Auto:    Dispatch the AUDITOR second-brain (independent reviewer
+           subagent), integrate its feedback automatically with
+           `> [AUDITOR]` callouts, and note in the plan's
+           open-questions card that the auto path was taken.
 
 Phase 8 (per-function approval)
   Normal:  Ask "does this match what you pictured?" after each
@@ -491,7 +491,7 @@ Use the **card-stack format** (Style C). Every section is its own bounded card w
 11. **Self-healing mechanisms** — where retries / checkpoints / atomic writes live
 12. **Files the script reads/writes** — explicit paths and formats
 13. **Dependencies** — libraries and external tools, versions if they matter
-14. **Open questions** — for Codex to weigh in on
+14. **Open questions** — for the AUDITOR to weigh in on
 15. **Per-function specs** — Phase 7.5 17-field cards appended below, one per RISKY function
 16. **BUILD STATUS** — progress tracker, updated by Phase 8 after each cycle phase clears (see format below)
 
@@ -524,34 +524,46 @@ Phase 6 emits this card with all phases unchecked. Phase 8 updates it after each
 
 A function is **complete** when every visible column is `[x]`. The build is shippable when every function row is fully checked AND Phase 9 integration checks have all cleared (see FINAL VERDICT card).
 
-### Phase 7 — Codex audit loop
+### Phase 7 — AUDITOR audit loop (second-brain self-review)
 
-Tell the user the plan is ready for Codex. Provide the exact text to paste — the full plan file contents, framed by a short instruction block:
+The audit is run in-house by an **AUDITOR** — a fresh, independent reviewer pass that acts as a second brain. Its only job is to try to *break* the plan, not to defend it. The author of the plan (you, who just wrote it) is the wrong brain to grade it — the AUDITOR is a deliberately separate one.
+
+**How to run the AUDITOR (in priority order):**
+
+1. **Preferred — dispatch an independent reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available) with the full plan file contents and the audit brief below. A subagent has none of your plan-authoring context, so its read is genuinely independent. Wait for its findings.
+
+2. **Fallback — if subagents are unavailable**, perform the audit yourself, but explicitly switch voice: open a section headed `=== AUDITOR ===`, drop the author's stance, and adopt a skeptic whose success metric is finding holes. List concrete defects, not reassurance.
+
+**The audit brief handed to the AUDITOR:**
 
 ```
-Please audit this plan for a new script. Evaluate:
+You are the AUDITOR — an independent second brain reviewing a plan you
+did NOT write. Your job is to break it, not bless it. Evaluate:
 1. Does the function list cover the goal, or is anything missing?
-2. Are the self-healing mechanisms adequate? Where could the script silently lose data?
-3. Are there simpler approaches that meet the same five properties (smooth, consistent, reliable, self-healing, optimized)?
-4. Any open questions you can answer?
-Return specific, actionable feedback — not just approval.
+2. Are the self-healing mechanisms adequate? Where could the script
+   silently fail, lose data, or wedge?
+3. Are there simpler approaches that meet the same five properties
+   (smooth, consistent, reliable, self-healing, optimized)?
+4. Answer the plan's OPEN QUESTIONS directly.
+Return specific, actionable defects ranked by severity — not approval.
+For each: what's wrong, why it bites, and the concrete fix.
 
 === PLAN BEGINS ===
 <plan contents here>
 === PLAN ENDS ===
 ```
 
-When the user returns with Codex's feedback, integrate each item explicitly:
+When the AUDITOR's findings come back, integrate each item explicitly with the user:
 
-- For each Codex point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
-- Update the plan file with every accepted change, noted with a `> [Codex]` callout so edits are traceable.
+- For each AUDITOR point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
+- Update the plan file with every accepted change, noted with a `> [AUDITOR]` callout so edits are traceable.
 
-Loop until the user says they are satisfied. Do not proceed to Phase 7.5 without explicit user go-ahead.
+Loop until the user says they are satisfied (optionally re-running the AUDITOR on the revised plan for a second pass). Do not proceed to Phase 7.5 without explicit user go-ahead.
 
 
 ### Phase 7.5 — Per-Function Audit Spec
 
-For every function flagged as **risky** in Phase 5, produce a full audit-grade specification using the 17-field template below. This is the artifact Codex actually audits — every field exists to give the reviewer something specific to engage with, not rubber-stamp.
+For every function flagged as **risky** in Phase 5, produce a full audit-grade specification using the 17-field template below. This is the artifact the AUDITOR actually audits — every field exists to give the reviewer something specific to engage with, not rubber-stamp.
 
 Safe functions get a one-line summary. Only risky ones get the full spec.
 
@@ -652,7 +664,7 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              and why a future reader might be
                              tempted to add it anyway.
 
-15. Open questions (Codex)   Explicit prompts for audit: "I'm
+15. Open questions (AUDITOR) Explicit prompts for audit: "I'm
                              not sure about X — can you
                              challenge it?" Makes the review
                              targeted, not hunt-and-peck.
@@ -871,7 +883,7 @@ Use these primitives when writing the plan and the prototype. Prefer simple vers
 Same list as the `optimize` skill, plus these specific to Phase 8:
 
 - Do not write the whole script in one pass before the user has approved each function.
-- Do not skip Phase 7 (Codex audit) because "the plan looks fine to me."
+- Do not skip Phase 7 (AUDITOR audit) because "the plan looks fine to me." The author brain never grades its own plan.
 - Do not declare Phase 9 done while any pentest check is failing.
 - Do not invent requirements the user did not ask for — if uncertain, ask.
 - Do not put `input()` / `getpass()` / `Read-Host` / GUI prompts inside any ENGINE function (post-startup-gate). The pipeline runs blind once the engine fires — every decision must resolve from startup-gate config, env vars, CLI flags, defaults, or computed state. Field 16 of every per-function spec must declare this explicitly.
@@ -889,13 +901,13 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 │  Done:                                                       │
 │  • <observable artifact / state>                             │
 │  • <observable artifact / state>                             │
-│  • Plan iterations: <N>  (plan → Codex → revise → approve)   │
+│  • Plan iterations: <N>  (plan → AUDITOR → revise → approve) │
 │  • Functions built: <N>                                      │
 │  • Self-healing hooks: <retry/checkpoint/atomic-write spots> │
 │                                                              │
 │  Pending / Blocker / Ambiguity:                              │
 │  • <each MUST-hold or end-state check that didn't clear,     │
-│    or each Codex point not yet integrated>                   │
+│    or each AUDITOR point not yet integrated>                 │
 │  • Permanent changes installed: <change + exact removal>     │
 │    (omit if none installed)                                  │
 │  • Known limitations: <out-of-scope items the user accepted> │
