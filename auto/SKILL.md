@@ -75,6 +75,8 @@ These tools are mandatory for autonomous work and are NOT loaded by default. Ski
 
 **Every time you launch a long-running shell job in the background, immediately arm a `Monitor` on its log/output.** The filter MUST cover BOTH success markers AND failure signatures (`Traceback|Error|Killed|FAILED|OOM|assert` plus domain-specific completion markers like `[DONE]`, `Successful:`). Silence ≠ success — a filter that matches only the happy path makes a crash look identical to "still running."
 
+**Every Monitor wait needs a deadline.** A hang produces neither a success marker nor a failure signature — so a filter watching only for those two waits forever on a wedged job (a stalled ffmpeg encode, a frozen download). Set a max wait of ~2× the step's expected duration; on expiry, treat the job as **STALLED** (not done, not failed) and escalate per heuristic #13 (cheapest action first — probe the artifact layer, then kill+retry, never silent wait). For tool-specific jobs, add that tool's real failure strings to the filter (e.g. ffmpeg: `Conversion failed|Invalid data|No space left`), and lean on exit code + artifact checks as the primary oracle rather than log-string matching alone.
+
 **Use `CronCreate`** for scheduled retries, periodic state checks, deferred re-runs, or any "check back later" pattern that would otherwise require the user to remember.
 
 This phase has NO output to the user. Load the tools, then continue to Phase 0.
@@ -326,6 +328,10 @@ This is what makes Pattern 3 (cron mode) survive a chat going silent — the cro
 Steps must be **atomic and verifiable**. "Implement the feature" is the GOAL, not a step. "Write feature_X.py with function `foo(bar) -> baz`" with verify "`python -c 'from feature_X import foo'` exits 0" is a step.
 
 If a step's verify can't be expressed as an observable check, the step is not atomic enough — split it.
+
+**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. This only fires on the bare path that lacks /prep's vetting.
+
+**Freeze the self-derived Success line.** A Success line from /prep is frozen (line 137). A self-derived Success line gets the **same** freeze: once written to the runbook it is never re-derived or edited mid-run — only the steps beneath it change. This stops "done" from quietly redefining itself toward whatever was achieved after a compaction.
 
 ### Stage-mode runbook (auto-detected for build tasks)
 
@@ -900,7 +906,16 @@ Tick fires → fresh claude code session → /auto re-invoked
   3. Read tail of auto-<slug>/logs/run.log (~30 lines of recent history)
   4. Check for auto-<slug>/VERDICT_DONE or auto-<slug>/VERDICT_STUCK
        If either exists → CronDelete + exit (loop self-uninstalls)
+  4b. TICK LOCK — check auto-<slug>/TICK_LOCK:
+       - fresh lock (timestamp < one interval old) → a prior tick is
+         still working; exit immediately (do NOT start a duplicate —
+         this is what prevents two ffmpeg jobs on the same output)
+       - stale lock (older than one interval) → prior tick died mid-step;
+         treat its in-progress step as STALLED, escalate per heuristic #13
+       - no lock → write TICK_LOCK with current timestamp, continue
   5. Pick first non-DONE / non-PARKED step from runbook
+       (if none and success unmet → write Status: PARTIAL + VERDICT, exit —
+        the all-parked terminus; never tick forever with nothing to do)
   6. Execute that step:
        - Bash for direct commands
        - Bash with run_in_background=true for long ones
@@ -910,7 +925,8 @@ Tick fires → fresh claude code session → /auto re-invoked
        Fail → enter fix mode, /repair sub-loop, rotate up to 5x
   8. Update auto-<slug>/RUNBOOK.md and auto-<slug>/logs/run.log
   9. Write auto-<slug>/PROGRESS.md with one-line "this tick did X" summary
- 10. Exit. Next tick fires N min later.
+ 10. Remove auto-<slug>/TICK_LOCK (release for the next tick), then exit.
+     Next tick fires N min later.
 ```
 
 Each tick is **stateless from the model's perspective** — every file read on every tick. No conversation memory carries between ticks. This is what makes the architecture survive context compression and chat idleness.
@@ -975,6 +991,12 @@ Procedure:
 
 - Merge into one step verify result. The step PASSES iff every item passes. Failures list the offending item ids → those become fix-mode targets.
 
+**A non-answer is a failure, never a pass.** A sub-agent can crash, hang, or return garbage. Handle it explicitly — silence must not be read as success:
+
+- **No verdict / unparseable / hallucinated item id** → that item is `fail (no verdict)`. Never count a missing `pass` as a pass.
+- **Hang** → give each sub-agent a deadline; on expiry the item is `fail (timeout)`.
+- Validate every returned item id against the set you dispatched; an id you didn't send is `fail`.
+
 This is the operational form of the "launch independent parallel steps" note: wall-clock collapses to the slowest single item, and the driver's context never fills with N items' worth of detail.
 
 ### Context offloading — keep the driver lean
@@ -989,6 +1011,8 @@ The driver's context is the scarce resource on long jobs; when it fills, the ses
 Offload:  "find which of these 40 files defines X" → sub-agent returns the path
 Don't:    content you must edit or quote exactly   → read it directly in the driver
 ```
+
+**Re-confirm before acting on a returned pointer.** The sub-agent's context is discarded, so its answer can't be audited later — a wrong or hallucinated path would silently send the driver editing the wrong file. Before acting on a returned path/line, the driver does one cheap check that it exists (a `Read` of that line, a `Test-Path`). Confirm, then act.
 
 This is the long-job survival lever: a lean driver runs a multi-hour pipeline end to end without hitting the context wall.
 
@@ -1254,6 +1278,16 @@ When a single step refuses to clear after bounded retries, do NOT halt the whole
 Halting the whole run for one stuck step is the worst version of pause-and-ask. The other 80% of the work could have made it home.
 
 This is P3 example J applied: park and flag, never halt and ask.
+
+**The all-parked terminus (never freeze).** When no step is PENDING or IN PROGRESS — every remaining step is DONE or PARKED — the run is terminal. It MUST write a verdict, never keep ticking with nothing to advance:
+
+```
+- Success condition met (despite parked steps)  → refuter gate, then Status: DONE
+- Success condition NOT met (parked steps blocked it) → Status: PARTIAL,
+  listing each parked step + reason
+```
+
+A runbook with no advanceable step and no terminal `Status:` line is the silent-freeze failure: the Stop hook keeps returning "continue" while there is nothing to do. `PARTIAL` is a terminal verdict the Stop hook honors — writing it ends the run cleanly. Never leave an all-parked runbook without a `Status:` verdict.
 
 
 ## Cron Mode (see Pattern 3 above)
