@@ -248,7 +248,10 @@ Status:
   Approaches tried:  0   (resets each step)
   Parked steps:      []
   Mode reason:       (filled when Mode != NORMAL)
+  Refuter:           n/a   (judgment-based goals: pending | clean | <n> BLOCKERs | round 1|2)
 ```
+
+`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate).
 
 ### Per-step lifecycle
 
@@ -650,7 +653,9 @@ Before generating the runbook, /auto MUST:
 
    Then Phase 9 integration steps from TESTING CONDITIONS card.
 
-   Then BUILD STATUS card update + FINAL VERDICT.
+   Then BUILD STATUS card update + FINAL VERDICT (the terminal
+   FINAL VERDICT routes through the Terminal Refuter Gate when the
+   success condition is judgment-based).
 ```
 
 ### /auto on top of /repair
@@ -771,6 +776,8 @@ These never bend.
    - First action of every cron tick (Pattern 3 — mandatory)
 
    Re-read scope: `./auto-runbook-<slug>.txt` (state) OR `./auto-<slug>/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), and the last ~30 lines of `./auto-log-<slug>.txt` (recent history). If the files disagree with conversation memory, trust the files and acknowledge the file truth in the next text output.
+
+9. **No terminal DONE before the refuter clears (judgment-based goals).** When the Success line is a judgment call, the terminal `Status: DONE` / `FINAL VERDICT: DONE` line MUST NOT be written until the runbook's `Refuter:` field reads `clean`. The Stop hook releases on that `Status:` line, so writing DONE first would let the run stop before the refuter can re-open it. All-steps-PASS is necessary but NOT sufficient for DONE — the refuter gate is. Machine-checked goals are exempt (`Refuter: n/a`). See Terminal Refuter Gate.
 
 
 ## Pre-Action One-Liner Format
@@ -947,6 +954,45 @@ Everything else (3-10 steps, 5-30 min, user present)         → Pattern 2
 When in doubt for shorter tasks, prefer Pattern 2 over Pattern 1.
 
 
+## Sub-agent Delegation — fan-out & context offloading
+
+Two execution disciplines that keep /auto fast and survivable on long jobs. Both delegate to throwaway sub-agents (the `Agent` tool) with isolated context, so the **driver's own context stays lean**. A sub-agent never inherits the session history — construct exactly the scope + inputs it needs, and take back only its conclusion.
+
+### Fan-out — same action × N independent items
+
+When a runbook step is "do the same check/action to N independent items" (verify 200 render outputs, validate N config files, pre-flight N source clips), do NOT loop through them in the driver's context.
+
+```
+Trigger:  N >= ~5 independent items, no shared state, same operation
+Below 5:  just loop inline (KISS — fan-out overhead isn't worth it)
+```
+
+Procedure:
+
+- Dispatch one sub-agent per item (or per batch of items), concurrency capped at **~8-12 at a time** — not unlimited; match the machine, don't thrash it.
+
+- Each sub-agent returns a **structured verdict ONLY** — `pass`, or `fail + reason + item id` — never raw logs/output.
+
+- Merge into one step verify result. The step PASSES iff every item passes. Failures list the offending item ids → those become fix-mode targets.
+
+This is the operational form of the "launch independent parallel steps" note: wall-clock collapses to the slowest single item, and the driver's context never fills with N items' worth of detail.
+
+### Context offloading — keep the driver lean
+
+The driver's context is the scarce resource on long jobs; when it fills, the session compacts and quality drops. Offload heavy reads so the bulk never lands in the driver.
+
+- Any discovery/read that pulls large content into the driver's context but isn't needed verbatim afterward — scanning a large file, grepping a big tree, reading many files to locate something — delegate to a throwaway sub-agent that returns **ONLY the conclusion** (the path, the line, the answer).
+
+- The driver keeps decisions + state; the raw content stays in the sub-agent's disposable context and is discarded.
+
+```
+Offload:  "find which of these 40 files defines X" → sub-agent returns the path
+Don't:    content you must edit or quote exactly   → read it directly in the driver
+```
+
+This is the long-job survival lever: a lean driver runs a multi-hour pipeline end to end without hitting the context wall.
+
+
 ## Universal Principles (apply in both shapes)
 
 These are the principles that make /auto trustworthy regardless of execution shape.
@@ -999,6 +1045,8 @@ Next:        <concrete next move if status != DONE,
 ```
 
 The report is the contract. If it says DONE, it's done. If it says PARTIAL, it lists exactly what's missing.
+
+Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
 
 ## Operational Heuristics — patterns from production runs
@@ -1226,6 +1274,55 @@ The key thing to remember when reading older docs or code that still references 
 - **No burning past 5 failed approaches without declaring STUCK.** The whole point is bounded autonomy.
 
 
+## Terminal Refuter Gate — independent DONE check
+
+Before /auto writes `Status: DONE`, one fresh agent tries to prove it is NOT done. This is the **independent upgrade** of the same-context "AUDIT vs END GOAL" step: the brain that did the work shares every blind spot that produced it, so it is the wrong brain to clear it. Empirically, a model grading its own output is unreliable (intrinsic self-correction often fails to improve and can degrade), and self-preference bias bites hardest exactly when the work is weakest — the worst time to be blind. An independent verifier is the documented fix, and verification is the cheap side of the generator-verifier gap.
+
+### When it fires
+
+Only when "done" is a **judgment call**. If the runbook's success line is a deterministic machine check that already passed (`pytest` exits 0, checksum matches, file exists at expected size), **SKIP** the refuter — that verify check IS the independent oracle, and self-preference can't bias a green test. Fire it when success is judgment-shaped: "pipeline handles real input", "output looks right", "report is complete", "no regressions in adjacent features".
+
+### Sequence (refute first, flip second)
+
+```
+1. All runbook steps verified PASS   (necessary, NOT sufficient for DONE)
+2. → set runbook Refuter: pending, dispatch refuter   (Status still NOT DONE)
+3a. refuter clean      → set Refuter: clean → write Status: DONE → emit AUTO DONE
+3b. refuter BLOCKER    → set Refuter: <n> BLOCKERs → keep Status non-DONE,
+                          re-enter fix mode on the unmet item
+```
+
+Running the refuter AFTER flipping Status would release the Stop hook (see auto-stop enforcement + Hard Invariant #9) and the run couldn't re-enter cleanly. Refute first, flip second — and the `Refuter:` field carries this in the runbook so it survives compaction.
+
+### The refuter brief
+
+Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — the same machinery /audit and /prep use. Hand it ONLY:
+
+- the **frozen Success line + per-step verify checks** (the yardstick — nothing else),
+- the observable artifacts produced,
+- the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks).
+
+Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.)
+
+### Verdict handling — severity-gated
+
+- **BLOCKER** (maps to a specific unmet Success item / failed verify) → re-enter fix mode on that item. ONLY a BLOCKER re-opens /auto.
+
+- **CONCERN / NOTE** → logged to the Notes file's Open Questions. Does NOT block DONE.
+
+### Bound (so it can never loop forever)
+
+Max **2 refute rounds** per run. /auto has no other run-level loop counter — without this bound, a refuter that keeps finding holes prevents termination. On the 2nd round still BLOCKER → stop and emit **AUTO PARTIAL** listing the refuter's open holes. Never silently loop; never silently DONE.
+
+### Not a user-facing gate
+
+The refuter is internal — it passes silently or auto-re-enters fix mode within the bound. It never asks the user "I found holes, keep going?" (that would violate no-gates / "invocation is authorization"). It only surfaces at the terminal PARTIAL/STUCK verdict.
+
+### Fallback
+
+If sub-agents are unavailable, run a same-context skeptic pass against the Success line and mark it explicitly as a **same-context fallback** — weaker, since the whole point is independence.
+
+
 ## Final Report Templates
 
 ### Inline auto, success
@@ -1272,4 +1369,6 @@ Same shape, but written to `auto-<slug>/VERDICT_DONE` or `auto-<slug>/VERDICT_ST
 - Diagnose, rotate approaches, never advance on lies, stop on DONE or STUCK.
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes.
+- On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
+- Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
 - Operational heuristics #8-13: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree.
