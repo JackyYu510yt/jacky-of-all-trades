@@ -179,6 +179,12 @@ Once the gate clears, the rule is permanent for the rest of the run: no further 
 
 After the activation gate clears, /auto writes a runbook file BEFORE any step runs. The runbook is the contract /auto follows — every step lists the action and the observable check that means "step done." /auto executes the runbook deterministically, only entering "fix mode" (diagnose + rotate) when a step's verify check fails.
 
+### Everything lives under `./auto-runs/<slug>/`
+
+**All of /auto's own artifacts for a run live inside one per-run folder: `./auto-runs/<slug>/`.** The working directory only ever gains a single visible `auto-runs/` folder no matter how many /auto runs happen there — runbook, log, notes, and (Pattern 3) the full state set all nest inside the slug subfolder. This keeps the user's working directory clean instead of scattering loose `auto-*` files alongside their own code. The only marker outside a slug folder is `./auto-runs/.session-<session_id>` at the root (see Session marker).
+
+Create the folder (`mkdir -p ./auto-runs/<slug>/`) before writing the first artifact. Artifacts the user's own scripts/build produce (logs, backups, caches) are NOT /auto's to relocate — this folder is for /auto's bookkeeping only.
+
 ### Slug derivation
 
 Every /auto run gets a **slug** — a short identifier suffixed onto the runbook file, the log file, and (for Pattern 3) the state folder. The slug uniquely identifies ONE /auto run for the rest of that run's life. Two parallel chats in the same directory must never resolve to the same slug.
