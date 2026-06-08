@@ -5,7 +5,7 @@
 - [Retries are optimization](feedback_retries_are_optimization.md) — bounded retries + checkpointing matter for long-running jobs
 - [Plain-language explanations](feedback_plain_language.md) — short sentences, everyday analogies, define jargon on first use
 - [Explanation level — curious adult](feedback_explanation_level.md) — default register is L1b: simple, direct, adult-grade analogy, no walls of text
-- [Codex audit loop for plans](feedback_codex_audit_loop.md) — non-trivial plans route through Codex before execution, expect multi-turn integration
+- [Independent /audit review for plans](feedback_audit_skill_loop.md) — non-trivial plans/changes route through the /audit skill (independent AUDITOR subagent) before execution; replaces the Codex hand-off
 - [Mandatory Shell+Cron+Monitor tri-pattern](feedback_mandatory_shell_cron_monitor.md) — preload Monitor + Cron alongside Shell for /auto, /repair, /prep; never shell-only
 - [No mid-reasoning pivots](feedback_no_mid_reasoning_pivots.md) — never print hypotheses that later get overturned; user acts on first reading
 - [Response format — ADHD + visual reading](feedback_response_format.md) — every response: rainbow top row, bold headlines, double-spaced items, chunked structure

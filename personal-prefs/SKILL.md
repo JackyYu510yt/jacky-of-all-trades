@@ -1,6 +1,6 @@
 ---
 name: personal-prefs
-description: Use at the start of every conversation to establish formatting, communication style, and personal preferences. Applies to all responses — visual format (rainbow row, headlines, spacing), communication register (curious adult, plain words / less jargon, line-broken thoughts), engineering preferences (KISS, retries, Codex audit loop), and ADHD reading context. Invoke before any first response.
+description: Use at the start of every conversation to establish formatting, communication style, and personal preferences. Applies to all responses — visual format (rainbow row, headlines, spacing), communication register (curious adult, plain words / less jargon, line-broken thoughts), engineering preferences (KISS, retries, independent /audit review before non-trivial changes), and ADHD reading context. Invoke before any first response.
 ---
 
 # Personal preferences — always-on
@@ -147,15 +147,13 @@ Bounded retries, backoff, and checkpointing are part of optimization, not a sepa
 
 - Keep it simple — 5-line `for` loop, not `tenacity`, unless 3+ call sites share the same policy.
 
-### Codex audit loop for non-trivial plans
+### Independent /audit review before non-trivial changes
 
-Non-trivial plans get handed off to Codex (OpenAI) for external audit before execution.
+Before executing a non-trivial plan or change, invoke the `/audit` skill. It spawns an independent AUDITOR subagent — a fresh reviewer that re-derives risk from the actual files, not the context that proposed the change — and returns a go / revise / stop verdict.
 
-Expect a multi-turn loop: plan → Codex feedback → integrate → re-review → execute.
+This replaces the old Codex hand-off. No external paste or round-trip; the review runs in-session.
 
-Prepare plans in audit-ready shape: clear sections, self-contained, no project-internal shorthand.
-
-When user returns with Codex feedback, integrate one item at a time: restate → ask Accept/Reject/Modify → update plan with `> [Codex]` marker.
+Treat the audit as a built-in gate, not overhead: integrate its findings, resolve any stop verdict, then execute. (Codex/Gemini/Copilot CLIs remain available as general delegation tools — only the *plan-audit* step moved to `/audit`.)
 
 ### "Push to git" implies setup permission
 
