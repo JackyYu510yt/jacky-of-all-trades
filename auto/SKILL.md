@@ -10,7 +10,7 @@ Universal autonomous mode. The user invokes `/auto` to hand Claude a task; Claud
 
 ## Installation (one-time, per machine)
 
-The `/auto` skill ships with a hook script — `hooks/auto-log-hook.py` — that auto-appends every state-changing tool call to `./auto-log-<slug>.txt` (or `./auto-<slug>/logs/run.log` for Pattern 3) when an active /auto run is detected. Without this hook, log appending falls back to model discipline and gets unreliable on long runs.
+The `/auto` skill ships with a hook script — `hooks/auto-log-hook.py` — that auto-appends every state-changing tool call to `./auto-runs/<slug>/log.txt` (or `./auto-<slug>/logs/run.log` for Pattern 3) when an active /auto run is detected. Without this hook, log appending falls back to model discipline and gets unreliable on long runs.
 
 To wire it up on a fresh install (or new PC), add this block to your `~/.claude/settings.json` under `hooks` (merge with existing hooks if any):
 
@@ -42,7 +42,7 @@ Linux    →  /home/<your-username>
 
 Empty `"matcher": ""` means "fire on every tool call" — the hook itself filters down to state-changing tools (Bash, Edit, Write, NotebookEdit, PowerShell). Read-only tools (Read, Glob, Grep, etc.) are skipped at the hook level so the log stays focused.
 
-**Verification:** after wiring, run `/auto` on a small task in any folder. After it generates the runbook, check the matching `./auto-log-<slug>.txt` — every tool call should appear as a one-line `[timestamp] [tool] <summary>` entry without the model having to remember to write them.
+**Verification:** after wiring, run `/auto` on a small task in any folder. After it generates the runbook, check the matching `./auto-runs/<slug>/log.txt` — every tool call should appear as a one-line `[timestamp] [tool] <summary>` entry without the model having to remember to write them.
 
 The invocation **is** the authorization. There is no Phase-0-confirm-the-plan gate. There are no "should I proceed?" checkpoints. There are no "want me to run X to verify Y?" offers. Claude states what it's about to do in one or two sentences, then does it, and reports back when DONE or STUCK.
 
@@ -218,7 +218,7 @@ On DONE or STUCK, /auto deletes its session marker as part of the final report s
 ### Runbook file location
 
 ```
-./auto-runbook-<slug>.txt   Patterns 1 & 2 (inline / background+monitor)
+./auto-runs/<slug>/runbook.txt   Patterns 1 & 2 (inline / background+monitor)
 ./auto-<slug>/RUNBOOK.md    Pattern 3 (cron+monitor+shell — lives with state files)
 ```
 
@@ -298,7 +298,7 @@ Resumption is **explicit-only** — /auto never auto-resumes a prior run by glob
 On resume, the runbook file is the source of truth:
 
 ```
-1. Read ./auto-runbook-<slug>.txt (or ./auto-<slug>/RUNBOOK.md)
+1. Read ./auto-runs/<slug>/runbook.txt (or ./auto-<slug>/RUNBOOK.md)
 2. Find the first step that is not DONE and not PARKED
 3. Resume from that step
 ```
@@ -412,7 +412,7 @@ Alongside the runbook, /auto keeps an append-only activity log. Where the runboo
 ### Log file location
 
 ```
-./auto-log-<slug>.txt        Patterns 1 & 2
+./auto-runs/<slug>/log.txt        Patterns 1 & 2
 ./auto-<slug>/logs/run.log   Pattern 3 (with per-tick logs in ./auto-<slug>/logs/<ts>.txt)
 ```
 
@@ -464,7 +464,7 @@ In Pattern 3 cron mode, every cron tick begins with reading the log tail before 
 [2026-04-30T22:02:35Z] [NORMAL] [Step 2] DONE
 ```
 
-The user can `tail -f ./auto-log-<slug>.txt` during a run to watch live, OR `cat` it after for a complete audit trail of what was done, tested, tried, and why.
+The user can `tail -f ./auto-runs/<slug>/log.txt` during a run to watch live, OR `cat` it after for a complete audit trail of what was done, tested, tried, and why.
 
 
 ## The Implementation Notes (per-run narrative)
@@ -485,7 +485,7 @@ The notes do NOT span multiple /auto runs. A new /auto with a different slug get
 ### File location
 
 ```
-./auto-notes-<slug>.md           Patterns 1 & 2
+./auto-runs/<slug>/notes.md           Patterns 1 & 2
 ./auto-<slug>/NOTES.md           Pattern 3 (lives with state files)
 ```
 
@@ -781,7 +781,7 @@ These never bend.
    - Every 5 tool calls since last re-read (compression hedge)
    - First action of every cron tick (Pattern 3 — mandatory)
 
-   Re-read scope: `./auto-runbook-<slug>.txt` (state) OR `./auto-<slug>/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), and the last ~30 lines of `./auto-log-<slug>.txt` (recent history). If the files disagree with conversation memory, trust the files and acknowledge the file truth in the next text output.
+   Re-read scope: `./auto-runs/<slug>/runbook.txt` (state) OR `./auto-<slug>/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), and the last ~30 lines of `./auto-runs/<slug>/log.txt` (recent history). If the files disagree with conversation memory, trust the files and acknowledge the file truth in the next text output.
 
 9. **No terminal DONE before the refuter clears (judgment-based goals).** When the Success line is a judgment call, the terminal `Status: DONE` / `FINAL VERDICT: DONE` line MUST NOT be written until the runbook's `Refuter:` field reads `clean`. The Stop hook releases on that `Status:` line, so writing DONE first would let the run stop before the refuter can re-open it. All-steps-PASS is necessary but NOT sufficient for DONE — the refuter gate is. Machine-checked goals are exempt (`Refuter: n/a`). See Terminal Refuter Gate.
 
@@ -879,7 +879,7 @@ auto-<slug>/APPROACHES.md Append-only retry log — every approach
                           tried for every step, with the reason it
                           failed.
 
-auto-log-<slug>.txt       Append-only activity log (also lives at
+auto-runs/<slug>/log.txt       Append-only activity log (also lives at
                           auto-<slug>/logs/run.log under Pattern 3
                           for per-tick separation).
 
@@ -1365,7 +1365,7 @@ If sub-agents are unavailable, run a same-context skeptic pass against the Succe
 Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
-Notes:   ./auto-notes-<slug>.md  (decisions + open questions)
+Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
 ### Inline auto, partial
@@ -1375,7 +1375,7 @@ Goal:        <one sentence>
 Done:        <what landed>
 Missing:     <what didn't, with reason>
 Next:        <concrete suggested move>
-Notes:       ./auto-notes-<slug>.md  (decisions + open questions)
+Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
 ### Inline auto, stuck
@@ -1388,7 +1388,7 @@ Approaches tried (N):
   ...
 Why I'm stopping: <why no 6th approach exists>
 Hand back to user — recommend: <best concrete next step>
-Notes:       ./auto-notes-<slug>.md  (decisions + open questions)
+Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
 ### Cron auto, on terminal verdict
