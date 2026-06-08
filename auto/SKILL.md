@@ -596,7 +596,7 @@ The user's standard invocation pattern is:
 /principles  →  /auto (or /prep or /repair)  →  proceed
 ```
 
-`/principles` is run first to load all eight principles into context (P1 test-at-scale, P2 conditions-upfront, P3 end-goal-in-sight, P4 audit-before-handback, P5 KISS, P6 think-before-coding, P7 surgical-changes, P8 goal-driven-execution). Then the action skill runs with the principles already active as standing checkpoints. Then `proceed` is the standing authorization.
+`/principles` is run first to load all nine principles into context (P1 test-at-scale, P2 conditions-upfront, P3 end-goal-in-sight, P4 audit-before-handback, P5 KISS, P6 think-before-coding, P7 surgical-changes, P8 goal-driven-execution, P9 build-for-the-real-run). Then the action skill runs with the principles already active as standing checkpoints. Then `proceed` is the standing authorization.
 
 When this pattern is detected (recent `/principles` skill invocation OR principle keywords in recent context), /auto skips re-reminding the user about principles and proceeds straight into Phase 0 plan ingestion + activation gate. The principles are already loaded; don't restate them.
 
@@ -1078,6 +1078,12 @@ The report is the contract. If it says DONE, it's done. If it says PARTIAL, it l
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
+
+### Build for the real run (P9 — practicality)
+
+Judge every step and the final verdict against the REAL operating envelope, not the demo: the real input size, the real run duration, unattended execution, messy/missing inputs, resource limits, and recovery after a partial failure. A green run on a small or clean sample is NOT DONE if the real job is bigger, longer, or dirtier — verify against the conditions the task will actually meet. This covers only conditions you can prove will occur; a safeguard for an imaginary case is still a P5 (KISS) violation, not practicality.
+
+Most of /auto's machinery already serves this — the self-derived verify sanity pass (P1), stage-mode's different-input re-run, disk-is-truth (#8), the escalation tree (#13), checkpointed cron state, and the Terminal Refuter's "holds on a different input with no Claude present" check. P9 is the name that ties them together and the bar the final report is judged against. (Unnumbered on purpose — the numbered list 1–7 continues into the Operational Heuristics' #8–13, so this anchor sits outside that run to avoid renumbering them.)
 
 ## Operational Heuristics — patterns from production runs
 
