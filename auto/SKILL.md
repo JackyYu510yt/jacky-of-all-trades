@@ -75,7 +75,7 @@ These tools are mandatory for autonomous work and are NOT loaded by default. Ski
 
 **Every time you launch a long-running shell job in the background, immediately arm a `Monitor` on its log/output.** The filter MUST cover BOTH success markers AND failure signatures (`Traceback|Error|Killed|FAILED|OOM|assert` plus domain-specific completion markers like `[DONE]`, `Successful:`). Silence ≠ success — a filter that matches only the happy path makes a crash look identical to "still running."
 
-**Every Monitor wait needs a deadline.** A hang produces neither a success marker nor a failure signature — so a filter watching only for those two waits forever on a wedged job (a stalled ffmpeg encode, a frozen download). Set a max wait of ~2× the step's expected duration; on expiry, treat the job as **STALLED** (not done, not failed) and escalate per heuristic #13 (cheapest action first — probe the artifact layer, then kill+retry, never silent wait). For tool-specific jobs, add that tool's real failure strings to the filter (e.g. ffmpeg: `Conversion failed|Invalid data|No space left`), and lean on exit code + artifact checks as the primary oracle rather than log-string matching alone.
+**Every Monitor wait needs a deadline.** A hang produces neither a success marker nor a failure signature — so a filter watching only for those two waits forever on a wedged job (a stalled ffmpeg encode, a frozen download). Set a max wait of ~2× the step's expected duration; on expiry, treat the job as **STALLED** (not done, not failed) and escalate per heuristic #13 (cheapest action first — probe the artifact layer, then kill+retry, never silent wait). For tool-specific jobs, add that tool's real failure strings to the filter (e.g. ffmpeg: `Conversion failed|Invalid data|No space left`), and lean on exit code + artifact checks as the primary oracle rather than log-string matching alone. On a STALLED verdict for a job with a visual surface, capture + read a visual checkpoint BEFORE the kill/retry (see Visual Checkpoints) — see the stall, don't just infer it. And when the deadline has been shortened to a checkpoint interval, an expiry means "look now," not STALLED — the ~2× stall clock accrues across re-arms.
 
 **Use `CronCreate`** for scheduled retries, periodic state checks, deferred re-runs, or any "check back later" pattern that would otherwise require the user to remember.
 
@@ -439,6 +439,7 @@ File edit/write       file path + lines changed
 Mode transition       NORMAL → DIAGNOSING → ROTATING (or back)
 Approach choice       which N/5 + the reason
 Verify result         PASS/FAIL + the check that ran
+Screenshot            shots/ path + trigger, then one-line Shot read verdict
 Sibling note          P7 violation parked for later
 /repair sub-loop      entry (with hypothesis list) and exit (verdict)
 Cron tick             tick start and tick end (Pattern 3 only)
@@ -471,6 +472,95 @@ In Pattern 3 cron mode, every cron tick begins with reading the log tail before 
 ```
 
 The user can `tail -f ./auto-runs/<slug>/log.txt` during a run to watch live, OR `cat` it after for a complete audit trail of what was done, tested, tried, and why.
+
+
+## Visual Checkpoints — screenshots so a stall can be SEEN
+
+Logs only report what the code thought to print. A frozen progress bar, a surprise GUI dialog, a browser parked on a login wall, a render writing black frames — none of these print a Traceback. The verbose output goes quiet (or keeps repeating) and everything *looks* fine in text. Visual checkpoints close that gap: /auto captures what the screen (or the output artifact) actually looks like, then READS the image itself and judges it.
+
+### When to capture
+
+```
+Major events (any step with a visual surface):
+  - Step transition: STARTED → DONE / BLOCKED / PARKED
+  - Mode → DIAGNOSING                (capture the failure as it looks NOW)
+  - STALLED verdict (Monitor deadline expired) — capture BEFORE kill/retry
+  - Right before terminal DONE on a job whose output is visual
+
+Timer interval (long steps):
+  - Step expected to run >10 min → capture every ~10 min while it runs
+  - Pattern 3 → one capture per cron tick while a long step is
+    IN PROGRESS (the tick IS the timer)
+```
+
+Interval mechanics: either set the Monitor wait deadline to the interval so each expiry is a checkpoint moment (capture → read → re-arm), or launch a tiny background loop that saves a shot every interval and read the newest at each check-in. Never foreground-sleep to wait for the next shot.
+
+**Checkpoint expiry ≠ stall verdict.** When the Monitor deadline is shortened to the checkpoint interval, an expiry means "look now," not "STALLED." The Phase −1 stall rule (~2× expected step duration) still governs: keep a running clock across re-arms, and only declare STALLED when the cumulative wait crosses it — or earlier, when the shots themselves show no progress (two-identical-shots rule below) AND a heuristic #8 artifact probe (output file mtime/size growth) agrees.
+
+### How to capture — match the surface
+
+```
+Browser automation       Playwright screenshot (browser-use / webapp-testing)
+GUI app on the desktop   PowerShell full-screen grab (snippet below)
+Video render in flight   frame-grab the newest FINISHED segment (primary):
+                           ffmpeg -sseof -1 -i seg_0042.mp4 -frames:v 1 shot.png
+                         A half-written default mp4 has no moov atom — ffmpeg
+                         can't open it at all. -sseof on the GROWING file works
+                         only for seekable formats (MKV, fragmented mp4, .ts).
+Background process       No window — a desktop grab proves nothing. Frame-grab
+                         the output artifact instead.
+No visual surface        SKIP — use heuristic #8 artifact probes instead
+```
+
+Desktop grab (Windows):
+
+```powershell
+$shots = "<ABSOLUTE path to auto-runs/<slug>/shots>"
+New-Item -ItemType Directory -Force $shots | Out-Null
+Add-Type -AssemblyName System.Windows.Forms,System.Drawing
+$s = [System.Windows.Forms.SystemInformation]::VirtualScreen
+$bmp = New-Object System.Drawing.Bitmap $s.Width,$s.Height
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.CopyFromScreen($s.Location,[System.Drawing.Point]::Empty,$s.Size)
+$bmp.Save("$shots\<timestamp>-<trigger>.png")
+$g.Dispose(); $bmp.Dispose()
+```
+
+Absolute path + `New-Item -Force` are load-bearing: `Bitmap.Save` resolves relative paths against the process CurrentDirectory (not `$PWD`) and throws an opaque GDI+ error if the folder is missing.
+
+If the grab fails or returns black / a lock screen (headless cron tick, no interactive desktop), that is NOT a job failure — log "shot unavailable" once and fall back to heuristic #8 artifact probes for the rest of the run.
+
+### Files + log lines
+
+```
+./auto-runs/<slug>/shots/<timestamp>-<trigger>.png
+```
+
+`<trigger>` is one of `step-done`, `step-blocked`, `diagnosing`, `stalled`, `interval`, `pre-done`. Timestamps use the filename-safe form the logs already use (`2026-04-30T22-01-08`). Every capture appends TWO log lines (model-written — the PostToolUse hook logs the capture command itself but not these):
+
+```
+[ts] [Mode] [Step N] Screenshot: shots/<file> (<trigger>)
+[ts] [Mode] [Step N] Shot read: <one-line verdict>
+```
+
+### Capturing is half the job — READ every shot
+
+A screenshot nobody reads is dead weight. Immediately after each capture, Read the image and log a one-line verdict against what the step SHOULD look like right now:
+
+```
+[ts] [NORMAL] [Step 4] Shot read: frame ~8100 rendering, progress moving — OK
+[ts] [NORMAL] [Step 4] Shot read: same frame as last interval + "Out of memory" dialog — STALLED
+```
+
+**Two-identical-shots rule:** on interval captures, compare the new shot against the previous one — compare the JOB'S surface (the window, the frame content), not the whole desktop (the taskbar clock alone makes full screens differ; an idle desktop is identical by design). A job that should be progressing showing the same surface two intervals in a row is strong STALLED evidence — corroborate with one heuristic #8 artifact probe (is the output file still growing?), then escalate per heuristic #13. Don't wait for a third shot.
+
+**Pattern 2 long runs: offload the reads.** Dozens of interval-shot Reads over a multi-hour run bloat the driver's context (see Context offloading). Delegate "Read shots A and B, compare the job surface, return a one-line verdict" to a throwaway sub-agent; the driver keeps only the verdict. Pattern 3 is naturally immune — each tick is a fresh session.
+
+### KISS bounds (P5)
+
+- Pattern 1 trivial tasks: no screenshots — they finish before any timer fires.
+- No desktop captures of steps with no visual surface just to follow the rule.
+- PNG stills only — no video capture, no pixel-diff tooling; "Read both images and compare" IS the diff.
 
 
 ## The Implementation Notes (per-run narrative)
@@ -900,6 +990,9 @@ auto-runs/<slug>/VERDICT_STUCK Touched on terminal failure (5 approaches
 auto-runs/<slug>/logs/         Per-tick logs:
   tick-<ISO>.log          One file per cron tick.
   cron.log                Append-only summary of every tick start/end.
+
+auto-runs/<slug>/shots/        Visual checkpoints — one PNG per capture
+                          (see Visual Checkpoints).
 ```
 
 ### How a cron tick actually flows
@@ -919,6 +1012,12 @@ Tick fires → fresh claude code session → /auto re-invoked
        - stale lock (older than one interval) → prior tick died mid-step;
          treat its in-progress step as STALLED, escalate per heuristic #13
        - no lock → write TICK_LOCK with current timestamp, continue
+  4c. If the runbook shows a long step IN PROGRESS with a visual
+      surface → capture + read a visual checkpoint (see Visual
+      Checkpoints). Job surface identical to the previous tick's shot
+      AND the heuristic #8 artifact probe shows no growth → treat the
+      step as STALLED (heuristic #13). Background jobs with no window:
+      frame-grab the output artifact instead of the desktop.
   5. Pick first non-DONE / non-PARKED step from runbook
        (if none and success unmet → write Status: PARTIAL + VERDICT, exit —
         the all-parked terminus; never tick forever with nothing to do)
@@ -1150,7 +1249,8 @@ When something stops making forward progress:
 ```
 1. Diagnose       — what changed? (Service alive? Disk writes? Network?)
 2. Differentiate  — slow (just wait) vs. stuck (intervene)?
-3. Cheapest first — read-only probe, info endpoint, single-call test
+3. Cheapest first — read-only probe, info endpoint, single-call test,
+                    visual checkpoint (screenshot + read it)
 4. Escalate       — release → release+assign → stop-all+release+assign
                     → service restart → host restart
 5. Verify recovery via artifacts — not API success codes alone
@@ -1417,4 +1517,5 @@ Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/
 - Final report is honest with numbers, not vibes.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
 - Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
+- Visual checkpoints: screenshot major events + ~10-min intervals on long visual steps, READ every shot; two identical job-surface shots + a flat artifact probe = STALLED.
 - Operational heuristics #8-13: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree.
