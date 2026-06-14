@@ -1446,6 +1446,7 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 
 - the **frozen Success line + per-step verify checks** (the yardstick — nothing else),
 - the observable artifacts produced,
+- a **baseline "before" reference if one exists** (git HEAD, a pre-change snapshot, the prior output dir) — part of the yardstick, so the refuter can diff the deliverables against it and flag unexplained or out-of-scope changes; greenfield builds have no baseline, so don't fabricate one (added 2026-06-14),
 - the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks).
 
 Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.)
@@ -1477,6 +1478,7 @@ If sub-agents are unavailable, run a same-context skeptic pass against the Succe
 Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
+Coverage: <success checks passed, e.g. 7/7 = 100%>
 Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
@@ -1486,6 +1488,7 @@ Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
 Goal:        <one sentence>
 Done:        <what landed>
 Missing:     <what didn't, with reason>
+Coverage:    <success checks passed, e.g. 5/7 = 71%>
 Next:        <concrete suggested move>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
