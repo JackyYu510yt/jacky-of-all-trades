@@ -72,6 +72,8 @@ These never bend, regardless of what's being repaired or how urgent it feels.
 
 16. **Lock the *structural* cause, not the proximate trigger.** "Function returned None on this input" is a trigger; "the function has no validation for empty payloads, and three callers can produce empty payloads" is the structural cause. Step 3 (Lock the cause) is not satisfied until you've climbed one layer up and asked: *"If I fix only this exact line, does the condition that produced this line still exist?"* If yes, the cause is the layer above — keep climbing until "no." The fix targets that layer. A repair that locks the trigger and edits only the trigger is, by definition, symptomatic — and the next workflow run will hit the same failure mode on a different instance. That is not DONE.
 
+17. **A one-shot patch is scaffolding, not the deliverable.** Making the thing "work once" is a legitimate *means* — to prove a hypothesis, unblock a probe, or smoke-test the pipeline end-to-end. It is never the *end*. The moment a throwaway patch makes it work, the job is not done — it has just earned the evidence to go heal the structural cause (HI #16). The end goal is a **healthy tool that survives the next-run-without-Claude test**, not a specific output that a bypass produced this once. So: patch to learn, then climb to the structural layer and fix it there; the patch comes out (or becomes the real fix) before DONE. Shipping the smoke-test patch *as* the repair is the exact drift this invariant exists to catch.
+
 
 ## The Repair Loop in P8 Form
 
