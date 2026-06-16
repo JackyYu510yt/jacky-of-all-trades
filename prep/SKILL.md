@@ -494,8 +494,27 @@ Use the **card-stack format** (Style C). Every section is its own bounded card w
 14. **Open questions** — for the AUDITOR to weigh in on
 15. **Per-function specs** — Phase 7.5 17-field cards appended below, one per RISKY function
 16. **BUILD STATUS** — progress tracker, updated by Phase 8 after each cycle phase clears (see format below)
+17. **FINDINGS** — lessons learned during build/pentest: context, proven result, suspected verdict (see format below). Starts empty; Phase 8 and Phase 9 append to it.
 
-Cards 1–7 lock in WHAT we're building before any function-level design appears. Every later phase (function specs, build cycles, pentest checks) points back at these front-matter cards. Card 16 lets the user (and Phase 8 itself) see exactly where the build is at any moment — and lets a resumed Phase 8 pick up where it left off.
+Cards 1–7 lock in WHAT we're building before any function-level design appears. Every later phase (function specs, build cycles, pentest checks) points back at these front-matter cards. Card 16 lets the user (and Phase 8 itself) see exactly where the build is at any moment — and lets a resumed Phase 8 pick up where it left off. Card 17 captures *why* things turned out the way they did — the discoveries worth remembering after the run.
+
+### FINDINGS card format
+
+Phase 6 emits this card empty. Phase 8 (build cycle) and Phase 9 (pentest) append an entry whenever they **learn why** something behaved as it did — a failure whose cause got pinned down, or a small success that flipped a prior assumption (the classic: "it worked once we authenticated → the thing was never broken, we just weren't logged in"). Do NOT log routine, expected passes.
+
+```
+╭─ FINDINGS ──────────────────────────────────────────────────╮
+│                                                              │
+│  <ISO timestamp> — <one-line summary>                        │
+│    Context:           <what we were doing + assumption held> │
+│    Result:            <what actually happened — PROVEN>      │
+│    Suspected verdict: <best-guess WHY — a hypothesis, never  │
+│                        stated as fact>                       │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+The `Result` is the proven part; the `Suspected verdict` is always flagged as a guess (evidence-first). A verdict confirmed by a decisive check — one experiment that isolates the cause, "pin the fix, don't guess" — is far stronger than one inferred from a single outcome; name the check in the verdict when one was run.
 
 ### BUILD STATUS card format
 
@@ -921,3 +940,15 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 ```
 
 The headline contrasts current state with the END GOAL card, not with a sub-step. SHIPPABLE / NOT SHIPPABLE is implied by the state — DONE means shippable, anything else means not.
+
+### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
+
+After the FINAL VERDICT card is written, if the project has a `SPEC.md`, promote the **keeper** findings from the FINDINGS card (the ones that explain a real cause — skip the obvious) into its Change Log. The ledger fields don't match the Change Log schema, so translate as you pipe each keeper — `finding → change` (prefix `FINDING: `), `suspected verdict → why` (keep the word "suspected"), `context → context`, prior-assumption `→ before`, `result → after`:
+
+```bash
+printf 'change: FINDING: %s\nwhy: suspected — %s\ncontext: %s\nbefore: %s\nafter: %s\n' \
+  "<summary>" "<suspected verdict>" "<context>" "<prior assumption>" "<proven result>" \
+  | python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log
+```
+
+No `SPEC.md` → skip silently (the findings still live in the FINDINGS card). One `spec_tool.py log` call per keeper.

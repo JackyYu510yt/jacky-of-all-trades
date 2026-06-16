@@ -607,6 +607,9 @@ Places where execution intentionally departed from the runbook, and why.
 ## Tradeoffs
 Alternatives considered and why the chosen path won.
 
+## Findings
+What we LEARNED — context, proven result, and the *suspected* reason why.
+
 ## Open Questions
 Anything the user should confirm or revise.
 
@@ -622,6 +625,7 @@ Append a dated entry under the matching section when:
 - **Deviation** — /auto departed from the runbook (added a step, skipped one, swapped an approach mid-step); log it here AND mark the runbook
 - **Tradeoff** — more than one valid path existed and /auto picked one; name the alternatives and the reason
 - **Open question** — something /auto resolved tentatively but the user might want to revise (library version, API timeout, file naming, a guessed default)
+- **Finding** — we learned *why* something was the way it was. Two cases fire it: (a) a failure got resolved and we now think we know the cause, or (b) a small success flipped a prior assumption — the classic being "the tool finally worked once we logged in → the account was never cooked, we just weren't authenticated and that's why it did nothing." A "surprising result" (worked when it shouldn't have, or vice-versa) also counts. Do NOT fire one on a routine, expected success.
 
 Entry format:
 
@@ -633,6 +637,18 @@ Entry format:
 **Why:**         <reason — usually grounded in spec, principle, or a probe result>
 **Alternatives:** <only on tradeoff entries>
 ```
+
+**Finding entries use their own three-field shape** (under the `## Findings` section):
+
+```markdown
+### <ISO timestamp> — FINDING: <one-line summary>
+
+**Context:**           <what we were doing + the assumption we held going in>
+**Result:**            <what actually happened — observed and PROVEN, not inferred>
+**Suspected verdict:** <best-guess reason WHY — explicitly a hypothesis, never stated as fact>
+```
+
+The `Result` line is the proven part (what the tool/output actually did). The `Suspected verdict` is the *guess* at the cause — always phrased as suspected, per the evidence-first rule: state what was seen, hypothesize the why. A verdict backed by a decisive check (one experiment that isolates the cause — "pin the fix, don't guess") is far stronger than one inferred from a single happy outcome; note the check in the verdict line when one was run.
 
 Keep entries short — 4-8 lines. The notes file is for human skim, not exhaustive log. Mechanical tool-call detail belongs in the activity log.
 
@@ -655,6 +671,7 @@ Duration: <wall-clock from Started>
 - Design decisions logged: N
 - Deviations logged:       N
 - Tradeoffs logged:        N
+- Findings logged:         N
 - Open questions pending:  N
 
 ### Open questions worth your review
@@ -666,12 +683,36 @@ Duration: <wall-clock from Started>
 
 This summary is the deliverable handed to the user. The in-chat AUTO REPORT stays short; the notes file is the deeper read with provenance for every non-obvious choice.
 
+### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
+
+A Finding is a lesson; lessons outlive the run. At terminal verdict, if the project has a `SPEC.md`, promote the **keeper** findings (the ones that explain a real cause — skip throwaway/obvious ones) into its Change Log.
+
+**Ordering is mandatory** — do this *before* writing `Status: DONE` to the runbook. Route the promotion through `spec_tool.py log` (not a raw Edit): the helper advances the logged-edit marker as it writes, so the SPEC.md change lands already-logged and the Stop hooks (`spec-guard`, `auto-stop-block`) see no dangling unlogged edit. A raw Edit to SPEC.md *after* `Status: DONE` would re-trip spec-guard and violate the Refuter Gate's frozen window (nothing runs between DONE and stop).
+
+The ledger's field names don't match the Change Log schema, so **translate** as you pipe each keeper:
+
+```
+finding   →  change   (prefix "FINDING: ")
+context   →  context
+(prior assumption / what was failing)  →  before
+result    →  after
+suspected verdict  →  why   (keep the word "suspected" — it's still a guess)
+```
+
+```bash
+printf 'change: FINDING: %s\nwhy: suspected — %s\ncontext: %s\nbefore: %s\nafter: %s\n' \
+  "<summary>" "<suspected verdict>" "<context>" "<prior assumption>" "<proven result>" \
+  | python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log
+```
+
+No `SPEC.md` in the project → skip promotion silently (the findings still live in `notes.md`). One `spec_tool.py log` call per keeper finding.
+
 ### Relationship to the other artifacts
 
 ```
 Runbook         current state of steps (mutable, source of truth for "where am I")
 Activity log    every state-changing tool call (append-only, mechanical, for replay)
-Notes (this)    the WHY (narrative, decisions, open questions, sealed at terminal verdict)
+Notes (this)    the WHY (decisions, tradeoffs, findings/lessons, open questions; sealed at terminal verdict)
 AUTO REPORT     terminal in-chat summary that points at the notes file
 ```
 
