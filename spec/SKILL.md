@@ -83,6 +83,26 @@ Tell the user it's created and that changes are now tracked.
 **Do NOT** write one block per file-touch — one block per *logical* change.
 The note-taker already records every edit; your job is the reasoning.
 
+### Incoming findings from /auto and /prep
+
+`/auto` and `/prep` keep a per-run **Findings Ledger** (lessons learned: context,
+proven result, and a *suspected* verdict for why). At their terminal verdict they
+promote keeper findings here by piping a translated block to `spec_tool.py log`,
+so promoted entries land in the Change Log already mapped to this schema:
+
+```
+change:  FINDING: <summary>        ← the finding
+why:     suspected — <verdict>     ← the suspected verdict (stays flagged a guess)
+context: <context>
+before:  <prior assumption / what was failing>
+after:   <proven result>
+```
+
+These arrive pre-formatted from the helper — nothing extra to do. The `FINDING:`
+prefix and `suspected —` marker are what distinguish a promoted lesson from a
+normal change block; preserve them. Do not "upgrade" a suspected verdict into a
+stated fact when you see one.
+
 ## SKIP — throwaway session
 
 ```
