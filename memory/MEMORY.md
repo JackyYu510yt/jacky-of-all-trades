@@ -22,3 +22,4 @@
 - [/auto-runs folder layout](project_auto_runs_folder_layout.md) — /auto nests ALL artifacts under one per-run ./auto-runs/<slug>/ folder; no more loose auto-* files in CWD
 - ["Leaning toward" is a question](feedback_leaning_toward_not_authorization.md) — tentative phrasings ask for more info; wait for explicit "apply / go / do it / yes" before acting
 - [One thing at a time](feedback_one_thing_at_a_time.md) — deliver one item/decision per message; don't stack explanations + fix lists + multiple questions in one turn
+- [Graduated scale-up](feedback_graduated_scale_up.md) — prove on a little before the whole: smoke(1)→batch→full, each rung a verify gate; conditional on volume. Baked into /spec (the bar) + /auto (the ramp)
