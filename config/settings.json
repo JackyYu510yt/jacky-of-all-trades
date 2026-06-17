@@ -1,0 +1,53 @@
+{
+  "model": "opus[1m]",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/hooks/auto-stop-block.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/hooks/spec-guard.py\"",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\Shadow\\.claude\\hooks\\repo-autocommit.ps1\"",
+            "shell": "powershell",
+            "async": true
+          },
+          {
+            "type": "command",
+            "command": "C:\\Users\\Shadow\\AppData\\Local\\Programs\\Python\\Python311\\pythonw.exe",
+            "args": [
+              "C:\\Users\\Shadow\\Desktop\\Compiled Binaries\\Tinkering\\jarvis\\play_end_sound.py"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/skills/auto/hooks/auto-log-hook.py\""
+          },
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/hooks/spec-collect.py\""
+          }
+        ]
+      }
+    ]
+  },
+  "effortLevel": "high",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark"
+}
