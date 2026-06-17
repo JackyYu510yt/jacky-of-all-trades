@@ -15,15 +15,12 @@ $repo = "C:\Users\Shadow\.claude\skills"
 $null = git -C $repo rev-parse --is-inside-work-tree 2>$null
 if ($LASTEXITCODE -ne 0) { exit 0 }
 
-# Snapshot machine config into the repo so hooks + settings ride the same
-# backup flow. The live files run from ~/.claude; these are tracked copies.
-# (See BACKUP.md for the layout and restore.ps1 for redeploy.)
-$hooksDst  = Join-Path $repo "hooks"
+# Snapshot settings.json into the repo so it rides the same backup flow.
+# Hooks + memory are live junctions INTO the repo (see GUIDE.md), so editing
+# them already edits the tracked copy — only settings.json needs copying,
+# because a single file can't be a folder junction.
 $configDst = Join-Path $repo "config"
-New-Item -ItemType Directory -Force $hooksDst  | Out-Null
 New-Item -ItemType Directory -Force $configDst | Out-Null
-Copy-Item "$src\hooks\*.py"    $hooksDst -Force
-Copy-Item "$src\hooks\*.ps1"   $hooksDst -Force
 Copy-Item "$src\settings.json" (Join-Path $configDst "settings.json") -Force
 
 # Stage everything.
