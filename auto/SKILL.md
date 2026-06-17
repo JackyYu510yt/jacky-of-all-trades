@@ -411,6 +411,41 @@ Steps:
 - "Write a quick X" / "give me a one-shot Y"
 
 
+## Graduated Scale-Up — prove on a little before committing to the whole
+
+Stage mode decomposes by **component** (load → upload → render → save). This decomposes by **volume**. The two compose: a stage that processes many items is itself climbed in rungs.
+
+A runbook step that processes MANY items, or is a long unattended run, is NOT one step. Split it into rungs — **smoke (1) → batch (small) → full** — where each rung is a verify gate and the next rung does not start until the prior rung's output is checked. The cost of a bad foundation then gets paid early and cheap, on item 1, not at hour two of the full run.
+
+**Trigger — any one of these:**
+
+- A step processes a collection where a full pass is expensive (batch render, bulk upload/download, migration over many rows, classification over a large set)
+- A step is a long unattended run (>~10 min, or "while I sleep" / "overnight" framing)
+
+**Rung shape in the runbook:**
+
+```
+Steps:
+  N.   [PENDING] <op> on 1 item (smoke)
+          verify: that 1 output actually works end-to-end (exists, valid,
+                  plays/parses — not just "no error printed")
+  N+1. [PENDING] <op> on a small batch (~10, or ~5% — whichever is smaller)
+          verify: all succeed, 0 errors in log, outputs consistent
+                  (sizes / durations / row counts in expected range)
+  N+2. [PENDING] <op> on the full set
+          verify: full count produced OR honest failure count
+                  (HI #6 — failures reported, never silently dropped)
+```
+
+**Real inputs on every rung (P1 test-at-scale).** The smoke and batch rungs use REAL data and REAL paths — a ramp on toy fixtures proves nothing about the full run. The point of the ladder is to hit the actual target condition at increasing volume, not to exercise a happy path on fake input.
+
+**KISS bounds (P5) — when NOT to ramp:**
+
+- One-shot single-item tasks (convert THIS file, fix THIS bug) — there's only ever 1, so there's no ladder to climb. Don't fabricate `1 → 10 → all` rungs for a task that runs once.
+- Renames, config tweaks, single-file edits — no volume.
+- If a smoke rung and the full set are the same size, the rung IS the run — collapse them, don't write three steps that all process the same one item.
+
+
 ## The Activity Log
 
 Alongside the runbook, /auto keeps an append-only activity log. Where the runbook tracks **state** (what step you're on), the log tracks **history** (everything that's been done, tested, tried, and why).

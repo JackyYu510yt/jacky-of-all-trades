@@ -35,7 +35,15 @@ time, plainly — then write the file:
 1. **Goal** — one or two sentences; what "done" looks like.
 2. **Logic / how it works** — the approach and the reasoning behind it.
 3. **Scope** — what's IN v1, and what's explicitly OUT.
-4. **Success criteria** — the bar to clear.
+4. **Success criteria** — the bar to clear. When the project processes
+   volume (a batch, many items, a long unattended run), the bar must be
+   *graduated and scale-proof*, not "works once": one rung per scale —
+   smoke (1 item works end-to-end), batch (a small set, 0 failures,
+   consistent output), full (the whole set, failures reported by count,
+   never hidden). Pinning the ramp here means any executor that reads
+   this spec (e.g. `/auto`) inherits the ladder automatically. Skip the
+   rungs only when there's no volume (a rename, a one-shot single-item
+   script) — don't fabricate a ladder for a task that only ever runs once.
 
 Then Write `./SPEC.md` from this template (fill the sections; leave the Change
 Log empty):
