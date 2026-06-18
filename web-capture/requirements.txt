@@ -1,0 +1,9 @@
+# web-capture skill — proxy-free Selenium page diagnostics.
+# Proven on Windows, Python 3.11.9, Chrome 148. selenium 4.15's bundled
+# Selenium Manager auto-fetches the matching chromedriver (no manual install).
+#
+# NOTE: do NOT add selenium-wire here. It was tested and is BROKEN for HTTPS
+# on this box (its bundled mitmproxy calls X509.get_extension, which modern
+# pyOpenSSL removed -> every HTTPS load fails). Network/console come from
+# Chrome's own DevTools logs instead. See SKILL.md "Why no proxy".
+selenium==4.15.2
