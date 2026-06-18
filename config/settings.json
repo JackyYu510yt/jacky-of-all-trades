@@ -49,5 +49,5 @@
   },
   "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
-  "theme": "dark"
+  "theme": "auto"
 }
