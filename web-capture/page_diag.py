@@ -260,7 +260,28 @@ def preflight_checks(config: RunConfig) -> Path:
             shutil.rmtree(dst_parent, ignore_errors=True)
         dst = dst_parent / config.profile_directory
         LOG.info("copying profile %s -> %s", src, dst)
-        shutil.copytree(src, dst, dirs_exist_ok=True)
+        # Skip giant/volatile caches and tolerate files Chrome holds locked —
+        # a few skipped files must never crash the copy.
+        skip_dirs = {"Cache", "Code Cache", "GPUCache", "Service Worker",
+                     "GrShaderCache", "ShaderCache", "DawnGraphiteCache",
+                     "DawnWebGPUCache", "component_crx_cache"}
+        skipped = []
+
+        def _copy(s, d):
+            try:
+                shutil.copy2(s, d)
+            except (OSError, PermissionError) as e:  # locked DB, etc.
+                skipped.append(f"{Path(s).name}: {type(e).__name__}")
+
+        try:
+            shutil.copytree(
+                src, dst, dirs_exist_ok=True, copy_function=_copy,
+                ignore=shutil.ignore_patterns(*skip_dirs))
+        except shutil.Error as e:  # copytree aggregates per-file failures
+            skipped.append(f"copytree: {len(e.args[0]) if e.args else '?'} files")
+        if skipped:
+            LOG.warning("profile copy skipped %d locked/cache item(s): %s",
+                        len(skipped), skipped[:5])
         # strip lock files so Chrome will open the copy
         for lock in dst_parent.rglob("Singleton*"):
             try:
