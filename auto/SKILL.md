@@ -783,7 +783,7 @@ The user's standard invocation pattern is:
 /principles  →  /auto (or /prep or /repair)  →  proceed
 ```
 
-`/principles` is run first to load all nine principles into context (P1 test-at-scale, P2 conditions-upfront, P3 end-goal-in-sight, P4 audit-before-handback, P5 KISS, P6 think-before-coding, P7 surgical-changes, P8 goal-driven-execution, P9 build-for-the-real-run). Then the action skill runs with the principles already active as standing checkpoints. Then `proceed` is the standing authorization.
+`/principles` is run first to load all ten principles into context (P1 test-at-scale, P2 conditions-upfront, P3 end-goal-in-sight, P4 audit-before-handback, P5 KISS, P6 think-before-coding, P7 surgical-changes, P8 goal-driven-execution, P9 build-for-the-real-run, P10 see-it-before-you-call-it). Then the action skill runs with the principles already active as standing checkpoints. Then `proceed` is the standing authorization.
 
 When this pattern is detected (recent `/principles` skill invocation OR principle keywords in recent context), /auto skips re-reminding the user about principles and proceeds straight into Phase 0 plan ingestion + activation gate. The principles are already loaded; don't restate them.
 
