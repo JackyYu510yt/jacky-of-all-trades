@@ -591,10 +591,31 @@ A screenshot nobody reads is dead weight. Immediately after each capture, Read t
 
 **Pattern 2 long runs: offload the reads.** Dozens of interval-shot Reads over a multi-hour run bloat the driver's context (see Context offloading). Delegate "Read shots A and B, compare the job surface, return a one-line verdict" to a throwaway sub-agent; the driver keeps only the verdict. Pattern 3 is naturally immune — each tick is a fresh session.
 
+### Smoke-test / verify capture — the eye on a pass/fail
+
+The captures above watch /auto's OWN steps for stalls. This subsection covers the other surface: a **smoke test or verify step** that decides PASS/FAIL on something you can see. The account-95 incident lives here — a warmup asserted READY because a prompt box existed, a screenshot was taken, but the verdict was read off the page's text ("image creation isn't available in your location"). The shot plainly showed a "Sign in" badge; the account was just signed out. Present-but-unread shot + weak text assertion = a confident wrong verdict. This subsection closes both holes.
+
+**Capture is built INTO the test, not bolted on after.** The screenshot fires from inside the test code at the truth-instant, so it's already on disk when /auto checks. A post-hoc "take a screenshot now" shell/PowerShell grab routed through the model is slow (seconds + a round-trip) and times the shot wrong — it is the **fallback only**, for a pre-existing test /auto can't edit. When /auto (or /prep) generates the test, it injects the capture automatically.
+
+**Capture points = state-changes + assertions, NOT every click.** A state-change is the surface meaningfully changing — navigation (page A→B), an auth flip (signed-out→signed-in), a form submit, a tool/mode toggle, an error appearing. An assertion is the line that decides pass/fail — the load-bearing one, since that is exactly where account-95 lied. A click that opens a menu counts; typing characters, focusing a field, hovering do not.
+
+**Generator contract — how an in-script shot reaches the eye.** Capture fires inside the test process, where the model is NOT in the loop, so the test itself can't write the `Shot read:` verdict. The contract: the test (a) captures at each state-change/assertion, (b) prints one parseable `[shot] <path>` line per capture to stdout. /auto harvests those lines, reads the must-read subset, and writes BOTH activity-log lines (`Screenshot:` + `Shot read:`) at verify time.
+
+**Read-before-verdict + INCONCLUSIVE handling.** A visual verify is not PASS/FAIL until /auto has read the assertion shot (plus the final shot, plus any failure shot) — text + exit code alone can't pass it (Hard Invariant #11). If a must-read shot is missing, black, or unreadable, the verify is INCONCLUSIVE → BLOCKED/PARKED, never PASS; the "shot unavailable → artifact probes" fallback above is for stall detection only, because a signed-out page produces a valid artifact too. A headless/cron run that can't screenshot a visual verify parks it for a run that can.
+
+**Mechanical must-read (no silent skip).** Bind the must-read set to the fan-out "non-answer is a failure" rule: each must-read shot (assertion + final + failure) gets an explicit per-shot `Shot read:` verdict; a missing verdict fails the step. "Must read" is a checkbox, not a promise — a skipped look leaves a blank that trips the failure. This is what stops the account-95 attention-miss from recurring.
+
+**Keep BOTH nets — the shot doesn't excuse a weak assertion.** account-95 also had a weak text check (prompt-box presence, true on a signed-out page too). The screenshot is a second net, not a license to skip tightening the first. For a visual surface, the self-derived verify sanity pass (see runbook "sources in priority order") explicitly asks: *does this assertion distinguish signed-in from signed-out / ready from error?* Tighten the text assertion AND read the shot.
+
+**Naming — reads as a story, in its own subdir.** Smoke-test shots live in `./auto-runs/<slug>/shots/smoke/` and are step-numbered + labeled: `01_before_login.png`, `02_after_submit.png`, `03_assert_ready.png`. Numbered + labeled means the sequence reads top-to-bottom and a gap (still "Sign in" at the READY assertion) jumps out. /auto's own step/stall captures keep their `shots/<timestamp>-<trigger>.png` scheme and `<trigger>` enum untouched — different folders, no collision.
+
+**What counts as a "visual surface" (decidable test).** If a human would need to *look* at the result to confirm it's correct — rather than read a number or string — it's a visual surface (browser, GUI app, rendered frame/image, TUI). If correctness is fully captured by an exit code, a returned value, or a file's size/contents, it's not.
+
 ### KISS bounds (P5)
 
 - Pattern 1 trivial tasks: no screenshots — they finish before any timer fires.
 - No desktop captures of steps with no visual surface just to follow the rule.
+- Non-visual verifies (exit code, returned value, file size/contents): no shot — the machine check IS the oracle.
 - PNG stills only — no video capture, no pixel-diff tooling; "Read both images and compare" IS the diff.
 
 
@@ -958,6 +979,8 @@ These never bend.
 9. **No terminal DONE before the refuter clears (judgment-based goals).** When the Success line is a judgment call, the terminal `Status: DONE` / `FINAL VERDICT: DONE` line MUST NOT be written until the runbook's `Refuter:` field reads `clean`. The Stop hook releases on that `Status:` line, so writing DONE first would let the run stop before the refuter can re-open it. All-steps-PASS is necessary but NOT sufficient for DONE — the refuter gate is. Machine-checked goals are exempt (`Refuter: n/a`). See Terminal Refuter Gate.
 
 10. **Probe, don't assume — empirical evidence governs every claim.** Never act on what *seems* true — what an error means, whether a step worked, whether a dependency / credential / file is in the expected state. Get the evidence first: run the cheapest probe that turns the assumption into an observation (artifact check, exit code, a one-shot **smoke test**, a re-read of the actual file). When there's no cheap probe, write a **specialized check that exercises the real target condition** (P1 test-at-scale — not a config flag standing in for the real thing) and run it. A verdict from one happy outcome is a hypothesis; a verdict from an isolating check is evidence ("pin the fix, don't guess" — one experiment that isolates a single variable beats inference). This generalizes #3 (never advance on a bad result) and the artifact rule in Universal Principles: those say *don't trust a bad or absent signal* — this says *go manufacture the signal rather than assume one*. A one-shot patch used to *make the probe possible* (work-once-to-smoke-test) is fine as scaffolding — but it is never DONE; the deliverable is the structural heal that survives the next-run-without-Claude test (see /repair HI #17). Patch to learn, then fix the cause.
+
+11. **See it before you call it — a visual verify is not PASS until the shot is read.** When a verify/smoke step decides pass/fail on a visual surface (a browser, a GUI window, a rendered frame), its screenshot is captured *inside the test* at each state-change + assertion, and /auto MUST read the relevant shot (assertion + final + any failure shot) before recording PASS/FAIL. A passing exit code or a matched log string is necessary but NOT sufficient on a visual surface — a signed-out page prints a prompt box and exits 0 just like a signed-in one (the account-95 miss: a captured-but-unread shot plus a weak text assertion produced a confident wrong verdict). So a visual verify is treated as judgment-shaped: the Terminal Refuter Gate does NOT skip it (this overrides the machine-check exemption in #9 for that step), and a missing / black / unread assertion shot makes the verify INCONCLUSIVE → the step goes BLOCKED/PARKED, never PASS. The stall-detection fallback ("shot unavailable → artifact probes") is for watching long jobs, NOT for clearing a visual verify. See the "Smoke-test / verify capture" subsection under Visual Checkpoints.
 
 
 ## Pre-Action One-Liner Format

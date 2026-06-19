@@ -1,6 +1,6 @@
 ---
 name: principles
-description: Core engineering and collaboration principles the user has codified from past failures. Each principle is a hard-earned rule meant to prevent a specific, real failure mode. Currently covers (1) test-at-scale — tests must exercise the actual target condition, not just set a config value; (2) figure-out-the-conditions-upfront — identify success, testing, and workflow conditions before starting any task; (3) keep-the-end-goal-in-sight — every action and every question must advance the stated goal; don't drift into tangents; don't stop to ask when the answer is already in the plan or prior context; (4) audit-against-the-goal-before-handback — before stopping, run an end-of-task checkpoint comparing current observable state to the end goal, then emit a decision-ready verdict (Result / Toward goal / Next) in one of four states (DONE / PARTIAL / BLOCKED / UNCLEAR); (5) KISS — pick the simplest solution that works; complexity must be justified by a concrete present requirement, not a hypothetical future one; duplication beats the wrong abstraction; rule of three before extracting; (6) think-before-coding — surface assumptions, forks, and tradeoffs *before* the implementation lands; present multiple interpretations rather than silently picking; push back when a simpler approach exists; name confusion instead of guessing; (7) surgical-changes — every changed line traces to the user's request; no drive-by improvements; no style impositions; mention pre-existing dead code instead of deleting it; clean only orphans your own change created; (8) goal-driven-execution — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable success criteria are what enable autonomous loops to keep going without pausing for guidance. Use when writing or running a test, claiming a value or threshold "works", reporting verification results, making any claim about code behavior, starting a non-trivial task, debugging, running a multi-step pipeline, running /auto or /loop, about to ask a clarifying question, mid-task considering a "while I'm here" detour, stalled by a question the context already answers, about to finish a task and hand output back to the user, designing a new component, refactoring, choosing between an abstraction and duplication, vibe-coding or prototyping, adding a factory/registry/wrapper/decorator/config layer, writing a class hierarchy, picking inheritance vs composition, editing existing code, fixing a bug, completing a focused feature ask, working in code with a style you'd write differently, noticing unrelated dead code or bugs, picking between two valid interpretations of a request, picking silent defaults (timeout, retry, format, library), starting work from an imperative without a checkable success criterion, writing a multi-step plan, autonomous run pausing at every fork, or about to say "tested" / "verified" / "confirmed" / "worked" / "fixed" / "done" / "should I" / "do you want me to" / "before I start" / "just to confirm" / "quick question" / "let me know if you want more" / "hope this helps" / "are we done?" / "what's next?" / "anything left?" / "in case we need it later" / "for future flexibility" / "to make it extensible" / "best practice" / "while I'm here" / "I also cleaned up" / "I improved" / "I refactored some adjacent code" / "I noticed" / "I'll just assume" / "they probably meant" / "I'll go with the standard" / "make it pass" / "get it green" / "keep going until" / "set and forget" / "until it's done" / "loop until done". Also covers (9) build-for-the-real-run — design for the actual operating envelope (real scale, real duration, unattended execution, messy/missing inputs, resource limits, recovery after partial failure); a passing demo is not the finish line, the real job surviving under real conditions is; only justifies robustness for conditions you can prove will occur (speculative robustness stays a P5/KISS violation), and is the tiebreaker when two principles conflict; trigger when code worked once on a small or clean input but must run for real, when a job runs overnight / unattended / under /auto or cron, or on "run it for real" / "this runs overnight" / "the real file is huge" / "set and forget" / "it died at 3am" / "works on my test clip but not the real one" / "it filled the disk" / "it hung halfway". This skill is expected to grow — new principles will be appended over time, each following the template at the bottom.
+description: Core engineering and collaboration principles the user has codified from past failures. Each principle is a hard-earned rule meant to prevent a specific, real failure mode. Currently covers (1) test-at-scale — tests must exercise the actual target condition, not just set a config value; (2) figure-out-the-conditions-upfront — identify success, testing, and workflow conditions before starting any task; (3) keep-the-end-goal-in-sight — every action and every question must advance the stated goal; don't drift into tangents; don't stop to ask when the answer is already in the plan or prior context; (4) audit-against-the-goal-before-handback — before stopping, run an end-of-task checkpoint comparing current observable state to the end goal, then emit a decision-ready verdict (Result / Toward goal / Next) in one of four states (DONE / PARTIAL / BLOCKED / UNCLEAR); (5) KISS — pick the simplest solution that works; complexity must be justified by a concrete present requirement, not a hypothetical future one; duplication beats the wrong abstraction; rule of three before extracting; (6) think-before-coding — surface assumptions, forks, and tradeoffs *before* the implementation lands; present multiple interpretations rather than silently picking; push back when a simpler approach exists; name confusion instead of guessing; (7) surgical-changes — every changed line traces to the user's request; no drive-by improvements; no style impositions; mention pre-existing dead code instead of deleting it; clean only orphans your own change created; (8) goal-driven-execution — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable success criteria are what enable autonomous loops to keep going without pausing for guidance. Use when writing or running a test, claiming a value or threshold "works", reporting verification results, making any claim about code behavior, starting a non-trivial task, debugging, running a multi-step pipeline, running /auto or /loop, about to ask a clarifying question, mid-task considering a "while I'm here" detour, stalled by a question the context already answers, about to finish a task and hand output back to the user, designing a new component, refactoring, choosing between an abstraction and duplication, vibe-coding or prototyping, adding a factory/registry/wrapper/decorator/config layer, writing a class hierarchy, picking inheritance vs composition, editing existing code, fixing a bug, completing a focused feature ask, working in code with a style you'd write differently, noticing unrelated dead code or bugs, picking between two valid interpretations of a request, picking silent defaults (timeout, retry, format, library), starting work from an imperative without a checkable success criterion, writing a multi-step plan, autonomous run pausing at every fork, or about to say "tested" / "verified" / "confirmed" / "worked" / "fixed" / "done" / "should I" / "do you want me to" / "before I start" / "just to confirm" / "quick question" / "let me know if you want more" / "hope this helps" / "are we done?" / "what's next?" / "anything left?" / "in case we need it later" / "for future flexibility" / "to make it extensible" / "best practice" / "while I'm here" / "I also cleaned up" / "I improved" / "I refactored some adjacent code" / "I noticed" / "I'll just assume" / "they probably meant" / "I'll go with the standard" / "make it pass" / "get it green" / "keep going until" / "set and forget" / "until it's done" / "loop until done". Also covers (9) build-for-the-real-run — design for the actual operating envelope (real scale, real duration, unattended execution, messy/missing inputs, resource limits, recovery after partial failure); a passing demo is not the finish line, the real job surviving under real conditions is; only justifies robustness for conditions you can prove will occur (speculative robustness stays a P5/KISS violation), and is the tiebreaker when two principles conflict; trigger when code worked once on a small or clean input but must run for real, when a job runs overnight / unattended / under /auto or cron, or on "run it for real" / "this runs overnight" / "the real file is huge" / "set and forget" / "it died at 3am" / "works on my test clip but not the real one" / "it filled the disk" / "it hung halfway". Also covers (10) see-it-before-you-call-it — when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log line is not proof on a visual surface; capture inside the test, read before declaring pass/fail, and a captured-but-unread shot or a weak visible assertion ("element exists" when it exists in both the good and bad state) is the failure this prevents; trigger on "is it logged in", "did the page load", "did it render", "smoke test the UI", "is the account ready", "did the image generate", warmup/readiness checks, or any verify gated on a visual outcome. This skill is expected to grow — new principles will be appended over time, each following the template at the bottom.
 ---
 
 # Principles
@@ -71,6 +71,8 @@ Linux    →  /home/<your-username>
 8. **Goal-driven execution** — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong, checkable success criteria are what enable autonomous loops.
 
 9. **Build for the real run** — design for the actual operating envelope: real scale, real duration, unattended execution, messy inputs, resource limits, recovery. The demo passing is not the goal; the real job surviving is. Only counts conditions you can prove will occur — speculative robustness still falls to P5.
+
+10. **See it before you call it** — when a result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log string is not proof on a visual surface.
 
 > **Crosswalk to Karpathy's 4 principles:** Think Before Coding → P6 · Simplicity First → P5 · Surgical Changes → P7 · Goal-Driven Execution → P8 (also touches P2 + P4).
 
@@ -1489,6 +1491,68 @@ Surfaced 2026-06-08. The user's recurring burns are operational, not algorithmic
 `========================================`
 
 
+## Principle 10 — See it before you call it
+
+**Rule:** When a check's result is something you can *see* — a rendered page, an app window, a generated image — confirm it by reading a screenshot before you trust it. A passing exit code or a matched log string is not proof on a visual surface. Capture the shot inside the test at each state-change and assertion, and read it before declaring pass or fail.
+
+**One-line form:** If the answer is visible, look at it. Exit 0 is not a pass on a screen.
+
+### When it applies
+
+- Writing or running a smoke test / verify step against a browser, a GUI app, a rendered frame, or any surface a human would *look* at to judge.
+
+- Warmup / readiness checks that decide "this account / session / page is good to go."
+
+- `/auto`, `/prep`, `/repair` runs that gate a step on a visual outcome.
+
+- Trigger phrases: "is it logged in?", "did the page load?", "did it render?", "smoke test the UI", "check the screen", "is the account ready?", "did the image generate?".
+
+### Failure modes this catches
+
+- **Present-but-unread shot** — a screenshot was captured but the verdict was read off log text instead of the image. The exact account-95 miss.
+
+- **Exit-0 illusion** — a signed-out page shows a prompt box and exits 0 just like a signed-in one; the machine check passes while the real state is wrong.
+
+- **Weak visible assertion** — the check tests "an element exists" when that element exists in both the good and bad state (a prompt box on signed-in AND signed-out pages).
+
+- **Text-trusting** — believing the page's own words ("image creation isn't available in your location") over what the screenshot plainly shows ("Sign in").
+
+### Check / gate before claiming done
+
+1. **Is this verdict about something visible?** — if a human would look at it to judge, a screenshot must be read before pass/fail.
+
+2. **Was the shot captured at the assertion, inside the test?** — built-in capture at the state-change/assertion, not a slow after-the-fact grab.
+
+3. **Did I actually read it, with a written one-line verdict?** — a missing read makes the verify INCONCLUSIVE (blocked), never a silent pass.
+
+4. **Does the visible assertion distinguish the good state from the bad one?** — "element exists" fails this if it's true in both; tighten it AND read the shot.
+
+### Common invalid patterns
+
+- Warmup asserts READY because a prompt box exists; the page is actually signed out → invalid (exit-0 illusion + weak assertion).
+
+- Screenshot saved to disk but the verdict drawn from the reply text → invalid (present-but-unread).
+
+- Headless run can't screenshot, so the visual verify "passes" on an artifact probe → invalid (a signed-out page has a valid artifact too — that's INCONCLUSIVE, not pass).
+
+### Hard NOs
+
+- Do not declare a visual check passed from an exit code or log string alone.
+
+- Do not trust a page's text over a screenshot of the page.
+
+- Do not treat a captured-but-unread screenshot as if it were read.
+
+- Do not let "must look" stay a promise — make it a recorded per-shot verdict, or the step fails.
+
+### Origin
+
+Surfaced 2026-06-18 from the account-95 incident: an autonomous run concluded "new-build accounts can't generate images" from a page's text reply, when the captured screenshot plainly showed the account was simply signed out. The shot existed and was never read; the readiness check only looked for a prompt box, which a signed-out page also shows. Two holes — present-but-unread shot and a weak visible assertion — that this principle closes. Encoded into `/auto` (Hard Invariant #11 + the Smoke-test/verify capture subsection) and `/prep` (visual smoke capture in the build + pentest phases).
+
+
+`========================================`
+
+
 ## Principle N — {{ short title, imperative if possible }}
 
 **Rule:** {{ one-sentence statement of the principle }}
@@ -1587,5 +1651,7 @@ can judge whether the rule still applies in edge cases }}
 - **P8 — goal-driven execution:** transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable criteria are what enable autonomous loops to keep going without pausing for guidance. Adopted from Karpathy's CLAUDE.md; pairs with P2 (define conditions upfront) and P4 (audit at handback).
 
 - **P9 — build for the real run:** design for the real operating envelope — real scale, real duration, unattended execution, messy inputs, resource limits, recovery; a passing demo isn't the finish line, the real job surviving is. Only fires on conditions you can prove will occur — speculative robustness still falls to P5, which is its hard boundary. Real-world fit is also the tiebreaker when two principles conflict.
+
+- **P10 — see it before you call it:** when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion before trusting it; an exit code or matched log line is not proof on a visual surface. Capture inside the test at each state-change/assertion; a captured-but-unread shot is the account-95 miss. Encoded into /auto (Hard Invariant #11) and /prep (visual smoke capture).
 
 - Append new principles using the template. Update the index and the frontmatter description when you do.

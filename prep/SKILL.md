@@ -816,6 +816,7 @@ function 2                 the file's style — naming, error
 - Self-healing in every risky function — bounded retries, checkpoint writes, idempotent operations. Never bare `try/except Exception: pass`.
 - KISS (P5) — no class hierarchies for linear flows, no `tenacity` when a 5-line loop works, no CLI framework for ≤ 2 args.
 - Every subprocess and network call gets a retry wrapper. Every file write uses write-to-temp-then-rename.
+- **Visual smoke capture (P10 — see it before you call it).** When a function's smoke/REAL test touches a visual surface (a browser, a GUI window, a rendered frame), the generated test captures a screenshot at each state-change + assertion and prints a `[shot] <path>` line per capture. The test's PASS is not accepted until that shot is read — a passing exit code on a visual surface is necessary but not sufficient (a signed-out page exits 0 too). Non-visual tests get no shot. Mirrors /auto Hard Invariant #11.
 
 After each function clears AUDIT, ask the user one quick question: "Does this match what you pictured?" (Yes / Tweak / Rewrite). The user is reviewing a proven function, not a hopeful one.
 
@@ -864,6 +865,13 @@ Pull each item from the TESTING CONDITIONS card and run it:
 
 [ ] MUST-hold checklist from the SUCCESS CONDITIONS card
        Each item passes or fails explicitly.
+
+[ ] Visual-surface verdicts read, not inferred (P10)
+       Any production-shape check whose result is something you
+       LOOK at (a rendered page, an app window) is confirmed by
+       reading its captured screenshot — never from log text or
+       exit code alone. A missing/unreadable shot = INCONCLUSIVE,
+       not pass.
 ```
 
 **No standalone Step 1 PoC layer.** It's been folded into Phase 8's per-function REAL step. The historical Step 1 / Step 2 split existed for skills that don't have a per-function build cycle — `prep` does, so Phase 9 is integration-only.
