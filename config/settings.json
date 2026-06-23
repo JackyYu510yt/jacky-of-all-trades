@@ -49,5 +49,6 @@
   },
   "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
-  "theme": "auto"
+  "theme": "auto",
+  "tui": "fullscreen"
 }
