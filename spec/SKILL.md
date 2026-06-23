@@ -44,12 +44,12 @@ time, plainly — then write the file:
    this spec (e.g. `/auto`) inherits the ladder automatically. Skip the
    rungs only when there's no volume (a rename, a one-shot single-item
    script) — don't fabricate a ladder for a task that only ever runs once.
-5. **Phases / blueprint (optional)** — if the task is *phaseable* (multi-step,
-   has setup or preconditions, will be driven by `/auto`), break it into an
-   ordered list of phases using the **Phase blueprint** format below. This is
-   the step-by-step plan `/auto` follows so it doesn't guess. Skip it for a
-   task that isn't phaseable (a rename, a one-shot fix) — phases are an option,
-   never forced.
+5. **Phases / blueprint** — the **default** for any task beyond a trivial
+   one-shot. Break the work into an ordered blueprint using the three-level
+   format below (PHASES ▸ MILESTONES ▸ STEPS — only as deep as the task needs).
+   This is the step-by-step plan `/auto` follows so it doesn't guess. Skip it
+   ONLY for a trivial single-action task (a rename, a config flip), where one
+   phase would just restate the success criteria.
 
 Then Write `./SPEC.md` from this template (fill the sections; leave the Change
 Log empty):
@@ -83,48 +83,77 @@ Log empty):
 
 Tell the user it's created and that changes are now tracked.
 
-### Phase blueprint — the optional step-by-step plan /auto follows
+### Phase blueprint — the step-by-step plan /auto follows
 
-When the project is phaseable, the `## Phases` section holds an ordered list of
-phases. Each phase is one fixed-shape block — the unit `/auto` reads and runs:
+For any task beyond a trivial one-shot, the `## Phases` section holds an ordered
+blueprint `/auto` runs without guessing. It nests in **three zoom levels** —
+write only as deep as the task needs:
 
 ```
-## Phase N — <plain name of what this phase achieves>
+PHASE        a milestone-sized goal with its own conditions + checkpoint
+  MILESTONE    a waypoint inside a phase, with its own checkpoint (optional layer)
+    STEP         a single action (the flexible doing)
+```
+
+**Depth scales with the task** (KISS — don't nest deeper than it earns):
+- Trivial one-shot (a rename) → no blueprint; the top-level Goal + Success
+  criteria already cover it.
+- Normal task → PHASES with STEPS directly under each (no milestone layer).
+- Big / risky / failure-prone (a login flow) → full depth PHASE ▸ MILESTONE ▸
+  STEP, so a failure narrows to one waypoint instead of the whole phase.
+
+**Phase block — the unit `/auto` reads and runs:**
+
+```
+## Phase N — <what this phase achieves>
 
 REQUIRES:          <condition that must be true first>   ← from Phase <X>            [HARD]
                    <another condition>                   ← external: <how to get it>  [HARD]
 VERIFY-REQUIRES:   <exact yes/no check that proves we're ready>                       [HARD]
-STEPS:             1. <step>   2. <step>   ...            (guidance — flexible)
 PRODUCES:          <output / now-true condition that feeds later phases>
 DONE-WHEN:         <observable checkpoint proving this phase succeeded>               [HARD]
+
+STEPS:             1. <action>   2. <action>   ...        (guidance — flexible)
 ```
 
-- **Hard vs flexible fields.** `REQUIRES`, `VERIFY-REQUIRES`, and `DONE-WHEN`
-  are the rails — they MUST be crisp and checkable (a command exit code, a file
-  + size, a parseable assertion, a read screenshot). `STEPS` is guidance only;
-  `/auto` may improvise the route between checkpoints. The blueprint pins the
-  *where*, not the *how*.
+**When a phase earns the milestone layer**, replace its flat `STEPS` with named
+milestones, each carrying its own checkpoint:
+
+```
+  Milestone N.1 — <waypoint name>
+        DONE-WHEN: <checkpoint for this waypoint>         [HARD]
+        STEP: <action>   STEP: <action>
+  Milestone N.2 — <waypoint name>
+        DONE-WHEN: <checkpoint>                           [HARD]
+        STEP: <action>
+```
+
+- **Hard vs flexible.** `REQUIRES`, `VERIFY-REQUIRES`, and every `DONE-WHEN`
+  (phase- or milestone-level) are the rails — crisp and checkable (an exit
+  code, a file + size, a parseable assertion, a read screenshot). `STEP`s are
+  guidance; `/auto` improvises the route between checkpoints. The blueprint pins
+  the *where*, not the *how*.
 - **Setup is its own phase.** Reaching a condition is always written as an
-  earlier phase, never fixed inline. The first phase(s) are usually
-  "get/establish the testing conditions" (e.g. *get a logged-in account*); the
-  test phases that need them list those conditions under `REQUIRES`.
+  earlier phase, never fixed inline. The first phase(s) usually *establish the
+  testing conditions* (e.g. *get a logged-in account*); the phases that need
+  them list those conditions under `REQUIRES`.
 - **Source-of-condition tag.** Every `REQUIRES` line names its source:
-  `← from Phase <X>` (an earlier phase produces it — `/auto` can satisfy it
-  itself) or `← external: <how to obtain it>` (a human / a dropped-in file /
-  another system supplies it — `/auto` cannot manufacture it, so the recipe for
-  getting it is written right there). This is what lets `/auto` tell *"I'm
-  stuck"* apart from *"I need accounts — here's how to get them."*
-- **Smaller phases = closer checkpoints = less drift.** Prefer more, smaller
-  phases over a few large ones; each `DONE-WHEN` is a place `/auto` re-checks it
-  is still on track.
+  `← from Phase <X>` (an earlier phase produces it — `/auto` can satisfy it) or
+  `← external: <how to obtain it>` (a human / a dropped-in file / another system
+  supplies it — `/auto` cannot manufacture it, so the recipe is written right
+  there). This is what lets `/auto` tell *"I'm stuck"* apart from *"I need
+  accounts — here's how to get them."*
+- **More, smaller units = closer checkpoints = less drift.** Each `DONE-WHEN`
+  is a place `/auto` re-checks it's still on track; the milestone layer exists
+  so a failure boxes into one waypoint instead of the whole phase.
 
 **Quality bar — a blueprint isn't done until it's airtight.** Do NOT consider
-the Phases section complete while any phase has a blank or hand-wavy HARD field
-(a `REQUIRES`, `VERIFY-REQUIRES`, or `DONE-WHEN` that isn't concretely
-checkable, or a `REQUIRES` with no source tag). A vague field is exactly the gap
-`/auto` would improvise into — close it here, at planning time. For a
-non-trivial blueprint, route it through `/audit` (independent review of the
-*plan*) before any step runs.
+the Phases section complete while any HARD field is blank or hand-wavy (a
+`REQUIRES`, `VERIFY-REQUIRES`, or `DONE-WHEN` that isn't concretely checkable,
+or a `REQUIRES` with no source tag). A vague field is exactly the gap `/auto`
+would improvise into — close it here, at planning time. For a non-trivial
+blueprint, route it through `/audit` (independent review of the *plan*) before
+any step runs.
 
 ## LOG — one tidy block per *logical* change
 

@@ -186,11 +186,19 @@ Once the gate clears, the rule is permanent for the rest of the run: no further 
 ## Phase Blueprint Mode — follow a /spec blueprint when one is bound
 
 A `SPEC.md` produced by `/spec` can carry a `## Phases` **blueprint**: an ordered
-list of phases, each with `REQUIRES` / `VERIFY-REQUIRES` / `STEPS` / `PRODUCES` /
-`DONE-WHEN`. When /auto is bound to such a blueprint, it follows those phases
-instead of deriving its own step list — the blueprint pins *where* each
-checkpoint is; /auto still owns *how* to reach it (it improvises the route
-between checkpoints, the `STEPS` are guidance, not a script).
+plan nested in three zoom levels — **PHASE ▸ MILESTONE ▸ STEP**:
+
+```
+PHASE      a milestone-sized goal with REQUIRES / VERIFY-REQUIRES / PRODUCES / DONE-WHEN
+  MILESTONE  a waypoint inside a phase with its own DONE-WHEN (optional layer — only on big phases)
+    STEP       a single action (the flexible doing)
+```
+
+(`MILESTONE` is the blueprint's middle layer — distinct from build **stage-mode**'s
+`stages/stage_N.py` file layout; they don't interact.) When /auto is bound to a
+blueprint, it follows it instead of deriving its own step list — the blueprint
+pins *where* each checkpoint is; /auto still owns *how* to reach it (it
+improvises the route between checkpoints; `STEP`s are guidance, not a script).
 
 ### Binding — exactly one blueprint, never a scan
 
@@ -216,17 +224,23 @@ the chosen blueprint's path is frozen for the run alongside the slug.
 
 ### Blueprint → runbook
 
-Each phase becomes a runbook step (or a small cluster of steps). Carry the
-phase's fields onto the step verbatim — do NOT re-derive them:
+Each phase becomes a runbook step cluster. Carry the phase's fields onto it
+verbatim — do NOT re-derive them:
 
 ```
-Step for Phase N:
-  pre-verify: <the phase's VERIFY-REQUIRES check>   (gate before STEPS run)
+Cluster for Phase N:
+  pre-verify: <the phase's VERIFY-REQUIRES check>   (gate before any work runs)
   action:     <the phase's STEPS>                   (guidance — may improvise)
   verify:     <the phase's DONE-WHEN check>         (the checkpoint)
 ```
 
-The blueprint's `DONE-WHEN` and `VERIFY-REQUIRES` are the verify checks — they
+When a phase has the **milestone layer**, each milestone becomes its own
+sub-step with its own `DONE-WHEN` checkpoint, run in order between the phase's
+pre-verify and the phase's final `DONE-WHEN`. This is what makes a failure
+narrow to one waypoint: phase red → the milestone whose checkpoint failed → its
+steps.
+
+The blueprint's `DONE-WHEN`s and `VERIFY-REQUIRES` are the verify checks — they
 were already vetted by /spec's quality bar (and /audit if it ran), so the
 self-derived verify sanity pass is not needed for blueprint-sourced steps.
 
@@ -250,8 +264,12 @@ For each phase in order:
                           the external condition is supplied. (One of the few
                           places /auto pauses; it pauses because it CANNOT
                           manufacture the condition, per Probe-don't-assume.)
-2. Run STEPS (improvising the route as needed; fix mode on sub-failures).
-3. Run DONE-WHEN (the checkpoint).
+2. Run the work, improvising the route as needed (fix mode on sub-failures):
+     - flat phase  → run STEPS.
+     - milestone'd → for each MILESTONE in order: run its STEPS, then check its
+                     DONE-WHEN. A milestone whose DONE-WHEN fails localizes the
+                     break to that waypoint → fix mode there before advancing.
+3. Run the phase DONE-WHEN (the final checkpoint).
      PASS → mark PRODUCES satisfied, advance to the next phase.
      FAIL → fix mode / approach rotation on this phase, up to the 5-approach
             bound, then PARK or STUCK as usual.
