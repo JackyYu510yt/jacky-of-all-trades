@@ -346,7 +346,9 @@ Mode:    NORMAL | DIAGNOSING | ROTATING
 
 Steps:
   1. [PENDING] <action one-liner>
-        verify: <observable check>
+        requires:   <precondition + source tag: ← from step X | ← external: recipe>  (optional)
+        pre-verify: <yes/no check the requires hold — run BEFORE the action>          (optional)
+        verify: <observable check the step is done>
         rollback: <undo if step later breaks — optional>
 
   2. [PENDING] <action one-liner>
@@ -444,6 +446,20 @@ If a step's verify can't be expressed as an observable check, the step is not at
 **Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. This only fires on the bare path that lacks /prep's vetting.
 
 **Freeze the self-derived Success line.** A Success line from /prep is frozen (line 137). A self-derived Success line gets the **same** freeze: once written to the runbook it is never re-derived or edited mid-run — only the steps beneath it change. This stops "done" from quietly redefining itself toward whatever was achieved after a compaction.
+
+### Condition-first runbooks — name the testing conditions, set them up first
+
+A self-derived runbook (sources 3–4) gets the same condition discipline a /spec blueprint carries — this is the front half a bare step list usually omits, and the gap that lets /auto test on a broken foundation (the logged-out-account confusion). When generating the runbook for a non-trivial task:
+
+1. **Name the preconditions first.** Before listing actions, ask what must already be true for the task to be testable — the *testing conditions* (a live logged-in account, seeded data, a reachable service, a built artifact). Tag each with its source: `← from step X` (an earlier step produces it) or `← external: <how to obtain it>` (a human / a dropped-in file / another system supplies it).
+
+2. **Make establishing each condition its own early step** — never fold "log in an account" into the step that tests the login. Setup is its own step, with its own verify (the condition is now true).
+
+3. **Gate each dependent step on a `pre-verify`** — run the readiness check BEFORE the action, not after. A step that needs a live session re-checks the session is live first.
+
+4. **On a failed `pre-verify`, branch on the source tag** (identical to Phase Blueprint Mode): `← from step X` → **STUCK** (the producing step under-delivered; don't fake the condition, don't test on a missing foundation); `← external` → **STOP and surface the how-to-get-it recipe**, resume once supplied (a Phase-0-style activation pause, not a STUCK — see Hard Invariant #1).
+
+Depth scales (KISS): a trivial one-shot needs no preconditions section — skip it. The win is that /auto stops testing on broken foundations whether or not a /spec blueprint was bound. Same machinery as Phase Blueprint Mode, applied to the plans /auto writes itself.
 
 ### Stage-mode runbook (auto-detected for build tasks)
 
