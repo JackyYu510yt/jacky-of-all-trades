@@ -72,8 +72,8 @@ Log empty):
 ## Success criteria
 - <...>
 
-## Phases (blueprint — optional; include only when phaseable)
-<!-- Ordered phases /auto follows step by step. One block per phase. -->
+## Phases (blueprint — default; omit only for a trivial one-shot)
+<!-- Ordered PHASE ▸ MILESTONE ▸ STEP plan /auto follows. One block per phase. -->
 
 ---
 
