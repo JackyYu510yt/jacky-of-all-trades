@@ -96,16 +96,19 @@ Glob the working directory for **input plans only** (not state from prior or par
 1. Explicit blueprint pointer in the invocation (/auto <path>/SPEC.md)
 2. ./prep-*.txt             (output of /prep — most recently modified wins)
 3. ./PLAN.md                (manual plan)
-4. ./SPEC.md                (ONLY if it carries a `## Phases` blueprint —
-                             see "Phase Blueprint Mode" below)
+4. ./SPEC.md                (ONLY when BOUND — a pointer, a chained /spec, or
+                             your direction; never by mere presence. See
+                             "Phase Blueprint Mode" below)
 5. ./.claude/plans/*.md     (older /prep outputs)
 6. User's invocation message + recent context
 ```
 
-A `SPEC.md` with a `## Phases` blueprint is a first-class plan source; binding
-to it (pointer vs context clue) and following its phases are governed by **Phase
-Blueprint Mode** below. A `SPEC.md` with NO `## Phases` section is not an
-execution plan — skip it as a source and fall through to the rest of the list.
+A `SPEC.md` with a `## Phases` blueprint is a plan source ONLY when /auto is
+**bound** to it per the binding rule in **Phase Blueprint Mode** below (explicit
+pointer, a chained `/spec`, or your direction). A SPEC.md merely sitting in the
+working directory does NOT make it a source — and a SPEC.md with NO `## Phases`
+section is never an execution plan. In both cases /auto falls through to the
+rest of the list and runs as normal.
 
 Existing `./auto-runs/*/runbook.txt`, `./auto-runs/*/RUNBOOK.md`, and `./auto-runs/*/GOAL.md` files are state from prior or parallel /auto runs and are deliberately ignored here. This is what makes parallel chats in the same directory safe — each gets its own slug and its own runbook with no glob-based crosstalk.
 
@@ -205,19 +208,29 @@ improvises the route between checkpoints; `STEP`s are guidance, not a script).
 /auto runs the ONE blueprint it is bound to. It does not hunt across multiple
 SPEC.md / blueprint files and pick one.
 
+Binding requires a POSITIVE signal — the mere presence of a `SPEC.md` in the
+working directory does NOT bind. /auto binds only when one of these holds:
+
 ```
 1. Explicit pointer   — invocation names a file (/auto <path>/SPEC.md) → use it.
-2. Context clue        — no pointer, but exactly one SPEC.md with a `## Phases`
-                         blueprint is clearly the issue in play (the CWD's
-                         SPEC.md, or the one under discussion) → use it.
-3. None                — no blueprint pointer and no SPEC.md with `## Phases`
-                         → run as NORMAL /auto (derive a runbook from the
-                         other plan sources / the invocation). Nothing changes
-                         from today's behavior.
-4. Ambiguous           — a pointer that doesn't resolve, OR several candidate
-                         blueprints and no pointer → HALT and ask which one.
-                         Never guess; never blend two blueprints.
+2. /spec chained      — /spec is invoked alongside /auto (e.g. `/auto /spec`,
+                         or /spec is the active spec lane this session) → bind
+                         to that spec's `## Phases` blueprint.
+3. You direct it       — the user references the spec/blueprint as what to run,
+                         or it's the blueprint we've actively been working in
+                         this session → bind to it.
+4. None of the above   → run as NORMAL /auto, even if a `## Phases` SPEC.md is
+                         sitting in the folder. Presence is not a clue. Derive
+                         the runbook from the other plan sources / invocation.
+                         Nothing changes from today's behavior.
+5. Ambiguous signal    — an explicit pointer that doesn't resolve, OR a genuine
+                         in-play signal pointing at several candidate blueprints
+                         → HALT and ask which one. Never guess; never blend two.
 ```
+
+The bias is conservative: when in doubt whether a SPEC.md was meant for this
+run, treat it as NOT bound and run normal autopilot — binding is opt-in via a
+pointer, a chained /spec, or your direction, not automatic discovery.
 
 Binding is a Phase-0 concern — resolve it before runbook generation. Once bound,
 the chosen blueprint's path is frozen for the run alongside the slug.
