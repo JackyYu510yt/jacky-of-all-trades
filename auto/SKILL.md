@@ -93,11 +93,19 @@ Before anything else, /auto must lock in the end goal and at least one observabl
 Glob the working directory for **input plans only** (not state from prior or parallel /auto runs):
 
 ```
-1. ./prep-*.txt             (output of /prep — most recently modified wins)
-2. ./PLAN.md                (manual plan)
-3. ./.claude/plans/*.md     (older /prep outputs)
-4. User's invocation message + recent context
+1. Explicit blueprint pointer in the invocation (/auto <path>/SPEC.md)
+2. ./prep-*.txt             (output of /prep — most recently modified wins)
+3. ./PLAN.md                (manual plan)
+4. ./SPEC.md                (ONLY if it carries a `## Phases` blueprint —
+                             see "Phase Blueprint Mode" below)
+5. ./.claude/plans/*.md     (older /prep outputs)
+6. User's invocation message + recent context
 ```
+
+A `SPEC.md` with a `## Phases` blueprint is a first-class plan source; binding
+to it (pointer vs context clue) and following its phases are governed by **Phase
+Blueprint Mode** below. A `SPEC.md` with NO `## Phases` section is not an
+execution plan — skip it as a source and fall through to the rest of the list.
 
 Existing `./auto-runs/*/runbook.txt`, `./auto-runs/*/RUNBOOK.md`, and `./auto-runs/*/GOAL.md` files are state from prior or parallel /auto runs and are deliberately ignored here. This is what makes parallel chats in the same directory safe — each gets its own slug and its own runbook with no glob-based crosstalk.
 
@@ -173,6 +181,86 @@ No execution will occur. Awaiting your input.
 This is the ONE place /auto pauses before doing real work. The authorization rule still holds — the user authorized execution by invoking, but they did not authorize working blind. Without observable criteria, "done" is opinion, not observation (P2 + P8).
 
 Once the gate clears, the rule is permanent for the rest of the run: no further pauses except the Hard Invariant trips and STUCK.
+
+
+## Phase Blueprint Mode — follow a /spec blueprint when one is bound
+
+A `SPEC.md` produced by `/spec` can carry a `## Phases` **blueprint**: an ordered
+list of phases, each with `REQUIRES` / `VERIFY-REQUIRES` / `STEPS` / `PRODUCES` /
+`DONE-WHEN`. When /auto is bound to such a blueprint, it follows those phases
+instead of deriving its own step list — the blueprint pins *where* each
+checkpoint is; /auto still owns *how* to reach it (it improvises the route
+between checkpoints, the `STEPS` are guidance, not a script).
+
+### Binding — exactly one blueprint, never a scan
+
+/auto runs the ONE blueprint it is bound to. It does not hunt across multiple
+SPEC.md / blueprint files and pick one.
+
+```
+1. Explicit pointer   — invocation names a file (/auto <path>/SPEC.md) → use it.
+2. Context clue        — no pointer, but exactly one SPEC.md with a `## Phases`
+                         blueprint is clearly the issue in play (the CWD's
+                         SPEC.md, or the one under discussion) → use it.
+3. None                — no blueprint pointer and no SPEC.md with `## Phases`
+                         → run as NORMAL /auto (derive a runbook from the
+                         other plan sources / the invocation). Nothing changes
+                         from today's behavior.
+4. Ambiguous           — a pointer that doesn't resolve, OR several candidate
+                         blueprints and no pointer → HALT and ask which one.
+                         Never guess; never blend two blueprints.
+```
+
+Binding is a Phase-0 concern — resolve it before runbook generation. Once bound,
+the chosen blueprint's path is frozen for the run alongside the slug.
+
+### Blueprint → runbook
+
+Each phase becomes a runbook step (or a small cluster of steps). Carry the
+phase's fields onto the step verbatim — do NOT re-derive them:
+
+```
+Step for Phase N:
+  pre-verify: <the phase's VERIFY-REQUIRES check>   (gate before STEPS run)
+  action:     <the phase's STEPS>                   (guidance — may improvise)
+  verify:     <the phase's DONE-WHEN check>         (the checkpoint)
+```
+
+The blueprint's `DONE-WHEN` and `VERIFY-REQUIRES` are the verify checks — they
+were already vetted by /spec's quality bar (and /audit if it ran), so the
+self-derived verify sanity pass is not needed for blueprint-sourced steps.
+
+### Per-phase loop — verify the foundation BEFORE the work
+
+For each phase in order:
+
+```
+1. Run VERIFY-REQUIRES (the readiness gate).
+     PASS → go to step 2.
+     FAIL → identify WHICH `REQUIRES` condition the gate actually failed on
+            (when a phase lists several, with mixed tags), then branch on THAT
+            line's SOURCE TAG:
+        ← from Phase X  → STUCK. A phase that should have produced this
+                          under-delivered. Do NOT fake the condition, do NOT
+                          test on a missing foundation. Report which phase.
+        ← external      → STOP and surface the how-to-get-it recipe to the
+                          user ("Missing <condition>. To get it: <recipe>.
+                          Supply it, then resume."). This is a Phase-0-style
+                          activation stop, not a STUCK — the run resumes once
+                          the external condition is supplied. (One of the few
+                          places /auto pauses; it pauses because it CANNOT
+                          manufacture the condition, per Probe-don't-assume.)
+2. Run STEPS (improvising the route as needed; fix mode on sub-failures).
+3. Run DONE-WHEN (the checkpoint).
+     PASS → mark PRODUCES satisfied, advance to the next phase.
+     FAIL → fix mode / approach rotation on this phase, up to the 5-approach
+            bound, then PARK or STUCK as usual.
+```
+
+The "stop on a missing external condition" branch is the blueprint form of the
+Phase 0 activation gate — /auto does not work blind on a foundation it can't
+build. Everything else (rotation, parking, the refuter gate, honest reporting)
+works exactly as in NORMAL mode.
 
 
 ## Phase 0.5 — Generate the Runbook (mandatory before execution)
@@ -949,7 +1037,7 @@ These never bend.
    - A step is taking longer than expected (use Monitor, continue planning)
    - A choice has to be made about a default (timeout, retry count, format) — pick the modern reasonable default, log it, proceed
 
-   The ONLY exits from /auto: **DONE**, **STUCK** (after 5 distinct failed approaches), or a Hard-Invariant trip in "Auto Does NOT Waive." The Phase 0 activation gate is the single exception, and it fires before /auto activates — not mid-run.
+   The ONLY exits from /auto: **DONE**, **STUCK** (after 5 distinct failed approaches), or a Hard-Invariant trip in "Auto Does NOT Waive." Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the Phase Blueprint Mode **missing-external-condition stop**, which can fire mid-run at a phase boundary when a phase's `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
 
 2. **Pre-action context, not pre-action gate.** Before doing something non-trivial, Claude states one or two sentences naming what it's about to do and why. This is for *user awareness*, not for *user approval*. There is no waiting period. Claude finishes the sentence and proceeds.
 

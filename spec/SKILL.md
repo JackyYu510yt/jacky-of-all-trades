@@ -44,6 +44,12 @@ time, plainly — then write the file:
    this spec (e.g. `/auto`) inherits the ladder automatically. Skip the
    rungs only when there's no volume (a rename, a one-shot single-item
    script) — don't fabricate a ladder for a task that only ever runs once.
+5. **Phases / blueprint (optional)** — if the task is *phaseable* (multi-step,
+   has setup or preconditions, will be driven by `/auto`), break it into an
+   ordered list of phases using the **Phase blueprint** format below. This is
+   the step-by-step plan `/auto` follows so it doesn't guess. Skip it for a
+   task that isn't phaseable (a rename, a one-shot fix) — phases are an option,
+   never forced.
 
 Then Write `./SPEC.md` from this template (fill the sections; leave the Change
 Log empty):
@@ -66,6 +72,9 @@ Log empty):
 ## Success criteria
 - <...>
 
+## Phases (blueprint — optional; include only when phaseable)
+<!-- Ordered phases /auto follows step by step. One block per phase. -->
+
 ---
 
 ## Change Log
@@ -73,6 +82,49 @@ Log empty):
 ```
 
 Tell the user it's created and that changes are now tracked.
+
+### Phase blueprint — the optional step-by-step plan /auto follows
+
+When the project is phaseable, the `## Phases` section holds an ordered list of
+phases. Each phase is one fixed-shape block — the unit `/auto` reads and runs:
+
+```
+## Phase N — <plain name of what this phase achieves>
+
+REQUIRES:          <condition that must be true first>   ← from Phase <X>            [HARD]
+                   <another condition>                   ← external: <how to get it>  [HARD]
+VERIFY-REQUIRES:   <exact yes/no check that proves we're ready>                       [HARD]
+STEPS:             1. <step>   2. <step>   ...            (guidance — flexible)
+PRODUCES:          <output / now-true condition that feeds later phases>
+DONE-WHEN:         <observable checkpoint proving this phase succeeded>               [HARD]
+```
+
+- **Hard vs flexible fields.** `REQUIRES`, `VERIFY-REQUIRES`, and `DONE-WHEN`
+  are the rails — they MUST be crisp and checkable (a command exit code, a file
+  + size, a parseable assertion, a read screenshot). `STEPS` is guidance only;
+  `/auto` may improvise the route between checkpoints. The blueprint pins the
+  *where*, not the *how*.
+- **Setup is its own phase.** Reaching a condition is always written as an
+  earlier phase, never fixed inline. The first phase(s) are usually
+  "get/establish the testing conditions" (e.g. *get a logged-in account*); the
+  test phases that need them list those conditions under `REQUIRES`.
+- **Source-of-condition tag.** Every `REQUIRES` line names its source:
+  `← from Phase <X>` (an earlier phase produces it — `/auto` can satisfy it
+  itself) or `← external: <how to obtain it>` (a human / a dropped-in file /
+  another system supplies it — `/auto` cannot manufacture it, so the recipe for
+  getting it is written right there). This is what lets `/auto` tell *"I'm
+  stuck"* apart from *"I need accounts — here's how to get them."*
+- **Smaller phases = closer checkpoints = less drift.** Prefer more, smaller
+  phases over a few large ones; each `DONE-WHEN` is a place `/auto` re-checks it
+  is still on track.
+
+**Quality bar — a blueprint isn't done until it's airtight.** Do NOT consider
+the Phases section complete while any phase has a blank or hand-wavy HARD field
+(a `REQUIRES`, `VERIFY-REQUIRES`, or `DONE-WHEN` that isn't concretely
+checkable, or a `REQUIRES` with no source tag). A vague field is exactly the gap
+`/auto` would improvise into — close it here, at planning time. For a
+non-trivial blueprint, route it through `/audit` (independent review of the
+*plan*) before any step runs.
 
 ## LOG — one tidy block per *logical* change
 
