@@ -557,6 +557,8 @@ if __name__ == "__main__":
 
 The `__main__` block IS the verify check. `python stages/stage_K_<name>.py` exits 0 iff the stage works alone.
 
+**Failure-prone stages build + smoke-test their recovery.** When a stage can leave **pre-seedable partial state** behind (it writes a file or mutates state you can stage by hand — i.e. it has a `RECOVERS-BY` in the bound spec, or a field-9/field-12 entry from /prep), the stage implements that recovery — roll back partial work → re-assert the precondition → invalidate downstream → resume — and its `__main__` block proves it: pre-seed the residue (a half-written output / stale state), call the stage, and assert it cleans up and still reaches `[stage K OK]`. This is the standalone twin of /spec's RECOVERS-BY proof, and it's orthogonal to the N+2 different-input re-run (that proves *not-hardcoded*; this proves *survives-residue*). A stage whose only failure mode is a flaky external service can't be cheaply broken in a one-file standalone block — defer its recovery proof to the field-13 REAL / integration test, not here. A pure-compute stage that can't leave residue keeps the happy-path block only (KISS).
+
 **Stage-mode runbook shape:**
 
 ```

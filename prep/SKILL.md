@@ -639,7 +639,11 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              producer/consumer graph.
 
  9. Failure modes            Table: failure → self-healing path
-                             → if that fails, what next.
+                             → if that fails, what next. The
+                             self-healing path uses Ordered
+                             recovery on re-entry (see Self-Healing
+                             Patterns) — never retry on a prior
+                             attempt's residue.
 
 10. Performance profile      CPU / IO / net bound? Cost per
                              item? Where the bottleneck lives?
@@ -649,7 +653,11 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              to watch on the first real run.
 
 12. Rollback plan            If this misbehaves mid-batch, how
-                             to undo. What state needs cleanup.
+                             to undo. Cleanup covers BOTH this
+                             function's own partial state AND any
+                             downstream consumer (field 5) that
+                             already read the now-undone output —
+                             else they run on a stale foundation.
 
 13. Test specs (4 sub)       The Phase 8 build cycle, pre-written:
 
