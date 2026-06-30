@@ -164,6 +164,7 @@ Record **realistic variations** — branches that are normal, not broken: cookie
 - Navigation axis: settled (survived re-check / stalled-checkpoint)
 - Semantic axis: recoverable — recovery measured at ~4 min via duration probe
 - State: session alive, quota NOT exhausted, job resumable at step 3
+- Residue: partial side effects this failure can leave (half-written output at step 4, uncommitted ledger row) that a rollback must undo before resume — (none / list)
 - Distinguish-from: E06 daily cap — cap survives the 15-min probe, soft block does not
 - Ledger semantics (if evidence is a log): append-only? rows≠items? unique key? concurrent writers?
 - Confidence: confirmed | confirmed-stochastic (~1 in N) | seen once — unconfirmed | described — unseen
@@ -220,7 +221,7 @@ Written to `healing-spec.md`. **`confirmed` and `confirmed-stochastic` entries g
 
 - **Detect** — the spot-set (OR) plus the verdict match (two *independent* signals agreeing + stability/stall check sized from THE FLOW). A single-signal verdict is allowed only where the entry already justified it in Phase 2. No fuzzy matching.
 - **Options, priced** — 2–4 realistic moves, each with cost / risk / when-it-works. (e.g., wait 4 min: cheap, proven · rotate account: burns a resource · park job, continue batch: free · abort day: expensive, only correct for a true daily cap.) Options that would never be chosen don't get written.
-- **Chosen chain** — ordered, every rung bounded (max retries, backoff), a resume-at-step from THE FLOW, bottom rung always fail-loud. Never an infinite loop. (For `confirmed-stochastic`, bounded retry is usually the chosen chain — capped, with the `~1 in N` frequency noted so the cap is sane.) When the right chain is a judgment call (burning a resource vs waiting), show the user the priced options and let them pick.
+- **Chosen chain** — ordered, every rung bounded (max retries, backoff), a resume-at-step from THE FLOW, bottom rung always fail-loud. When a rung resumes a step that may have run partway, it follows the canonical re-entry order — roll back partial work (the entry's `Residue`) → re-assert the precondition → invalidate downstream (later FLOW steps whose persisted output is now stale) → resume — never re-running on a prior attempt's residue. Never an infinite loop. (For `confirmed-stochastic`, bounded retry is usually the chosen chain — capped, with the `~1 in N` frequency noted so the cap is sane.) When the right chain is a judgment call (burning a resource vs waiting), show the user the priced options and let them pick.
 - **Label** — the exact string the tool prints, 1:1 with the entry ID (`soft-block [E05]`).
 - **Provenance** — at decision time the tool logs entry ID + the signal that matched, so "why did you call it that?" is always answerable from the log.
 
@@ -259,6 +260,8 @@ Written to `healing-spec.md`. **`confirmed` and `confirmed-stochastic` entries g
 
 - **`deep-audit`** — cold-reads existing CODE for latent bugs. `error-recon` runs the TOOL against reality and captures real failures. Code-in vs world-in. (For a tool you own, `deep-audit` + good logging may be cheaper for the CLI/API parts; `error-recon` earns its keep on the interpretation discipline — outcome check, no umbrella labels, denominators — and on opaque third-party surfaces.)
 - **`repair`** — fixes a failure after it happens. `error-recon` maps the failure space so future repairs become map lookups instead of investigations.
+- **`spec`** — `error-recon`'s map is the upstream source of the *known failure modes* /spec's self-healing success criteria require: each confirmed entry feeds a phase's `RECOVERS-BY` (failure mode + ordered recovery). No map → /spec's "recovers from its known failures" criterion has nothing concrete to point at.
+- **`prep`** — the map + healing-spec feed /prep's per-function design: confirmed entries become field-9 (Failure modes table) and field-12 (rollback, via the `Residue` field) content, and the safe-to-provoke set plus the `described — unseen` modes become /prep's field-6 TESTING-CONDITIONS injection list. /prep designs the healing; `error-recon` supplies the evidence it heals against.
 - **`audit`** — gates the build step that follows this skill.
 - **`auto`** — under `/auto`, phase gates collapse; only DONE or STUCK ends the run. The budget is the exception — it must be pre-supplied, never invented.
 - **`optimize`** — tune the tool after it's correct and self-healing.
