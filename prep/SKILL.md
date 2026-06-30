@@ -643,7 +643,11 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              self-healing path uses Ordered
                              recovery on re-entry (see Self-Healing
                              Patterns) — never retry on a prior
-                             attempt's residue.
+                             attempt's residue. Source the rows from
+                             /error-recon's map when one exists — its
+                             confirmed entries are the evidence-backed
+                             failure list (+ the `Residue` field feeds
+                             field 12).
 
 10. Performance profile      CPU / IO / net bound? Cost per
                              item? Where the bottleneck lives?
