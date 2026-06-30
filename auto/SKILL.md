@@ -401,13 +401,55 @@ Fix mode is the ONLY time /auto deviates from the runbook. When a step's verify 
 ```
 1. Mode → DIAGNOSING — read the failure signature
 2. Mode → ROTATING   — pick a different approach (Approach Rotation Rules)
-3. Apply, re-run the step
+3. Restore the precondition (Re-entry hygiene), then apply + re-run the step
 4. Verify pass → Mode → NORMAL, mark DONE, advance
 5. 5 fails       → Mode → NORMAL, step PARKED, advance to next
                    independent step (Park, don't halt)
 ```
 
 In NORMAL mode, /auto follows the runbook step by step without diagnosis or rotation. The runbook IS the path; the loop just walks it.
+
+### Re-entry hygiene — restore the precondition before any retry
+
+Every recovery path is a **re-entry over partial state**: the prior attempt may have half-written a file, mutated a row, or left a downstream step standing on output that's about to change. The happy path only moves forward through clean states; recovery paths move *backward into* a step that already ran. Before re-attempting a step at any of the re-entry points below, restore its starting condition first — never retry on top of the last attempt's residue.
+
+The re-entry points:
+
+```
+1. Approach rotation   — a verify failed; a different approach on the same step
+2. Resume / cron tick  — a tick died; the next picks up a step left IN PROGRESS
+3. Refuter re-open     — a BLOCKER re-opens a step already marked DONE
+
+(No in-run "un-park" path exists: a PARKED step is retried only via a fresh
+ user-initiated run, outside this automation — so it needs no restore here.)
+```
+
+At door 3 the refuter names an unmet **Success-line item / failed verify**, not a step — so first **map that item to the step(s) that produced it**, then apply the restore below to each.
+
+The restore, in order, before the retry runs:
+
+```
+a. Run the step's `rollback:` action if it has one (undo partial effects —
+   delete the half-written artifact, revert the partial edit, reset the row).
+   No rollback field + a non-idempotent action → probe the artifact layer
+   (heuristic #8) for what the dead/partial attempt left, and clear it before
+   retrying. If the residue can't be safely identified and cleared, the step
+   goes BLOCKED — never retried blind (HI #10: don't guess).
+b. Re-assert the step's `pre-verify` (precondition true again) BEFORE the
+   action — identical to the first-run gate. A precondition an earlier step
+   produced may have been invalidated by the failure; re-check, don't assume.
+c. Invalidate downstream — but only on a real change. After restore+redo, if
+   this step's output differs (checksum / size) from what a later step consumed,
+   every such later step goes DONE → PENDING; if the output is byte-identical
+   they stay DONE (HI #4 — don't burn budget re-running on an unchanged
+   foundation). "Consumed" = a later step whose `requires:` names this step, or
+   (tags absent — the common case) a later DONE step that read a file this step
+   wrote (detect via the heuristic #8 artifact probe).
+```
+
+This is the missing wiring for the runbook's `rollback:` field (defined in the runbook format, invoked here). KISS (P5): an idempotent step **with no dependents** that overwrites (not appends to) its own output needs only (b); (a) and (c) fire only when a partial attempt could have left residue or fed a downstream consumer. A trivial Pattern-1 step with no artifact and no dependents has nothing to restore — the rule no-ops.
+
+_(Added 2026-06-30 — closes the orphaned-`rollback:` gap: the field was defined in the runbook schema but invoked at no recovery door, so rotation / resume / refuter re-entry could run on a prior attempt's partial state. Independent /audit review applied.)_
 
 ### Resumability
 
@@ -427,7 +469,7 @@ On resume, the runbook file is the source of truth:
 ```
 1. Read ./auto-runs/<slug>/runbook.txt (or ./auto-runs/<slug>/RUNBOOK.md)
 2. Find the first step that is not DONE and not PARKED
-3. Resume from that step
+3. Restore that step's precondition (Re-entry hygiene), then resume from it
 ```
 
 If no slug is supplied, /auto generates a fresh one and starts a new run — parallel chats and accidental re-invocations never collide on someone else's state.
@@ -1117,6 +1159,8 @@ These never bend.
 
 11. **See it before you call it — a visual verify is not PASS until the shot is read.** When a verify/smoke step decides pass/fail on a visual surface (a browser, a GUI window, a rendered frame), its screenshot is captured *inside the test* at each state-change + assertion, and /auto MUST read the relevant shot (assertion + final + any failure shot) before recording PASS/FAIL. A passing exit code or a matched log string is necessary but NOT sufficient on a visual surface — a signed-out page prints a prompt box and exits 0 just like a signed-in one (the account-95 miss: a captured-but-unread shot plus a weak text assertion produced a confident wrong verdict). So a visual verify is treated as judgment-shaped: the Terminal Refuter Gate does NOT skip it (this overrides the machine-check exemption in #9 for that step), and a missing / black / unread assertion shot makes the verify INCONCLUSIVE → the step goes BLOCKED/PARKED, never PASS. The stall-detection fallback ("shot unavailable → artifact probes") is for watching long jobs, NOT for clearing a visual verify. See the "Smoke-test / verify capture" subsection under Visual Checkpoints.
 
+12. **Restore the precondition before any retry.** Never re-attempt a step on top of the prior attempt's residue. At every recovery door — approach rotation, resume / cron-tick pickup of an IN-PROGRESS step, and a refuter re-opening a DONE step — run the step's `rollback:`, re-assert its `pre-verify`, and invalidate any downstream step whose foundation actually changed (checksum differs), BEFORE re-running. Re-entry that skips this ships a stale foundation. See "Re-entry hygiene."
+
 
 ## Pre-Action One-Liner Format
 
@@ -1257,7 +1301,8 @@ Tick fires → fresh claude code session → /auto re-invoked
   5. Pick first non-DONE / non-PARKED step from runbook
        (if none and success unmet → write Status: PARTIAL + VERDICT, exit —
         the all-parked terminus; never tick forever with nothing to do)
-  6. Execute that step:
+  6. Execute that step (if it was left IN PROGRESS by a dead tick, restore its
+     precondition first — Re-entry hygiene):
        - Bash for direct commands
        - Bash with run_in_background=true for long ones
        - Monitor on the log to wait for completion signal
@@ -1689,7 +1734,7 @@ Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT 
 
 ### Verdict handling — severity-gated
 
-- **BLOCKER** (maps to a specific unmet Success item / failed verify) → re-enter fix mode on that item. ONLY a BLOCKER re-opens /auto.
+- **BLOCKER** (maps to a specific unmet Success item / failed verify) → re-enter fix mode on that item (Re-entry hygiene: map it to its owning step(s) and restore each before redo). ONLY a BLOCKER re-opens /auto.
 
 - **CONCERN / NOTE** → logged to the Notes file's Open Questions. Does NOT block DONE.
 
