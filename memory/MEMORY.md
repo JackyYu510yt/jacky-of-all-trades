@@ -1,6 +1,7 @@
 # Memory Index
 
 - [User work context](user_work_context.md) — Python + ffmpeg video rendering pipelines, long jobs, large files
+- [ffmpeg on PATH](reference_ffmpeg_on_path.md) — canonical ffmpeg/ffprobe at C:\ffmpeg\bin, on persistent user PATH; winget NOT available
 - [/web-capture skill](reference_web_capture_skill.md) — proxy-free headed-Selenium page capture + detection signatures; selenium-wire is BROKEN on this box (use Chrome DevTools logs)
 - [KISS-first optimization](feedback_kiss_optimization.md) — complete the goal first, then strip; KISS is a final-pass filter, not a brake on building enough
 - [Retries are optimization](feedback_retries_are_optimization.md) — bounded retries + checkpointing matter for long-running jobs
