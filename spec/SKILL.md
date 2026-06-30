@@ -44,6 +44,20 @@ time, plainly — then write the file:
    this spec (e.g. `/auto`) inherits the ladder automatically. Skip the
    rungs only when there's no volume (a rename, a one-shot single-item
    script) — don't fabricate a ladder for a task that only ever runs once.
+
+   For a tool meant to run **unattended / on autopilot** (a pipeline, an
+   overnight job, anything where no human watches each step), the bar must
+   also pin the **failure path**, not just the happy path — most failures
+   happen there, so a spec that grades only the happy path grades the wrong
+   thing. Add self-healing criteria, each empirically checkable: recovers
+   from its *known* failure modes with no human in the loop (the modes come
+   from `/error-recon`), checkpoints progress so a restart resumes instead of
+   starting over, never blocks on mid-run input, and surfaces failures by
+   count rather than hiding them. Same propagation as the ladder — any
+   executor that reads the spec inherits these — and the same KISS bound: a
+   one-shot a human watches doesn't need them. (Planning-time twin of
+   `/auto`'s Re-entry-hygiene rule: design how recovery is ordered; don't
+   just hope the happy path holds.)
 5. **Phases / blueprint** — the **default** for any task beyond a trivial
    one-shot. Break the work into an ordered blueprint using the three-level
    format below (PHASES ▸ MILESTONES ▸ STEPS — only as deep as the task needs).
@@ -70,6 +84,8 @@ Log empty):
 - <...>
 
 ## Success criteria
+<!-- Happy-path bar AND, for unattended tools, the recovery bar (self-heals known
+     failures, checkpoints, no mid-run input, failures reported by count). -->
 - <...>
 
 ## Phases (blueprint — default; omit only for a trivial one-shot)
@@ -112,6 +128,11 @@ REQUIRES:          <condition that must be true first>   ← from Phase <X>     
 VERIFY-REQUIRES:   <exact yes/no check that proves we're ready>                       [HARD]
 PRODUCES:          <output / now-true condition that feeds later phases>
 DONE-WHEN:         <observable checkpoint proving this phase succeeded>               [HARD]
+RECOVERS-BY:       <failure-prone / unattended phases only — failure mode + ORDERED   [HARD when
+                   recovery: roll back partial write → re-assert precondition (re-run  applicable]
+                   this phase's VERIFY-REQUIRES, not a new check) → invalidate
+                   downstream → resume. Proof: after injecting the named failure,
+                   the phase still reaches its DONE-WHEN.>
 
 STEPS:             1. <action>   2. <action>   ...        (guidance — flexible)
 ```
@@ -146,11 +167,23 @@ milestones, each carrying its own checkpoint:
 - **More, smaller units = closer checkpoints = less drift.** Each `DONE-WHEN`
   is a place `/auto` re-checks it's still on track; the milestone layer exists
   so a failure boxes into one waypoint instead of the whole phase.
+- **Design the failure path, not just the happy path.** On a failure-prone or
+  unattended phase, add `RECOVERS-BY`: name how it fails and the *ordered*
+  recovery — roll back partial work → re-assert the precondition → invalidate
+  downstream → resume — the planning-time form of `/auto`'s Re-entry hygiene.
+  The happy-path `DONE-WHEN` proves it worked; `RECOVERS-BY` proves it survives
+  when it doesn't (proof: inject the named failure, confirm the phase still
+  reaches its `DONE-WHEN`). When the phase uses the milestone layer, attach
+  `RECOVERS-BY` to whichever milestone can leave partial state. Skip it on
+  phases that can't leave partial state behind (KISS).
 
 **Quality bar — a blueprint isn't done until it's airtight.** Do NOT consider
 the Phases section complete while any HARD field is blank or hand-wavy (a
 `REQUIRES`, `VERIFY-REQUIRES`, or `DONE-WHEN` that isn't concretely checkable,
-or a `REQUIRES` with no source tag). A vague field is exactly the gap `/auto`
+or a `REQUIRES` with no source tag). On a phase flagged failure-prone or
+unattended, a missing or hand-wavy `RECOVERS-BY` trips this bar too
+(HARD-when-applicable); on a happy-path phase that can't leave partial state
+it's simply absent, and that's fine. A vague field is exactly the gap `/auto`
 would improvise into — close it here, at planning time. For a non-trivial
 blueprint, route it through `/audit` (independent review of the *plan*) before
 any step runs.
