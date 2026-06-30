@@ -912,6 +912,7 @@ Use these primitives when writing the plan and the prototype. Prefer simple vers
 - **Idempotent operations** — every stage should be safe to re-run. If output exists and is valid, skip it. If not, produce it.
 - **Fail-fast on non-transient errors** — bad codec, missing file, wrong credentials: raise immediately. Only retry truly transient conditions.
 - **Health check before heavy work** — ffprobe the input before a 2-hour encode. Ping the upload endpoint before batching.
+- **Ordered recovery on re-entry** — when retrying or resuming a step that may have run partway, never retry on top of a prior attempt's residue. Restore in order: roll back partial work → re-assert the precondition (re-run the step's health check / readiness check, field 7) → invalidate downstream (the field-5 consumers that read the old output, but only when the redone output actually differs) → resume. The build-time form of /auto's Re-entry hygiene + /spec's RECOVERS-BY.
 
 ## Hard NOs
 
