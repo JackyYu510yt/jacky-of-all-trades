@@ -1,16 +1,21 @@
-"""PostToolUse hook: auto-append every tool call to ./auto-log-<slug>.txt.
+"""PostToolUse hook: auto-append every tool call to ./auto-runs/<slug>/log.txt.
 
 Fires after every tool invocation in claude code. If the chat's CWD has an
 active /auto run, append a one-line event to the run's log file.
 
+All of /auto's artifacts live under a single per-run folder
+./auto-runs/<slug>/ — runbook, log, notes, and (Pattern 3) the full state
+set. The only marker outside a slug folder is ./auto-runs/.session-<id> at
+the root, which the hook reads to learn the slug.
+
 Resolution priority (so parallel chats in the same dir do not trample each
 other's logs):
 
-1. Session-scoped marker — ./.auto-session-<session_id> exists and contains
-   the slug for THIS chat. Hook routes the log line to that exact slug.
-2. Legacy fallback — most recently modified ./auto-runbook-*.txt or
-   ./auto-*/RUNBOOK.md in the CWD. Only used when no session marker exists
-   (older runs predating the session-marker change).
+1. Session-scoped marker — ./auto-runs/.session-<session_id> exists and
+   contains the slug for THIS chat. Hook routes the log line to that slug.
+2. Legacy fallback — most recently modified ./auto-runs/*/RUNBOOK.md or
+   ./auto-runs/*/runbook.txt in the CWD. Only used when no session marker
+   exists.
 
 This converts log-appending from "model discipline" into a harness guarantee.
 Even if the assistant forgets to write a log line, this hook captures the
@@ -55,22 +60,25 @@ SKIPPED_TOOLS = {
 def _paths_for_slug(cwd: Path, slug: str) -> tuple[Path, Path] | None:
     """Resolve (log_path, runbook_path) for an explicit slug.
 
-    Tries Pattern 3 layout first (./auto-<slug>/RUNBOOK.md), then Pattern 1/2
-    (./auto-runbook-<slug>.txt). Returns None if neither runbook file exists
-    (slug supplied but run hasn't written its runbook yet).
+    Everything lives under ./auto-runs/<slug>/. Tries Pattern 3 layout first
+    (RUNBOOK.md → logs/run.log), then Pattern 1/2 (runbook.txt → log.txt).
+    Returns None if neither runbook file exists (slug supplied but run hasn't
+    written its runbook yet).
     """
-    pattern3_runbook = cwd / f"auto-{slug}" / "RUNBOOK.md"
+    run_dir = cwd / "auto-runs" / slug
+
+    pattern3_runbook = run_dir / "RUNBOOK.md"
     if pattern3_runbook.is_file():
-        log_dir = pattern3_runbook.parent / "logs"
+        log_dir = run_dir / "logs"
         try:
-            log_dir.mkdir(exist_ok=True)
+            log_dir.mkdir(parents=True, exist_ok=True)
         except OSError:
             return None
         return (log_dir / "run.log", pattern3_runbook)
 
-    pattern12_runbook = cwd / f"auto-runbook-{slug}.txt"
+    pattern12_runbook = run_dir / "runbook.txt"
     if pattern12_runbook.is_file():
-        return (cwd / f"auto-log-{slug}.txt", pattern12_runbook)
+        return (run_dir / "log.txt", pattern12_runbook)
 
     return None
 
@@ -79,18 +87,18 @@ def find_runbook(cwd: Path, session_id: str | None) -> tuple[Path, Path] | None:
     """Return (log_path, runbook_path) if an active /auto run exists, else None.
 
     Priority:
-    1. Session marker ./.auto-session-<session_id> — contains the slug for
-       THIS chat. Guarantees a parallel chat in the same dir cannot trample
-       this run's log.
-    2. Legacy fallback — most recently modified runbook in CWD. Only fires
-       when no session marker exists (older runs predating the marker).
+    1. Session marker ./auto-runs/.session-<session_id> — contains the slug
+       for THIS chat. Guarantees a parallel chat in the same dir cannot
+       trample this run's log.
+    2. Legacy fallback — most recently modified runbook under ./auto-runs/.
+       Only fires when no session marker exists.
     """
     if not cwd.is_dir():
         return None
 
     # Path 1 — session-scoped marker
     if session_id:
-        marker = cwd / f".auto-session-{session_id}"
+        marker = cwd / "auto-runs" / f".session-{session_id}"
         if marker.is_file():
             try:
                 slug = marker.read_text(encoding="utf-8").strip()
@@ -105,24 +113,27 @@ def find_runbook(cwd: Path, session_id: str | None) -> tuple[Path, Path] | None:
                 # scan, which could route to a parallel chat's runbook.
                 return None
 
-    # Path 2 — legacy fallback (no session marker found)
+    # Path 2 — legacy fallback (no session marker found): scan ./auto-runs/
     candidates: list[tuple[Path, Path]] = []  # (runbook, log)
 
-    # Pattern 3 — auto-<slug>/RUNBOOK.md
-    for entry in cwd.iterdir():
-        if not entry.is_dir() or not entry.name.startswith("auto-"):
-            continue
-        runbook = entry / "RUNBOOK.md"
-        if runbook.is_file():
-            log_dir = entry / "logs"
-            log_dir.mkdir(exist_ok=True)
-            candidates.append((runbook, log_dir / "run.log"))
+    runs_root = cwd / "auto-runs"
+    if not runs_root.is_dir():
+        return None
 
-    # Pattern 1/2 — auto-runbook-<slug>.txt
-    for runbook in cwd.glob("auto-runbook-*.txt"):
-        if runbook.is_file():
-            slug = runbook.stem.removeprefix("auto-runbook-")
-            candidates.append((runbook, cwd / f"auto-log-{slug}.txt"))
+    for run_dir in runs_root.iterdir():
+        if not run_dir.is_dir():
+            continue
+        # Pattern 3 — auto-runs/<slug>/RUNBOOK.md
+        p3 = run_dir / "RUNBOOK.md"
+        if p3.is_file():
+            log_dir = run_dir / "logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            candidates.append((p3, log_dir / "run.log"))
+            continue
+        # Pattern 1/2 — auto-runs/<slug>/runbook.txt
+        p12 = run_dir / "runbook.txt"
+        if p12.is_file():
+            candidates.append((p12, run_dir / "log.txt"))
 
     if not candidates:
         return None

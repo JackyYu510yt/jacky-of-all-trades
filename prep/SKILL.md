@@ -494,8 +494,27 @@ Use the **card-stack format** (Style C). Every section is its own bounded card w
 14. **Open questions** — for the AUDITOR to weigh in on
 15. **Per-function specs** — Phase 7.5 17-field cards appended below, one per RISKY function
 16. **BUILD STATUS** — progress tracker, updated by Phase 8 after each cycle phase clears (see format below)
+17. **FINDINGS** — lessons learned during build/pentest: context, proven result, suspected verdict (see format below). Starts empty; Phase 8 and Phase 9 append to it.
 
-Cards 1–7 lock in WHAT we're building before any function-level design appears. Every later phase (function specs, build cycles, pentest checks) points back at these front-matter cards. Card 16 lets the user (and Phase 8 itself) see exactly where the build is at any moment — and lets a resumed Phase 8 pick up where it left off.
+Cards 1–7 lock in WHAT we're building before any function-level design appears. Every later phase (function specs, build cycles, pentest checks) points back at these front-matter cards. Card 16 lets the user (and Phase 8 itself) see exactly where the build is at any moment — and lets a resumed Phase 8 pick up where it left off. Card 17 captures *why* things turned out the way they did — the discoveries worth remembering after the run.
+
+### FINDINGS card format
+
+Phase 6 emits this card empty. Phase 8 (build cycle) and Phase 9 (pentest) append an entry whenever they **learn why** something behaved as it did — a failure whose cause got pinned down, or a small success that flipped a prior assumption (the classic: "it worked once we authenticated → the thing was never broken, we just weren't logged in"). Do NOT log routine, expected passes.
+
+```
+╭─ FINDINGS ──────────────────────────────────────────────────╮
+│                                                              │
+│  <ISO timestamp> — <one-line summary>                        │
+│    Context:           <what we were doing + assumption held> │
+│    Result:            <what actually happened — PROVEN>      │
+│    Suspected verdict: <best-guess WHY — a hypothesis, never  │
+│                        stated as fact>                       │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+The `Result` is the proven part; the `Suspected verdict` is always flagged as a guess (evidence-first). A verdict confirmed by a decisive check — one experiment that isolates the cause, "pin the fix, don't guess" — is far stronger than one inferred from a single outcome; name the check in the verdict when one was run.
 
 ### BUILD STATUS card format
 
@@ -620,7 +639,15 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              producer/consumer graph.
 
  9. Failure modes            Table: failure → self-healing path
-                             → if that fails, what next.
+                             → if that fails, what next. The
+                             self-healing path uses Ordered
+                             recovery on re-entry (see Self-Healing
+                             Patterns) — never retry on a prior
+                             attempt's residue. Source the rows from
+                             /error-recon's map when one exists — its
+                             confirmed entries are the evidence-backed
+                             failure list (+ the `Residue` field feeds
+                             field 12).
 
 10. Performance profile      CPU / IO / net bound? Cost per
                              item? Where the bottleneck lives?
@@ -630,7 +657,11 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              to watch on the first real run.
 
 12. Rollback plan            If this misbehaves mid-batch, how
-                             to undo. What state needs cleanup.
+                             to undo. Cleanup covers BOTH this
+                             function's own partial state AND any
+                             downstream consumer (field 5) that
+                             already read the now-undone output —
+                             else they run on a stale foundation.
 
 13. Test specs (4 sub)       The Phase 8 build cycle, pre-written:
 
@@ -797,6 +828,7 @@ function 2                 the file's style — naming, error
 - Self-healing in every risky function — bounded retries, checkpoint writes, idempotent operations. Never bare `try/except Exception: pass`.
 - KISS (P5) — no class hierarchies for linear flows, no `tenacity` when a 5-line loop works, no CLI framework for ≤ 2 args.
 - Every subprocess and network call gets a retry wrapper. Every file write uses write-to-temp-then-rename.
+- **Visual smoke capture (P10 — see it before you call it).** When a function's smoke/REAL test touches a visual surface (a browser, a GUI window, a rendered frame), the generated test captures a screenshot at each state-change + assertion and prints a `[shot] <path>` line per capture. The test's PASS is not accepted until that shot is read — a passing exit code on a visual surface is necessary but not sufficient (a signed-out page exits 0 too). Non-visual tests get no shot. Mirrors /auto Hard Invariant #11.
 
 After each function clears AUDIT, ask the user one quick question: "Does this match what you pictured?" (Yes / Tweak / Rewrite). The user is reviewing a proven function, not a hopeful one.
 
@@ -845,6 +877,13 @@ Pull each item from the TESTING CONDITIONS card and run it:
 
 [ ] MUST-hold checklist from the SUCCESS CONDITIONS card
        Each item passes or fails explicitly.
+
+[ ] Visual-surface verdicts read, not inferred (P10)
+       Any production-shape check whose result is something you
+       LOOK at (a rendered page, an app window) is confirmed by
+       reading its captured screenshot — never from log text or
+       exit code alone. A missing/unreadable shot = INCONCLUSIVE,
+       not pass.
 ```
 
 **No standalone Step 1 PoC layer.** It's been folded into Phase 8's per-function REAL step. The historical Step 1 / Step 2 split existed for skills that don't have a per-function build cycle — `prep` does, so Phase 9 is integration-only.
@@ -877,6 +916,7 @@ Use these primitives when writing the plan and the prototype. Prefer simple vers
 - **Idempotent operations** — every stage should be safe to re-run. If output exists and is valid, skip it. If not, produce it.
 - **Fail-fast on non-transient errors** — bad codec, missing file, wrong credentials: raise immediately. Only retry truly transient conditions.
 - **Health check before heavy work** — ffprobe the input before a 2-hour encode. Ping the upload endpoint before batching.
+- **Ordered recovery on re-entry** — when retrying or resuming a step that may have run partway, never retry on top of a prior attempt's residue. Restore in order: roll back partial work → re-assert the precondition (re-run the step's health check / readiness check, field 7) → invalidate downstream (the field-5 consumers that read the old output, but only when the redone output actually differs) → resume. The build-time form of /auto's Re-entry hygiene + /spec's RECOVERS-BY.
 
 ## Hard NOs
 
@@ -921,3 +961,15 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 ```
 
 The headline contrasts current state with the END GOAL card, not with a sub-step. SHIPPABLE / NOT SHIPPABLE is implied by the state — DONE means shippable, anything else means not.
+
+### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
+
+After the FINAL VERDICT card is written, if the project has a `SPEC.md`, promote the **keeper** findings from the FINDINGS card (the ones that explain a real cause — skip the obvious) into its Change Log. The ledger fields don't match the Change Log schema, so translate as you pipe each keeper — `finding → change` (prefix `FINDING: `), `suspected verdict → why` (keep the word "suspected"), `context → context`, prior-assumption `→ before`, `result → after`:
+
+```bash
+printf 'change: FINDING: %s\nwhy: suspected — %s\ncontext: %s\nbefore: %s\nafter: %s\n' \
+  "<summary>" "<suspected verdict>" "<context>" "<prior assumption>" "<proven result>" \
+  | python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log
+```
+
+No `SPEC.md` → skip silently (the findings still live in the FINDINGS card). One `spec_tool.py log` call per keeper.

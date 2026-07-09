@@ -1,11 +1,17 @@
 # Memory Index
 
 - [User work context](user_work_context.md) — Python + ffmpeg video rendering pipelines, long jobs, large files
+- [ffmpeg on PATH](reference_ffmpeg_on_path.md) — canonical ffmpeg/ffprobe at C:\ffmpeg\bin, on persistent user PATH; winget NOT available
+- [/web-capture skill](reference_web_capture_skill.md) — proxy-free headed-Selenium page capture + detection signatures; selenium-wire is BROKEN on this box (use Chrome DevTools logs)
 - [KISS-first optimization](feedback_kiss_optimization.md) — complete the goal first, then strip; KISS is a final-pass filter, not a brake on building enough
 - [Retries are optimization](feedback_retries_are_optimization.md) — bounded retries + checkpointing matter for long-running jobs
+- [Evidence-first error handling](feedback_evidence_first_error_recon.md) — never guess what an error means; act only on seen/captured/proven failures; success only from verified output. Embodied in /error-recon
+- [Pin the fix, don't guess](feedback_pin_the_fix.md) — before patching, run one decisive check that isolates a single variable (binary outcome localizes the cause); prove the cause before the fix
+- [Probe, don't assume](feedback_probe_dont_assume.md) — get empirical evidence for every claim; smoke test or write a specialized test when no cheap probe exists. Codified in /auto (Hard Invariant #10) + /spec
+- [See it before you call it](feedback_see_it_before_you_call_it.md) — on a visual surface, read a screenshot (captured in-test at assertions) before declaring pass/fail; exit-0/log text isn't proof. Codified as Principle 10 + /auto HI #11 + /prep
 - [Plain-language explanations](feedback_plain_language.md) — short sentences, everyday analogies, define jargon on first use
 - [Explanation level — curious adult](feedback_explanation_level.md) — default register is L1b: simple, direct, adult-grade analogy, no walls of text
-- [Codex audit loop for plans](feedback_codex_audit_loop.md) — non-trivial plans route through Codex before execution, expect multi-turn integration
+- [Independent /audit review for plans](feedback_audit_skill_loop.md) — non-trivial plans/changes route through the /audit skill (independent AUDITOR subagent) before execution; replaces the Codex hand-off
 - [Mandatory Shell+Cron+Monitor tri-pattern](feedback_mandatory_shell_cron_monitor.md) — preload Monitor + Cron alongside Shell for /auto, /repair, /prep; never shell-only
 - [No mid-reasoning pivots](feedback_no_mid_reasoning_pivots.md) — never print hypotheses that later get overturned; user acts on first reading
 - [Response format — ADHD + visual reading](feedback_response_format.md) — every response: rainbow top row, bold headlines, double-spaced items, chunked structure
@@ -16,7 +22,12 @@
 - [Structural fix vs patch](feedback_structural_fix_vs_patch.md) — DONE only if next run, different input, no Claude in loop, doesn't hit same failure
 - [/auto has no phase gates](feedback_auto_no_phase_gates.md) — under /auto, skill phase boundaries are not confirmation gates; only DONE or STUCK ends the loop
 - [/auto Stop-hook enforcement](project_auto_stop_hook_enforcement.md) — ~/.claude/hooks/auto-stop-block.py blocks Stop while a runbook exists without Status DONE/STUCK; harness-level autonomy without /goal typing
+- [/auto-runs folder layout](project_auto_runs_folder_layout.md) — /auto nests ALL artifacts under one per-run ./auto-runs/<slug>/ folder; no more loose auto-* files in CWD
 - ["Leaning toward" is a question](feedback_leaning_toward_not_authorization.md) — tentative phrasings ask for more info; wait for explicit "apply / go / do it / yes" before acting
+- [One thing at a time](feedback_one_thing_at_a_time.md) — deliver one item/decision per message; don't stack explanations + fix lists + multiple questions in one turn
+- [Graduated scale-up](feedback_graduated_scale_up.md) — prove on a little before the whole: smoke(1)→batch→full, each rung a verify gate; conditional on volume. Baked into /spec (the bar) + /auto (the ramp)
+- [Constraint vs preference](feedback_constraint_vs_preference.md) — a limit/deadline ("overnight", "under 5GB") is a filter, not a vote for the slowest option that fits; among options that satisfy it, faster/better still wins
+- [Audit the error path's ordering](feedback_audit_error_path_ordering.md) — recovery paths are re-entries over partial state; trace each failure path's own order (undo→re-assert precondition→invalidate downstream), don't just audit the happy path. Codified across /auto (Re-entry hygiene + HI #12 + stage template), /spec (self-healing success bar + RECOVERS-BY), and /prep (field 9/12 + Ordered-recovery pattern); same canonical chain in all four
 - [Connect to live Chrome via chrome-devtools-mcp](reference_chrome_devtools_live_browser.md) — toggle + `--autoConnect` (not --browserUrl) + Node ≥22.12; the 3 gotchas that each blocked us once
 - [TubeAI Viral Vectors knowledge base](project_tubeai_viral_vectors.md) — 5,075 words scraped into viral_vectors.jsonl + guide + clusters + graph for LLM ideation
 - [Spotlistr bulk playlist method](reference_spotlistr_bulk_playlist.md) — paste text→Spotify playlist; title-only beats wrong-artist; native-setter fill; token search is rate-limited
