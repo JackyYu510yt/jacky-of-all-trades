@@ -17,3 +17,7 @@
 - [/auto has no phase gates](feedback_auto_no_phase_gates.md) — under /auto, skill phase boundaries are not confirmation gates; only DONE or STUCK ends the loop
 - [/auto Stop-hook enforcement](project_auto_stop_hook_enforcement.md) — ~/.claude/hooks/auto-stop-block.py blocks Stop while a runbook exists without Status DONE/STUCK; harness-level autonomy without /goal typing
 - ["Leaning toward" is a question](feedback_leaning_toward_not_authorization.md) — tentative phrasings ask for more info; wait for explicit "apply / go / do it / yes" before acting
+- [Connect to live Chrome via chrome-devtools-mcp](reference_chrome_devtools_live_browser.md) — toggle + `--autoConnect` (not --browserUrl) + Node ≥22.12; the 3 gotchas that each blocked us once
+- [TubeAI Viral Vectors knowledge base](project_tubeai_viral_vectors.md) — 5,075 words scraped into viral_vectors.jsonl + guide + clusters + graph for LLM ideation
+- [Spotlistr bulk playlist method](reference_spotlistr_bulk_playlist.md) — paste text→Spotify playlist; title-only beats wrong-artist; native-setter fill; token search is rate-limited
+- [Top Tracks 2024 playlist](project_top_tracks_2024_playlist.md) — rebuilt user's 200-song stats.fm list into clean Spotify playlist 5A2S7ToY9tCbAda19YFM5U
