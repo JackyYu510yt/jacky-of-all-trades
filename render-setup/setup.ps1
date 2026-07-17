@@ -62,7 +62,7 @@ function Invoke-WithRetry([scriptblock]$Action, [string]$What, [int]$Tries = 3) 
 function Wait-Until([scriptblock]$Condition, [string]$What, [int]$TimeoutSec = 300, [int]$PollSec = 5) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
-        try { if (& $Condition) { return $true } } catch { }
+        try { if (& $Condition) { return } } catch { }
         Start-Sleep -Seconds $PollSec
     }
     Fail "Timed out after ${TimeoutSec}s waiting for: $What"
@@ -347,7 +347,90 @@ foreach ($f in $folders) {
 }
 
 # ----------------------------------------------------------------------------
-# STEP 12 - staged unpause: thumbnails first, then the big work folder
+# STEP 12 - general tools: Chrome, WinRAR, Git, Claude Code + dsp + skills
+# (runs BEFORE the long sync so all interaction happens early)
+# ----------------------------------------------------------------------------
+foreach ($app in @(
+    @{ id = 'Google.Chrome'; name = 'Chrome' }
+    @{ id = 'RARLab.WinRAR'; name = 'WinRAR' }
+    @{ id = 'Git.Git';       name = 'Git' }
+)) {
+    Log "Installing $($app.name)..."
+    try {
+        Invoke-WithRetry { winget install --id $app.id --silent --accept-package-agreements --accept-source-agreements | Out-Null } "$($app.name) install" 2
+        Ok "$($app.name) ready."
+    } catch { Warn "$($app.name) install failed - install it by hand later; setup continues." }
+}
+
+# Claude Code + the dsp command
+$claudeBin = Join-Path $env:USERPROFILE '.local\bin'
+New-Item -ItemType Directory -Force $claudeBin | Out-Null
+if (Get-Command claude -ErrorAction SilentlyContinue) { Ok "Claude Code already installed." }
+else {
+    Log "Installing Claude Code..."
+    try { Invoke-WithRetry { irm https://claude.ai/install.ps1 | iex } 'Claude Code install' 2; Ok "Claude Code installed." }
+    catch { Warn "Claude Code install failed - run  irm https://claude.ai/install.ps1 | iex  by hand later." }
+}
+$up = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($up -notlike "*$claudeBin*") { [Environment]::SetEnvironmentVariable('Path', "$up;$claudeBin", 'User') }
+$env:Path += ";$claudeBin"
+Set-Content -Path (Join-Path $claudeBin 'dsp.cmd') -Value "@echo off`r`nclaude --dangerously-skip-permissions %*"
+Ok "dsp command ready."
+
+# Skills repo + Claude config wiring (the repo's own setup.ps1 does the junctions)
+$skills = Join-Path $env:USERPROFILE '.claude\skills'
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$claudeBin"
+if (-not (Test-Path (Join-Path $skills '.git'))) {
+    Log "Cloning skills repo..."
+    # via cmd so git's stderr chatter can't trip EAP=Stop; the repo has one
+    # Windows-illegal filename, so a partial checkout is expected and tolerated
+    & cmd /c "git clone https://github.com/JackyYu510yt/jacky-of-all-trades `"$skills`" 2>nul"
+    if ($LASTEXITCODE -ne 0) { Warn "git clone reported errors (known: one repo filename is illegal on Windows) - continuing with what checked out." }
+} else { Ok "Skills repo already present." }
+if (Test-Path (Join-Path $skills 'setup.ps1')) {
+    Log "Wiring Claude config (hooks + memory + settings)..."
+    try { & powershell -ExecutionPolicy Bypass -File (Join-Path $skills 'setup.ps1') | Out-Null; Ok "Claude config wired." }
+    catch { Warn "Skills setup.ps1 failed - run it by hand later." }
+} else { Warn "Skills repo setup.ps1 not found - wire Claude config by hand later." }
+
+# ----------------------------------------------------------------------------
+# STEP 13 - Chrome Remote Desktop: install always, link with ONE paste
+# ----------------------------------------------------------------------------
+$crdExe = "${env:ProgramFiles(x86)}\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe"
+if (-not (Test-Path $crdExe)) {
+    Log "Installing Chrome Remote Desktop host..."
+    $msi = Join-Path $work 'crdhost.msi'
+    try {
+        Invoke-WithRetry { Invoke-WebRequest 'https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi' -OutFile $msi -UseBasicParsing } 'CRD download'
+        Start-Process msiexec -ArgumentList '/i', "`"$msi`"", '/qn' -Wait
+    } catch { Warn "CRD host install failed - install by hand later; setup continues." }
+}
+if (Test-Path $crdExe) {
+    Ok "Chrome Remote Desktop host installed."
+    $pin = ''
+    $settingsPath = Join-Path $work 'setup_settings.json'
+    if (Test-Path $settingsPath) { $pin = (Get-Content $settingsPath -Raw | ConvertFrom-Json).crd_pin }
+    if (-not $pin -or $pin -eq 'CHANGE_ME') { $pin = Read-Host 'Choose the Chrome Remote Desktop PIN (6+ digits)' }
+    Write-Host ''
+    Write-Host '  LINK THIS PC TO YOUR GOOGLE ACCOUNT (one paste):' -ForegroundColor Yellow
+    Write-Host '  1. On ANY device where you are logged into Google, open:'
+    Write-Host '       https://remotedesktop.google.com/headless'
+    Write-Host '  2. Click Begin -> Next -> Authorize, then COPY the command shown under "Windows".'
+    Write-Host '  3. Paste it below. (Press Enter alone to SKIP - you can link later.)'
+    $pasted = Read-Host '  paste here'
+    if ($pasted -match '--code="?([^"\s]+)"?') {
+        Log "Registering with Google as $PcName..."
+        $eapBak = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+        $out = $pin, $pin | & $crdExe --code="$($Matches[1])" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name="$PcName" 2>&1
+        $ErrorActionPreference = $eapBak
+        if ($LASTEXITCODE -eq 0) { Ok "Chrome Remote Desktop linked - this PC is '$PcName' in your device list." }
+        else { Warn "CRD registration failed: $($out | Out-String)" }
+    } elseif ($pasted.Trim()) { Warn 'Could not find --code=... in that paste - CRD link skipped.' }
+    else { Warn 'CRD linking skipped by choice.' }
+}
+
+# ----------------------------------------------------------------------------
+# STEP 14 - staged unpause: thumbnails first, then the big work folder
 # ----------------------------------------------------------------------------
 Log "Waiting for a connection to the farmer..."
 Wait-Until {
@@ -371,7 +454,7 @@ Unpause-AndSync $FOLDER_THUMBS '! Thumbnails' 1800
 Unpause-AndSync $FOLDER_OUTPUT '! Jacky Rush Output' 14400   # up to 4h - the work folder can be 20+ GB
 
 # ----------------------------------------------------------------------------
-# STEP 13 - watcher config: this machine's claim-protocol name
+# STEP 15 - watcher config: this machine's claim-protocol name
 # ----------------------------------------------------------------------------
 $cfgPath = Join-Path $TemplateDir 'render_watcher_config.json'
 if (-not (Test-Path $cfgPath)) { Fail "render_watcher_config.json not found in the template." }
@@ -382,7 +465,7 @@ $cfg.my_pc_name = $PcName
 Ok "Watcher config: my_pc_name = $PcName"
 
 # ----------------------------------------------------------------------------
-# STEP 14 - start the watcher + its autostart (only now that sync is complete)
+# STEP 16 - start the watcher + its autostart (only now that sync is complete)
 # ----------------------------------------------------------------------------
 $launch = Join-Path $TemplateDir 'launch.bat'
 if (-not (Test-Path $launch)) { Fail "launch.bat not found in the template." }
@@ -406,5 +489,7 @@ Write-Host " identity   : $ExpectedId"
 Write-Host " folders    : ! Jacky Rush Output + ! Thumbnails (synced)"
 Write-Host " watcher    : running, autostarts at login"
 Write-Host " win update : permanently disabled"
+Write-Host " tools      : Chrome, WinRAR, Git, Claude Code (+dsp), skills repo, CRD"
 Write-Host ""
+Write-Host " Remaining by hand: run 'claude login' once (credentials are never bundled)."
 Write-Host " Reboot once to prove autostart if you want the full test."
