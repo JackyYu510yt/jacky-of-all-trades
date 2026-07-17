@@ -474,7 +474,9 @@ Set-ItemProperty $run -Name 'JackyRushWatcher' -Value "cmd.exe /c cd /d `"$Templ
 # and NVIDIA DLL dirs (they were written to the registry, not this session)
 $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) { Warn "'py' launcher not on PATH yet - if the watcher window errors, reboot once and it will autostart correctly." }
-Start-Process cmd.exe -ArgumentList '/c', 'launch.bat' -WorkingDirectory $TemplateDir
+$watcherAlive = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'jacky_rush_render_watcher' }
+if ($watcherAlive) { Ok "Watcher is already running - leaving it alone (no second copy)." }
+else { Start-Process cmd.exe -ArgumentList '/c', 'launch.bat' -WorkingDirectory $TemplateDir }
 Ok "Watcher started + autostarts at login."
 
 # ----------------------------------------------------------------------------
