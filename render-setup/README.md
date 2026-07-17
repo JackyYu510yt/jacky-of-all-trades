@@ -42,6 +42,17 @@ template folder is left untouched on re-run; to force-refresh it, delete
 Future setups now include the change. Already-running PCs: re-run setup or
 apply the change by hand.
 
+## Storage layout (two drives)
+
+Shadow PCs: 256 GB SSD (C:) + purchased 1 TB HDD.
+
+- **SSD (C:)** - scripts/tools: the template, Python, Syncthing, configs.
+- **HDD** - all video bulk: `! Jacky Rush Output`, `! Thumbnails`,
+  `! Jacky Rush Rendered`, physically at `D:\Shared Folder`.
+- One junction makes it invisible: `Desktop\Compiled Binaries\Shared Folder`
+  -> `D:\Shared Folder`. Every config keeps using the Desktop path.
+- No HDD present -> setup warns and falls back to C:.
+
 ## Hard rules baked into setup.ps1 (do not "fix")
 
 - Identity keys are planted BEFORE Syncthing ever starts; the script hard-stops
