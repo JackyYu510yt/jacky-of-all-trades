@@ -281,8 +281,26 @@ Wait-Until { $api = Get-StApi; (Invoke-RestMethod "$($api.Base)/system/status" -
 Ok "Syncthing running + autostarts at login."
 
 # ----------------------------------------------------------------------------
-# STEP 10 - local folders
+# STEP 10 - local folders: video bulk lives on the HDD via ONE junction
+#   SSD (C:) keeps scripts/tools; Shared Folder -> D:\Shared Folder (junction)
 # ----------------------------------------------------------------------------
+$hdd = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
+       Where-Object { $_.DeviceID -ne 'C:' } |
+       Sort-Object Size -Descending | Select-Object -First 1
+$existing = Get-Item $SharedRoot -ErrorAction SilentlyContinue
+if ($existing -and ($existing.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+    Ok "Shared Folder junction already in place."
+} elseif ($existing) {
+    Warn "Shared Folder already exists as a REAL folder on C: - leaving it alone (migrate to the HDD manually later)."
+} elseif ($hdd) {
+    $hddRoot = "$($hdd.DeviceID)\Shared Folder"
+    New-Item -ItemType Directory -Force $hddRoot | Out-Null
+    New-Item -ItemType Directory -Force (Split-Path $SharedRoot) | Out-Null
+    New-Item -ItemType Junction -Path $SharedRoot -Target $hddRoot | Out-Null
+    Ok "Video storage -> HDD $($hdd.DeviceID) ($([math]::Round($hdd.Size/1GB)) GB) via Desktop junction."
+} else {
+    Warn "No HDD found - video folders will live on the small C: drive."
+}
 foreach ($d in $OutputDir, $ThumbsDir, $RenderedDir) {
     New-Item -ItemType Directory -Force $d | Out-Null
 }
