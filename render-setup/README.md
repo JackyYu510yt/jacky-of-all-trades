@@ -30,6 +30,7 @@ template folder is left untouched on re-run; to force-refresh it, delete
 | `setup.ps1` | The one-shot installer a blank PC downloads and runs |
 | `pack_payload.ps1` | Run on the farmer to (re)build `payload.enc` from the template + keys |
 | `payload.enc` | Template + all identity keys, AES-256 locked with the password. Safe to host publicly. |
+| `share-rendered-to-uploader.ps1` | Run on an already-set-up render PC to share `! Jacky Rush Rendered` send-only to the Uploader PC (see `../uploader-setup/`) |
 
 ## Updating the template (new tools, fixed scripts)
 
@@ -73,6 +74,14 @@ Shadow PCs: 256 GB SSD (C:) + purchased 1 TB HDD.
 | PC1 | `VYEHZ24` | Shadow |
 | PC2 | `NSBTRAN` | Shadow |
 | PC3 | `ZGSLY26` | Shadow |
+| Uploader | `MSZZ6T4` | Receives finished videos one-way, see `../uploader-setup/` |
 
 The farmer + PC2 already trust these identities - a rebuilt PC reconnects with
 zero changes on any other machine.
+
+## One-way sync to the Uploader PC
+
+Finished videos in `! Jacky Rush Rendered` sync one-way (send-only) to the
+Uploader PC via folder ID `jr-rendered`. This is configured separately from
+setup.ps1 by running `share-rendered-to-uploader.ps1` on each render PC. Full
+docs: [`../uploader-setup/README.md`](../uploader-setup/README.md).
