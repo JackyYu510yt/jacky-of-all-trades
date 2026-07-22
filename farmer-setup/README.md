@@ -36,7 +36,7 @@ type it again when rebuilding. It is never stored anywhere.
 
 | Payload folder | Restored to | Why it's irreplaceable |
 |---|---|---|
-| `syncthing-identity\` | `%LOCALAPPDATA%\Syncthing` | The farmer's cert.pem + key.pem (device ID `XFLEVVM...`) **and the live config.xml** - the mesh's real folder/device list, which is AHEAD of what any README records (e.g. the newer PC1 `5QQ3FXH...`, Claude Output, Mats Output, Transfer) |
+| `syncthing-identity\` | `%LOCALAPPDATA%\Syncthing` | The farmer's cert.pem + key.pem (device ID `XFLEVVM...`) **and the live config.xml** - the mesh's real folder/device list, which is AHEAD of what any README records (extra devices like the `jacky` home PC and dead-but-registered old boxes, plus the Claude Output / Mats Output / Transfer folders) |
 | `render-pc-identities\` | `Desktop\render-pc-identities` | pc1/pc2/pc3 cert+key pairs - they exist ONLY on the farmer; lose them and no render PC can ever be rebuilt with its old identity |
 | `Jacky Rush Render PC Template\` | `Desktop\Testing\Jacky Rush Render PC Template` | The MASTER template that `render-setup/pack_payload.ps1` reads |
 | `Jacky Rush\` | `Desktop\Testing\Jacky Rush` | The orchestrator itself - farmer + stage 0-6 pipeline + workers + secrets (cookies.txt, proxies.txt, quota state). Logs, outputs, scratch and `_*` test dirs are deliberately NOT packed (9 GB of junk) |
