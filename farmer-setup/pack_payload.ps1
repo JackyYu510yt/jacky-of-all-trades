@@ -46,7 +46,11 @@ if ($p1.Length -lt 16) { throw 'Password must be at least 16 characters - it gua
 
 # stage: one folder holding exactly what setup.ps1 expects to find in the zip
 $stage = Join-Path $env:TEMP 'farmer-payload-stage'
-if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+if (Test-Path $stage) {
+    # \\?\ fallback: plain Remove-Item chokes on names ending in dots/spaces
+    try { Remove-Item $stage -Recurse -Force -ErrorAction Stop }
+    catch { [IO.Directory]::Delete("\\?\$stage", $true) }
+}
 New-Item -ItemType Directory $stage | Out-Null
 
 # --- Syncthing identity + live config: cert, key, config.xml and NOTHING else.
@@ -107,6 +111,20 @@ Copy-Item 'C:\Users\Shadow\Desktop\Compiled Binaries\Tinkering\stagger-dashboard
 Copy-Item 'C:\Tools\AutoHotkey\WinVDitto.exe' $misc
 Copy-Item 'C:\Users\Shadow\Desktop\ClipAngel 2.22' (Join-Path $misc 'ClipAngel 2.22') -Recurse
 
+# folder names ending in dots/spaces ("Video 3 ... Gunman...") break every
+# normal Windows tool including Compress-Archive - rename them in the stage
+# via \\?\ deep paths (contents kept), deepest first so nesting can't bite
+$odd = @([IO.Directory]::EnumerateDirectories("\\?\$stage", '*', [IO.SearchOption]::AllDirectories)) |
+       Where-Object { $n = [IO.Path]::GetFileName($_); $n.TrimEnd('. ') -ne $n } |
+       Sort-Object { $_.Length } -Descending
+foreach ($d in $odd) {
+    if (-not [IO.Directory]::Exists($d)) { continue }
+    $fixed = [IO.Path]::GetDirectoryName($d) + '\' + [IO.Path]::GetFileName($d).TrimEnd('. ')
+    if ([IO.Directory]::Exists($fixed)) { [IO.Directory]::Delete($d, $true) }
+    else { [IO.Directory]::Move($d, $fixed) }
+    Write-Host "  (renamed unzippable folder: $([IO.Path]::GetFileName($d)))"
+}
+
 # zip tools drop empty dirs (inputFiles, processing, niches...) - plant placeholders
 Get-ChildItem $stage -Recurse -Directory | Where-Object { -not (Get-ChildItem $_.FullName -Force) } |
     ForEach-Object { New-Item -ItemType File (Join-Path $_.FullName '.keep') | Out-Null }
@@ -127,7 +145,13 @@ $aes = [Security.Cryptography.Aes]::Create()
 $aes.Key = $kdf.GetBytes(32)
 $aes.GenerateIV()
 $cipher = $aes.CreateEncryptor().TransformFinalBlock($plain, 0, $plain.Length)
-[IO.File]::WriteAllBytes($OutFile, ($salt + $aes.IV + $cipher))
+# stream the three parts - PS array '+' on a payload this size boxes every
+# byte and runs out of memory (render-setup's smaller payload got away with it)
+$fs = [IO.File]::Create($OutFile)
+$fs.Write($salt, 0, $salt.Length)
+$fs.Write($aes.IV, 0, $aes.IV.Length)
+$fs.Write($cipher, 0, $cipher.Length)
+$fs.Close()
 
 Remove-Item $zip, $stage -Recurse -Force
 $mb = [math]::Round((Get-Item $OutFile).Length / 1MB, 1)
