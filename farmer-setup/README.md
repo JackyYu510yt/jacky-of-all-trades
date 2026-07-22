@@ -42,6 +42,7 @@ type it again when rebuilding. It is never stored anywhere.
 | `Jacky Rush\` | `Desktop\Testing\Jacky Rush` | The orchestrator itself - farmer + stage 0-6 pipeline + workers + secrets (cookies.txt, proxies.txt, quota state). Logs, outputs, scratch and `_*` test dirs are deliberately NOT packed (9 GB of junk) |
 | `Vercel\` | `Desktop\Testing\Vercel` | Render snapshot scanner (feeds the yt-dashboard via Supabase; creds come from the template's `_render_push_config.json`) |
 | `jarvis\` | `Tinkering\jarvis` | Claude notes/strips overlay scripts |
+| `stagger-dashboard\` | `Tinkering\stagger-dashboard` | Daily-quota rotator dashboard. Its git repo has **no remote** - this payload is the ONLY off-machine copy (.git history + .env.local included; node_modules and the 11 GB of test artifacts skipped) |
 | `misc\` | various | Transcript-service Startup trio, `bot_restart.ps1`, stagger `supervisor.ps1`, `WinVDitto.exe`, ClipAngel |
 
 ## Hard rules baked into setup.ps1 (do not "fix")
@@ -109,6 +110,7 @@ Credentials are never bundled; these need a human:
 4. Reinstall **chrome-for-testing** to `C:\chrome-for-testing\chrome-win64\`
    (the worker browser runtime - not packed), then log the gemini/aistudio/flow
    worker accounts back in. All browser profiles are gone after a rebuild.
-5. stagger-dashboard project (Tinkering) - restore from its own repo/backup,
-   then re-enable the StaggerHelperSupervisor task if wanted.
+5. stagger-dashboard comes back from the payload, but without node_modules -
+   run `npm install` inside it, then re-enable the StaggerHelperSupervisor
+   task if wanted.
 6. Start the farmer when ready: `launch jacky_rush_farmer.bat`.

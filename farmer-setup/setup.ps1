@@ -207,6 +207,8 @@ Restore-Folder (Join-Path $work 'Jacky Rush')                     $JackyDir    '
 Restore-Folder (Join-Path $work 'Jacky Rush Render PC Template')  $TemplateDir 'Master render template'
 Restore-Folder (Join-Path $work 'render-pc-identities')           $KeysDir     'Render PC identity bundles'
 Restore-Folder (Join-Path $work 'jarvis')                         $JarvisDir   'jarvis overlay scripts'
+# must run BEFORE the supervisor.ps1 plant below (that would pre-create the dir)
+Restore-Folder (Join-Path $work 'stagger-dashboard') (Split-Path $StaggerHlp) 'stagger-dashboard project (incl. its only git copy)'
 # Vercel: restore the scanner files without clobbering a fuller existing dir
 New-Item -ItemType Directory -Force $VercelDir | Out-Null
 foreach ($f in Get-ChildItem (Join-Path $work 'Vercel') -File) {
@@ -370,6 +372,11 @@ Install-Tool 'Git' "$env:ProgramFiles\Git\cmd\git.exe" `
 Install-Tool 'GitHub CLI' "$env:ProgramFiles\GitHub CLI\gh.exe" `
     { $r = Invoke-RestMethod 'https://api.github.com/repos/cli/cli/releases/latest'
       ($r.assets | Where-Object { $_.name -like '*_windows_amd64.msi' } | Select-Object -First 1).browser_download_url } `
+    @('/qn')
+Install-Tool 'Node.js LTS' "$env:ProgramFiles\nodejs\node.exe" `
+    { $idx = Invoke-RestMethod 'https://nodejs.org/dist/index.json'
+      $lts = $idx | Where-Object { $_.lts } | Select-Object -First 1
+      "https://nodejs.org/dist/$($lts.version)/node-$($lts.version)-x64.msi" } `
     @('/qn')
 Install-Tool 'Ditto' "$env:ProgramFiles\Ditto\Ditto.exe" `
     { $r = Invoke-RestMethod 'https://api.github.com/repos/sabrogden/Ditto/releases/latest'

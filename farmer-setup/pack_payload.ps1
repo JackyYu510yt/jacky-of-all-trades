@@ -22,6 +22,7 @@ $TemplateDir = 'C:\Users\Shadow\Desktop\Testing\Jacky Rush Render PC Template'
 $JackyDir    = 'C:\Users\Shadow\Desktop\Testing\Jacky Rush'
 $VercelDir   = 'C:\Users\Shadow\Desktop\Testing\Vercel'
 $JarvisDir   = 'C:\Users\Shadow\Desktop\Compiled Binaries\Tinkering\jarvis'
+$StaggerDir  = 'C:\Users\Shadow\Desktop\Compiled Binaries\Tinkering\stagger-dashboard'
 $StartupDir  = "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
 $OutFile     = Join-Path $PSScriptRoot 'payload.enc'
 
@@ -33,6 +34,7 @@ foreach ($pc in 'pc1', 'pc2', 'pc3') {
 }
 if (-not (Test-Path $TemplateDir)) { throw "Template folder not found: $TemplateDir" }
 if (-not (Test-Path "$JackyDir\jacky_rush_farmer.py")) { throw "Orchestrator folder not found: $JackyDir" }
+if (-not (Test-Path "$StaggerDir\package.json")) { throw "stagger-dashboard not found: $StaggerDir" }
 
 if ($Password) { $p1 = $Password }
 else {
@@ -99,6 +101,16 @@ $jDst = Join-Path $stage 'jarvis'
 robocopy $JarvisDir $jDst /E /XJ /NFL /NDL /NJH /NJS /R:1 /W:1 /XD __pycache__ /XF *.log | Out-Null
 if ($LASTEXITCODE -ge 8) { throw "robocopy failed staging $JarvisDir (exit $LASTEXITCODE)" }
 
+# --- stagger-dashboard: its git repo has NO remote - this payload is the ONLY
+#     off-machine copy. Keeps .git history + .env.local secrets; skips
+#     node_modules (npm install rebuilds it) and the 11 GB of test junk.
+Write-Host 'Staging stagger-dashboard...'
+$sgDst = Join-Path $stage 'stagger-dashboard'
+robocopy $StaggerDir $sgDst /E /XJ /NFL /NDL /NJH /NJS /R:1 /W:1 `
+    /XD node_modules smoke_tools auto-runs .claude `
+    /XF *.log _shot_*.png | Out-Null
+if ($LASTEXITCODE -ge 8) { throw "robocopy failed staging $StaggerDir (exit $LASTEXITCODE)" }
+
 # --- small autostart helpers that live outside any project folder
 Write-Host 'Staging autostart helpers...'
 $misc = New-Item -ItemType Directory (Join-Path $stage 'misc')
@@ -132,7 +144,10 @@ Get-ChildItem $stage -Recurse -Directory | Where-Object { -not (Get-ChildItem $_
 Write-Host 'Zipping...'
 $zip = Join-Path $env:TEMP 'farmer-payload.zip'
 if (Test-Path $zip) { Remove-Item $zip }
-Compress-Archive "$stage\*" -DestinationPath $zip -CompressionLevel Optimal
+# .NET ZipFile, NOT Compress-Archive: Compress-Archive silently drops HIDDEN
+# files, which would strip stagger-dashboard's .git (its only history copy)
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+[IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
 
 Write-Host 'Locking with your password (AES-256)...'
 $plain = [IO.File]::ReadAllBytes($zip)
