@@ -101,16 +101,18 @@ payload is the only complete record of the mesh.
 
 ## After a rebuild - the by-hand checklist
 
-Credentials are never bundled; these need a human:
+Everything installable is installed by setup.ps1 (including chrome-for-testing
+and stagger-dashboard's `npm install`). What's left is exactly the things a
+script can't do - logins:
 
 1. `gh auth login` (GitHub), `claude login` (Claude Code).
 2. Chrome Remote Desktop - the script offers the one-paste link flow; if
    skipped, do it via https://remotedesktop.google.com/headless.
-3. AdsPower + Proxifier - install and log in by hand.
-4. Reinstall **chrome-for-testing** to `C:\chrome-for-testing\chrome-win64\`
-   (the worker browser runtime - not packed), then log the gemini/aistudio/flow
-   worker accounts back in. All browser profiles are gone after a rebuild.
-5. stagger-dashboard comes back from the payload, but without node_modules -
-   run `npm install` inside it, then re-enable the StaggerHelperSupervisor
-   task if wanted.
-6. Start the farmer when ready: `launch jacky_rush_farmer.bat`.
+3. Log the gemini/aistudio/flow worker accounts back in (chrome-for-testing /
+   Chrome). All browser profiles are gone after a rebuild - this is the real
+   time cost of a wipe.
+4. Re-enable the StaggerHelperSupervisor task if wanted.
+5. Start the farmer when ready: `launch jacky_rush_farmer.bat`.
+
+(AdsPower and Proxifier autostart on the old box but are believed unused -
+they are deliberately NOT part of the rebuild. Install by hand if ever missed.)

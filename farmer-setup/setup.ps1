@@ -378,6 +378,34 @@ Install-Tool 'Node.js LTS' "$env:ProgramFiles\nodejs\node.exe" `
       $lts = $idx | Where-Object { $_.lts } | Select-Object -First 1
       "https://nodejs.org/dist/$($lts.version)/node-$($lts.version)-x64.msi" } `
     @('/qn')
+
+# chrome-for-testing + chromedriver: the worker browser runtime at the same
+# paths the workers expect (C:\chrome-for-testing\{chrome,chromedriver}-win64).
+# The binary is scriptable; the account LOGINS inside it are not - those stay manual.
+if (Test-Path 'C:\chrome-for-testing\chrome-win64\chrome.exe') { Ok "chrome-for-testing already installed." }
+else {
+    Log "Installing chrome-for-testing (Stable)..."
+    try {
+        $cftIdx = Invoke-RestMethod 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json'
+        New-Item -ItemType Directory -Force 'C:\chrome-for-testing' | Out-Null
+        foreach ($what in 'chrome', 'chromedriver') {
+            $url = ($cftIdx.channels.Stable.downloads.$what | Where-Object { $_.platform -eq 'win64' }).url
+            $z = Join-Path $work "cft-$what.zip"
+            Invoke-WithRetry { Invoke-WebRequest $url -OutFile $z -UseBasicParsing } "$what download" 2
+            Expand-Archive $z -DestinationPath 'C:\chrome-for-testing' -Force
+        }
+        Ok "chrome-for-testing $($cftIdx.channels.Stable.version) installed."
+    } catch { Warn "chrome-for-testing install failed - install by hand later; setup continues." }
+}
+
+# stagger-dashboard dependencies (node_modules is deliberately not in the payload)
+$sgDir = Split-Path $StaggerHlp
+if ((Test-Path "$env:ProgramFiles\nodejs\npm.cmd") -and (Test-Path "$sgDir\package.json") -and -not (Test-Path "$sgDir\node_modules")) {
+    Log "npm install for stagger-dashboard (a few minutes)..."
+    & cmd /c "cd /d `"$sgDir`" && `"$env:ProgramFiles\nodejs\npm.cmd`" install --no-audit --no-fund 2>nul"
+    if ($LASTEXITCODE -eq 0) { Ok "stagger-dashboard dependencies installed." }
+    else { Warn "npm install exited $LASTEXITCODE - run it by hand in stagger-dashboard later." }
+}
 Install-Tool 'Ditto' "$env:ProgramFiles\Ditto\Ditto.exe" `
     { $r = Invoke-RestMethod 'https://api.github.com/repos/sabrogden/Ditto/releases/latest'
       ($r.assets | Where-Object { $_.name -like '*64bit*.exe' -and $_.name -notlike '*portable*' } | Select-Object -First 1).browser_download_url } `
@@ -470,12 +498,11 @@ Write-Host " sync       : live mesh config restored (all folders + devices)"
 Write-Host " tasks      : scanner + unhide daemon on; bot-restart + stagger off"
 Write-Host " orchestr.  : Jacky Rush scripts + template + pc identities restored"
 Write-Host ""
-Write-Host " Remaining BY HAND (never bundled):" -ForegroundColor Yellow
+Write-Host " Remaining BY HAND (logins cannot be bundled):" -ForegroundColor Yellow
 Write-Host "  - gh auth login          (GitHub token lives in the keyring)"
 Write-Host "  - claude login"
-Write-Host "  - AdsPower + Proxifier   (install + log in)"
-Write-Host "  - browser profiles       (Chrome/chrome-for-testing worker logins are gone -"
-Write-Host "                            re-log-in the gemini/aistudio/flow accounts)"
-Write-Host "  - stagger-dashboard      (restore the project, then re-enable its task if wanted)"
+Write-Host "  - worker account logins  (gemini/aistudio/flow in chrome-for-testing/Chrome -"
+Write-Host "                            browser profiles are gone after a rebuild)"
+Write-Host "  - re-enable the StaggerHelperSupervisor task when wanted"
 Write-Host "  - start the farmer       ('launch jacky_rush_farmer.bat' - it is manual on purpose)"
 Write-Host " Reboot once to prove autostart if you want the full test."
