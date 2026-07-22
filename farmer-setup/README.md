@@ -111,8 +111,11 @@ script can't do - logins:
 3. Log the gemini/aistudio/flow worker accounts back in (chrome-for-testing /
    Chrome). All browser profiles are gone after a rebuild - this is the real
    time cost of a wipe.
-4. Re-enable the StaggerHelperSupervisor task if wanted.
-5. Start the farmer when ready: `launch jacky_rush_farmer.bat`.
+4. **AdsPower** - still in use; install it and log in by hand (its profiles
+   are account-bound and cannot be bundled).
+5. Re-enable the StaggerHelperSupervisor task if wanted.
+6. Start the farmer when ready: `launch jacky_rush_farmer.bat`.
 
-(AdsPower and Proxifier autostart on the old box but are believed unused -
-they are deliberately NOT part of the rebuild. Install by hand if ever missed.)
+(Proxifier: confirmed dead 2026-07-22 - its profile had an EMPTY proxy list
+and direct-only rules, i.e. it proxied nothing. Autostart removed from the
+live farmer; not part of the rebuild.)
