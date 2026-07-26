@@ -12,8 +12,8 @@ PC1 ──┐
 PC2 ──┼── send-only ──>  Uploader (receive-only)
 PC3 ──┘                  Desktop\Compiled Binaries\Shared Folder\! Jacky Rush Rendered
 
-Farmer ── xkrz4-rfveh ──> Uploader (receive-only)
-                          Desktop\Compiled Binaries\Shared Folder\! Thumbnails
+Farmer <── xkrz4-rfveh ──> Uploader (send & receive, two-way)
+                           Desktop\Compiled Binaries\Shared Folder\! Thumbnails
 ```
 
 - Each render PC shares its local `! Jacky Rush Rendered` folder (where the
@@ -26,9 +26,11 @@ Farmer ── xkrz4-rfveh ──> Uploader (receive-only)
   they see each other's files via the uploader but never pull them. Cosmetic;
   ignore.)
 - The farmer shares `! Thumbnails` (folder ID `xkrz4-rfveh`, the same one the
-  render PCs get) directly with the uploader, **receive-only** on the uploader,
-  so each video's thumbnail is next to it at upload time. Deleting an uploaded
-  thumbnail locally is safe - receive-only keeps local deletes local.
+  render PCs get) directly with the uploader, **send & receive** on purpose:
+  deleting a thumbnail anywhere deletes it everywhere (farmer + render PCs +
+  uploader). That's the intended cleanup flow - delete after upload and the
+  whole fleet forgets it. Versioning is off mesh-wide, so those deletes are
+  permanent; upload FIRST, delete second.
 
 ## On a blank uploader PC
 
@@ -97,7 +99,7 @@ $exe = "$env:LOCALAPPDATA\Programs\Syncthing\syncthing.exe"
 
 | Machine | Device ID starts | Role |
 |---|---|---|
-| Uploader | `MSZZ6T4` | receive-only `jr-rendered` + receive-only `xkrz4-rfveh` |
+| Uploader | `MSZZ6T4` | receive-only `jr-rendered` + send-receive `xkrz4-rfveh` |
 | PC1 | `VYEHZ24` | send-only `jr-rendered` |
 | PC2 | `NSBTRAN` | send-only `jr-rendered` |
 | PC3 | `ZGSLY26` | send-only `jr-rendered` |

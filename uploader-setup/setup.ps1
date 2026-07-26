@@ -1,7 +1,7 @@
 # Uploader PC one-shot setup
 # Turns a blank Windows box into the fleet's upload station: Syncthing with a
 # RECEIVE-ONLY "! Jacky Rush Rendered" folder fed by all three render PCs,
-# a RECEIVE-ONLY "! Thumbnails" folder fed by the farmer,
+# a SEND & RECEIVE "! Thumbnails" folder shared with the farmer,
 # bulk storage junctioned onto the biggest data drive, autostart wired.
 #
 #   irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex
@@ -127,13 +127,14 @@ foreach ($pc in $RenderPCs) {
     try { & $StExe cli config folders $FolderId devices add --device-id $pc.Id } catch { Write-Host "Folder already shared with $($pc.Name)" }
 }
 
-# Thumbnails: receive-only from the farmer, so each video's thumbnail sits
-# next to it at upload time. Local deletes stay local (same as jr-rendered).
+# Thumbnails: send & receive with the farmer, so each video's thumbnail sits
+# next to it at upload time. INTENTIONALLY two-way: deleting a thumbnail here
+# (post-upload cleanup) deletes it fleet-wide (versioning is off mesh-wide).
 New-Item -ItemType Directory -Force $ThumbFolderPath | Out-Null
 try {
-    & $StExe cli config folders add --id $ThumbFolderId --label $ThumbFolderLabel --path $ThumbFolderPath --type receiveonly
+    & $StExe cli config folders add --id $ThumbFolderId --label $ThumbFolderLabel --path $ThumbFolderPath --type sendreceive
 } catch { Write-Host 'Thumbnails folder already present' }
-& $StExe cli config folders $ThumbFolderId type set receiveonly
+& $StExe cli config folders $ThumbFolderId type set sendreceive
 try { & $StExe cli config folders $ThumbFolderId devices add --device-id $Farmer.Id } catch { Write-Host 'Thumbnails already shared with Farmer' }
 
 # --- 6. Autostart ------------------------------------------------------------
