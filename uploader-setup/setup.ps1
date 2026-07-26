@@ -121,6 +121,12 @@ foreach ($pc in $RenderPCs) {
     try { & $StExe cli config devices add --device-id $pc.Id --name $pc.Name } catch { Write-Host "$($pc.Name) already present" }
 }
 try { & $StExe cli config devices add --device-id $Farmer.Id --name $Farmer.Name } catch { Write-Host "$($Farmer.Name) already present" }
+# Names: adds above no-op if the device already existed (e.g. added via a GUI
+# banner, which defaults to the Windows hostname) - force the friendly names,
+# and name this machine itself so other devices see 'Uploader PC' by default.
+foreach ($pc in $RenderPCs) { & $StExe cli config devices $pc.Id name set $pc.Name }
+& $StExe cli config devices $Farmer.Id name set $Farmer.Name
+& $StExe cli config devices $MyId name set 'Uploader PC'
 # Rendered videos: send & receive. Each render PC's .stignore filters to its
 # own "* - PCx.mp4" videos, so a delete here wipes exactly the origin's copy
 # and render PCs never cross-copy each other's videos.
