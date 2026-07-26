@@ -1,6 +1,7 @@
 # Uploader PC one-shot setup
 # Turns a blank Windows box into the fleet's upload station: Syncthing with a
 # RECEIVE-ONLY "! Jacky Rush Rendered" folder fed by all three render PCs,
+# a RECEIVE-ONLY "! Thumbnails" folder fed by the farmer,
 # bulk storage junctioned onto the biggest data drive, autostart wired.
 #
 #   irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex
@@ -15,6 +16,9 @@ $FolderId    = 'jr-rendered'
 $FolderLabel = '! Jacky Rush Rendered'
 $SharedRoot  = Join-Path $env:USERPROFILE 'Desktop\Compiled Binaries\Shared Folder'
 $FolderPath  = Join-Path $SharedRoot $FolderLabel
+$ThumbFolderId    = 'xkrz4-rfveh'
+$ThumbFolderLabel = '! Thumbnails'
+$ThumbFolderPath  = Join-Path $SharedRoot $ThumbFolderLabel
 $StDir       = "$env:LOCALAPPDATA\Programs\Syncthing"
 $StExe       = "$StDir\syncthing.exe"
 
@@ -24,6 +28,9 @@ $RenderPCs = @(
     @{ Name = 'Render PC2'; Id = 'NSBTRAN-KTBVNJH-TXEQDYW-6KA3RYS-WWV34MU-XSMYIL5-WWU7RRH-OYBI2A4' },
     @{ Name = 'Render PC3'; Id = 'ZGSLY26-WJMJXAC-6EU2K7I-C6U7FYU-RDXI5SI-FPVC5GR-IKCIUTA-2U2H2A5' }
 )
+
+# Farmer (orchestrator) - feeds the thumbnails folder
+$Farmer = @{ Name = 'Farmer'; Id = 'XFLEVVM-KVCRGNJ-L2K6ARD-LZHPH45-GZZZC4B-AVPCU5E-H6QGOGS-OQMJMQ7' }
 
 function Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 
@@ -111,6 +118,7 @@ Step 'Configure sync (receive-only)'
 foreach ($pc in $RenderPCs) {
     try { & $StExe cli config devices add --device-id $pc.Id --name $pc.Name } catch { Write-Host "$($pc.Name) already present" }
 }
+try { & $StExe cli config devices add --device-id $Farmer.Id --name $Farmer.Name } catch { Write-Host "$($Farmer.Name) already present" }
 try {
     & $StExe cli config folders add --id $FolderId --label $FolderLabel --path $FolderPath --type receiveonly
 } catch { Write-Host 'Folder already present' }
@@ -118,6 +126,15 @@ try {
 foreach ($pc in $RenderPCs) {
     try { & $StExe cli config folders $FolderId devices add --device-id $pc.Id } catch { Write-Host "Folder already shared with $($pc.Name)" }
 }
+
+# Thumbnails: receive-only from the farmer, so each video's thumbnail sits
+# next to it at upload time. Local deletes stay local (same as jr-rendered).
+New-Item -ItemType Directory -Force $ThumbFolderPath | Out-Null
+try {
+    & $StExe cli config folders add --id $ThumbFolderId --label $ThumbFolderLabel --path $ThumbFolderPath --type receiveonly
+} catch { Write-Host 'Thumbnails folder already present' }
+& $StExe cli config folders $ThumbFolderId type set receiveonly
+try { & $StExe cli config folders $ThumbFolderId devices add --device-id $Farmer.Id } catch { Write-Host 'Thumbnails already shared with Farmer' }
 
 # --- 6. Autostart ------------------------------------------------------------
 Step 'Autostart'
@@ -129,10 +146,16 @@ Write-Host 'Syncthing registered in HKCU Run.'
 Step 'DONE'
 Write-Host "Uploader device ID: $MyId" -ForegroundColor Green
 Write-Host "Renders will arrive in: $FolderPath" -ForegroundColor Green
+Write-Host "Thumbnails will arrive in: $ThumbFolderPath" -ForegroundColor Green
 if ($script:NewIdentity) {
     Write-Host ''
     Write-Host 'NEW IDENTITY - each render PC must be pointed at it. On PC1/PC2/PC3 run:' -ForegroundColor Yellow
     Write-Host "  `$u = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/render-setup/share-rendered-to-uploader.ps1'" -ForegroundColor Yellow
     Write-Host "  & ([scriptblock]::Create((irm `$u))) -UploaderId '$MyId'" -ForegroundColor Yellow
     Write-Host 'Then remove the OLD uploader device in each render PC''s Syncthing GUI (or leave it; it''s harmless).' -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host 'The FARMER must also be told (thumbnails). On the farmer run:' -ForegroundColor Yellow
+    Write-Host "  `$exe = `"`$env:LOCALAPPDATA\Programs\Syncthing\syncthing.exe`"" -ForegroundColor Yellow
+    Write-Host "  & `$exe cli config devices add --device-id '$MyId' --name 'Uploader'" -ForegroundColor Yellow
+    Write-Host "  & `$exe cli config folders xkrz4-rfveh devices add --device-id '$MyId'" -ForegroundColor Yellow
 }

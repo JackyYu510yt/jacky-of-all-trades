@@ -11,6 +11,9 @@ the render PCs into this machine, where they get uploaded and deleted.
 PC1 ──┐
 PC2 ──┼── send-only ──>  Uploader (receive-only)
 PC3 ──┘                  Desktop\Compiled Binaries\Shared Folder\! Jacky Rush Rendered
+
+Farmer ── xkrz4-rfveh ──> Uploader (receive-only)
+                          Desktop\Compiled Binaries\Shared Folder\! Thumbnails
 ```
 
 - Each render PC shares its local `! Jacky Rush Rendered` folder (where the
@@ -22,6 +25,10 @@ PC3 ──┘                  Desktop\Compiled Binaries\Shared Folder\! Jacky R
   with the uploader. (Their GUIs may show the folder as "out of sync" because
   they see each other's files via the uploader but never pull them. Cosmetic;
   ignore.)
+- The farmer shares `! Thumbnails` (folder ID `xkrz4-rfveh`, the same one the
+  render PCs get) directly with the uploader, **receive-only** on the uploader,
+  so each video's thumbnail is next to it at upload time. Deleting an uploaded
+  thumbnail locally is safe - receive-only keeps local deletes local.
 
 ## On a blank uploader PC
 
@@ -49,6 +56,14 @@ PC:
 ```powershell
 $u = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/render-setup/share-rendered-to-uploader.ps1'
 & ([scriptblock]::Create((irm $u))) -UploaderId 'THE-NEW-DEVICE-ID'
+```
+
+The FARMER must also be told (it feeds the thumbnails folder). On the farmer:
+
+```powershell
+$exe = "$env:LOCALAPPDATA\Programs\Syncthing\syncthing.exe"
+& $exe cli config devices add --device-id 'THE-NEW-DEVICE-ID' --name 'Uploader'
+& $exe cli config folders xkrz4-rfveh devices add --device-id 'THE-NEW-DEVICE-ID'
 ```
 
 ## Adding a NEW render PC to the pipeline
@@ -82,10 +97,11 @@ $u = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/re
 
 | Machine | Device ID starts | Role |
 |---|---|---|
-| Uploader | `MSZZ6T4` | receive-only `jr-rendered` |
+| Uploader | `MSZZ6T4` | receive-only `jr-rendered` + receive-only `xkrz4-rfveh` |
 | PC1 | `VYEHZ24` | send-only `jr-rendered` |
 | PC2 | `NSBTRAN` | send-only `jr-rendered` |
 | PC3 | `ZGSLY26` | send-only `jr-rendered` |
+| Farmer | `XFLEVVM` | feeds `xkrz4-rfveh` (Thumbnails) |
 
-The uploader does NOT participate in the farmer's `sjetj-h9jpa` (Output) or
-`xkrz4-rfveh` (Thumbnails) folders - it only ever sees finished videos.
+The uploader does NOT participate in the farmer's `sjetj-h9jpa` (Output)
+folder - it only ever sees finished videos and thumbnails.

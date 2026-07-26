@@ -74,7 +74,7 @@ Shadow PCs: 256 GB SSD (C:) + purchased 1 TB HDD.
 | PC1 | `VYEHZ24` | Shadow |
 | PC2 | `NSBTRAN` | Shadow |
 | PC3 | `ZGSLY26` | Shadow |
-| Uploader | `MSZZ6T4` | Receives finished videos one-way, see `../uploader-setup/` |
+| Uploader | `MSZZ6T4` | Receives finished videos one-way (+ thumbnails from the farmer), see `../uploader-setup/` |
 
 The farmer + PC2 already trust these identities - a rebuilt PC reconnects with
 zero changes on any other machine.
