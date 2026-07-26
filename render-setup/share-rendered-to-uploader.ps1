@@ -65,7 +65,16 @@ $stignore = @(
     "!(?i)**/* - $PcName.mp4",
     "*"
 ) -join "`n"
-[IO.File]::WriteAllText((Join-Path $FolderPath '.stignore'), $stignore + "`n")
+$igPath = Join-Path $FolderPath '.stignore'
+if (Test-Path $igPath) {
+    # An existing .stignore may be hidden and/or read-only (Syncthing marks its
+    # dotfiles hidden on Windows) - WriteAllText refuses to open it then.
+    # Show what it held, normalize attributes, then overwrite.
+    Write-Host 'Existing .stignore found, replacing. Old content was:'
+    Get-Content $igPath -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  | $_" }
+    (Get-Item $igPath -Force).Attributes = 'Normal'
+}
+[IO.File]::WriteAllText($igPath, $stignore + "`n")
 Write-Host ".stignore written: only '* - $PcName.mp4' syncs on this PC"
 
 # Add uploader as a trusted device (ignore error if already added)
