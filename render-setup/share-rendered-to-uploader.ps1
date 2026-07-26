@@ -56,8 +56,10 @@ if (-not (Get-Process syncthing -ErrorAction SilentlyContinue)) {
 
 if (-not (Test-Path $FolderPath)) { New-Item -ItemType Directory -Force $FolderPath | Out-Null }
 
-# Add uploader as a trusted device (ignore error if already added)
-try { & $exe cli config devices add --device-id $UploaderId --name 'Uploader PC' } catch { Write-Host 'Uploader device already present' }
+# Add uploader as a trusted device (ignore error if already added), then
+# force the friendly name (the add no-ops if the device already existed)
+try { & $exe cli config devices add --device-id $UploaderId --name 'Uploading PC1' } catch { Write-Host 'Uploader device already present' }
+& $exe cli config devices $UploaderId name set 'Uploading PC1'
 
 # Add the folder if missing - as SEND-ONLY first, so there is never a window
 # where this PC is two-way without its ignore filter in place.

@@ -32,7 +32,7 @@ $RenderPCs = @(
 )
 
 # Farmer (orchestrator) - feeds the thumbnails folder
-$Farmer = @{ Name = 'Farmer'; Id = 'XFLEVVM-KVCRGNJ-L2K6ARD-LZHPH45-GZZZC4B-AVPCU5E-H6QGOGS-OQMJMQ7' }
+$Farmer = @{ Name = 'Farmer PC1'; Id = 'XFLEVVM-KVCRGNJ-L2K6ARD-LZHPH45-GZZZC4B-AVPCU5E-H6QGOGS-OQMJMQ7' }
 
 function Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 
@@ -126,7 +126,7 @@ try { & $StExe cli config devices add --device-id $Farmer.Id --name $Farmer.Name
 # and name this machine itself so other devices see 'Uploader PC' by default.
 foreach ($pc in $RenderPCs) { & $StExe cli config devices $pc.Id name set $pc.Name }
 & $StExe cli config devices $Farmer.Id name set $Farmer.Name
-& $StExe cli config devices $MyId name set 'Uploader PC'
+& $StExe cli config devices $MyId name set 'Uploading PC1'
 # Rendered videos: send & receive. Each render PC's .stignore filters to its
 # own "* - PCx.mp4" videos, so a delete here wipes exactly the origin's copy
 # and render PCs never cross-copy each other's videos.
