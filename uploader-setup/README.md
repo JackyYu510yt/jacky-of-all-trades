@@ -2,29 +2,39 @@
 
 Turn a blank Windows box into the fleet's upload station with one command.
 
-The uploader is the end of the pipeline: finished videos flow **one way** from
-the render PCs into this machine, where they get uploaded and deleted.
+The uploader is the end of the pipeline: finished videos flow from the render
+PCs into this machine, get uploaded, then deleted - and the delete flows BACK
+to the render PC that made the video, wiping its copy too.
 
-## The one-way sync (how it works)
+## The origin-tagged sync (how it works)
 
 ```
 PC1 ──┐
-PC2 ──┼── send-only ──>  Uploader (receive-only)
-PC3 ──┘                  Desktop\Compiled Binaries\Shared Folder\! Jacky Rush Rendered
+PC2 ──┼── jr-rendered, send & receive ──> Uploader (send & receive)
+PC3 ──┘   (each PC .stignore-filtered      Desktop\Compiled Binaries\Shared Folder\! Jacky Rush Rendered
+           to its own "* - PCx.mp4")
 
 Farmer <── xkrz4-rfveh ──> Uploader (send & receive, two-way)
                            Desktop\Compiled Binaries\Shared Folder\! Thumbnails
 ```
 
 - Each render PC shares its local `! Jacky Rush Rendered` folder (where the
-  watcher drops finished videos) as **send-only**, Syncthing folder ID
-  `jr-rendered`.
-- The uploader holds the same folder ID as **receive-only**. Send-only +
-  receive-only = strictly one-way; nothing on the uploader ever flows back.
+  watcher drops finished videos) with the uploader, Syncthing folder ID
+  `jr-rendered`, **send & receive**.
+- The watcher tags every final filename with its origin (`Title - PC2.mp4`),
+  and each render PC carries a `.stignore` that syncs ONLY its own tag:
+  ```
+  !(?i)**/* - PC2.mp4
+  *
+  ```
+  So: deleting an uploaded video on the uploader deletes it on the origin
+  render PC (post-upload cleanup, fleet-wide) - but render PCs never download
+  each other's videos, because everyone else's tags are on their ignore list.
+- **NEVER delete the `.stignore` file on a render PC.** It is the ONLY thing
+  preventing that PC from downloading every other PC's videos. If it goes
+  missing, re-run `render-setup/share-rendered-to-uploader.ps1` to restore it.
 - The render PCs do NOT share this folder with each other or the farmer - only
-  with the uploader. (Their GUIs may show the folder as "out of sync" because
-  they see each other's files via the uploader but never pull them. Cosmetic;
-  ignore.)
+  with the uploader.
 - The farmer shares `! Thumbnails` (folder ID `xkrz4-rfveh`, the same one the
   render PCs get) directly with the uploader, **send & receive** on purpose:
   deleting a thumbnail anywhere deletes it everywhere (farmer + render PCs +
@@ -84,14 +94,12 @@ $exe = "$env:LOCALAPPDATA\Programs\Syncthing\syncthing.exe"
 
 ## Rules of the road (upload workflow)
 
-- **Deleting an uploaded video on the uploader is safe** - receive-only keeps
-  local deletes local; the file will NOT come back on its own.
-- **Never click "Revert Local Changes"** in the uploader's Syncthing GUI
-  (127.0.0.1:8384) - that re-downloads everything you deleted after uploading.
-- **Deletes on a render PC DO propagate here.** If a render PC cleans up its
-  Rendered folder before the uploader has uploaded the file, the file is gone
-  on both ends (versioning is off mesh-wide - deletions are permanent).
-  Upload first, clean up second.
+- **Deleting a video here deletes it on the origin render PC too** - that's
+  the intended post-upload cleanup: delete once, the whole fleet forgets it.
+- **Upload FIRST, delete second.** Versioning is off mesh-wide - a delete is
+  permanent everywhere. Deleting a video you haven't uploaded yet kills the
+  only copies in existence.
+- **Deletes on a render PC also propagate here.** Same rule, other direction.
 - Bulk data lives on the HDD via the junction; keep an eye on free space with
   big batches anyway.
 
@@ -99,10 +107,10 @@ $exe = "$env:LOCALAPPDATA\Programs\Syncthing\syncthing.exe"
 
 | Machine | Device ID starts | Role |
 |---|---|---|
-| Uploader | `MSZZ6T4` | receive-only `jr-rendered` + send-receive `xkrz4-rfveh` |
-| PC1 | `VYEHZ24` | send-only `jr-rendered` |
-| PC2 | `NSBTRAN` | send-only `jr-rendered` |
-| PC3 | `ZGSLY26` | send-only `jr-rendered` |
+| Uploader | `MSZZ6T4` | send-receive `jr-rendered` + send-receive `xkrz4-rfveh` |
+| PC1 | `VYEHZ24` | send-receive `jr-rendered`, .stignore-filtered to `* - PC1.mp4` |
+| PC2 | `NSBTRAN` | send-receive `jr-rendered`, .stignore-filtered to `* - PC2.mp4` |
+| PC3 | `ZGSLY26` | send-receive `jr-rendered`, .stignore-filtered to `* - PC3.mp4` |
 | Farmer | `XFLEVVM` | feeds `xkrz4-rfveh` (Thumbnails) |
 
 The uploader does NOT participate in the farmer's `sjetj-h9jpa` (Output)

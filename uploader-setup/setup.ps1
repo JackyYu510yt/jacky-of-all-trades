@@ -1,6 +1,8 @@
 # Uploader PC one-shot setup
 # Turns a blank Windows box into the fleet's upload station: Syncthing with a
-# RECEIVE-ONLY "! Jacky Rush Rendered" folder fed by all three render PCs,
+# SEND & RECEIVE "! Jacky Rush Rendered" folder fed by all three render PCs
+# (each render PC filters to its own videos via .stignore, so deleting an
+# uploaded video here wipes the origin PC's copy - and only that copy),
 # a SEND & RECEIVE "! Thumbnails" folder shared with the farmer,
 # bulk storage junctioned onto the biggest data drive, autostart wired.
 #
@@ -113,16 +115,19 @@ while ((Get-Date) -lt $deadline) {
     try { & $StExe cli config devices list | Out-Null; break } catch { Start-Sleep 2 }
 }
 
-# --- 5. Configure receive-only folder + trusted render PCs -------------------
-Step 'Configure sync (receive-only)'
+# --- 5. Configure sync folders + trusted render PCs --------------------------
+Step 'Configure sync'
 foreach ($pc in $RenderPCs) {
     try { & $StExe cli config devices add --device-id $pc.Id --name $pc.Name } catch { Write-Host "$($pc.Name) already present" }
 }
 try { & $StExe cli config devices add --device-id $Farmer.Id --name $Farmer.Name } catch { Write-Host "$($Farmer.Name) already present" }
+# Rendered videos: send & receive. Each render PC's .stignore filters to its
+# own "* - PCx.mp4" videos, so a delete here wipes exactly the origin's copy
+# and render PCs never cross-copy each other's videos.
 try {
-    & $StExe cli config folders add --id $FolderId --label $FolderLabel --path $FolderPath --type receiveonly
+    & $StExe cli config folders add --id $FolderId --label $FolderLabel --path $FolderPath --type sendreceive
 } catch { Write-Host 'Folder already present' }
-& $StExe cli config folders $FolderId type set receiveonly
+& $StExe cli config folders $FolderId type set sendreceive
 foreach ($pc in $RenderPCs) {
     try { & $StExe cli config folders $FolderId devices add --device-id $pc.Id } catch { Write-Host "Folder already shared with $($pc.Name)" }
 }

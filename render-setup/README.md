@@ -74,14 +74,17 @@ Shadow PCs: 256 GB SSD (C:) + purchased 1 TB HDD.
 | PC1 | `VYEHZ24` | Shadow |
 | PC2 | `NSBTRAN` | Shadow |
 | PC3 | `ZGSLY26` | Shadow |
-| Uploader | `MSZZ6T4` | Receives finished videos one-way (+ thumbnails from the farmer), see `../uploader-setup/` |
+| Uploader | `MSZZ6T4` | Finished videos two-way origin-tagged (+ thumbnails from the farmer), see `../uploader-setup/` |
 
 The farmer + PC2 already trust these identities - a rebuilt PC reconnects with
 zero changes on any other machine.
 
-## One-way sync to the Uploader PC
+## Sync to the Uploader PC (origin-tagged two-way)
 
-Finished videos in `! Jacky Rush Rendered` sync one-way (send-only) to the
-Uploader PC via folder ID `jr-rendered`. This is configured separately from
+Finished videos in `! Jacky Rush Rendered` sync two-way with the Uploader PC
+via folder ID `jr-rendered`, filtered per PC: a `.stignore` on each render PC
+syncs only its own `* - PCx.mp4` videos (the watcher tags every final name).
+Deleting an uploaded video on the uploader wipes the origin PC's copy; render
+PCs never download each other's videos. This is configured separately from
 setup.ps1 by running `share-rendered-to-uploader.ps1` on each render PC. Full
 docs: [`../uploader-setup/README.md`](../uploader-setup/README.md).
