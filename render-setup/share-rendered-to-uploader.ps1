@@ -56,34 +56,40 @@ if (-not (Get-Process syncthing -ErrorAction SilentlyContinue)) {
 
 if (-not (Test-Path $FolderPath)) { New-Item -ItemType Directory -Force $FolderPath | Out-Null }
 
-# Write .stignore BEFORE the folder ever goes two-way, so this PC is already
-# blind to the other PCs' videos when it starts accepting remote changes.
-# First match wins: keep my own tagged videos (anywhere in the tree), ignore
-# everything else. MUST be UTF-8 without BOM (WriteAllText default).
-$stignore = @(
-    "// Only sync videos this PC rendered (watcher tags every final name with - $PcName)",
-    "!(?i)**/* - $PcName.mp4",
-    "*"
-) -join "`n"
-$igPath = Join-Path $FolderPath '.stignore'
-if (Test-Path $igPath) {
-    # An existing .stignore may be hidden and/or read-only (Syncthing marks its
-    # dotfiles hidden on Windows) - WriteAllText refuses to open it then.
-    # Show what it held, normalize attributes, then overwrite.
-    Write-Host 'Existing .stignore found, replacing. Old content was:'
-    Get-Content $igPath -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  | $_" }
-    (Get-Item $igPath -Force).Attributes = 'Normal'
-}
-[IO.File]::WriteAllText($igPath, $stignore + "`n")
-Write-Host ".stignore written: only '* - $PcName.mp4' syncs on this PC"
-
 # Add uploader as a trusted device (ignore error if already added)
 try { & $exe cli config devices add --device-id $UploaderId --name 'Uploader PC' } catch { Write-Host 'Uploader device already present' }
 
-# Add the folder as SEND & RECEIVE (ignore error if already added), then share it with the uploader
-try { & $exe cli config folders add --id $FolderId --label '! Jacky Rush Rendered' --path $FolderPath --type sendreceive } catch { Write-Host 'Folder already present' }
-& $exe cli config folders $FolderId type set sendreceive
+# Add the folder if missing - as SEND-ONLY first, so there is never a window
+# where this PC is two-way without its ignore filter in place.
+try { & $exe cli config folders add --id $FolderId --label '! Jacky Rush Rendered' --path $FolderPath --type sendonly } catch { Write-Host 'Folder already present' }
 try { & $exe cli config folders $FolderId devices add --device-id $UploaderId } catch { Write-Host 'Folder already shared with uploader' }
+
+# Set the ignore patterns through Syncthing's own local API so SYNCTHING
+# writes the .stignore file itself (direct file writes can be blocked by
+# folder permissions / Controlled Folder Access - Syncthing already has
+# write rights in its own folder). First match wins: keep my own tagged
+# videos anywhere in the tree, ignore everything else.
+[xml]$stCfg = Get-Content "$env:LOCALAPPDATA\Syncthing\config.xml"
+$apiKey = $stCfg.configuration.gui.apikey
+$guiUrl = "http://$($stCfg.configuration.gui.address)"
+$hdr = @{ 'X-API-Key' = $apiKey }
+$old = Invoke-RestMethod -Uri "$guiUrl/rest/db/ignores?folder=$FolderId" -Headers $hdr
+if ($old.ignore) {
+    Write-Host 'Existing ignore patterns being replaced:'
+    $old.ignore | ForEach-Object { Write-Host "  | $_" }
+}
+$body = @{ ignore = @(
+    "// Only sync videos this PC rendered (watcher tags every final name with - $PcName)",
+    "!(?i)**/* - $PcName.mp4",
+    "*"
+) } | ConvertTo-Json
+Invoke-RestMethod -Uri "$guiUrl/rest/db/ignores?folder=$FolderId" -Method Post -Headers $hdr -Body $body -ContentType 'application/json' | Out-Null
+$check = Invoke-RestMethod -Uri "$guiUrl/rest/db/ignores?folder=$FolderId" -Headers $hdr
+if (-not ($check.ignore -contains "!(?i)**/* - $PcName.mp4")) { throw 'Ignore patterns did not stick - aborting before the two-way flip' }
+Write-Host "Ignore patterns set: only '* - $PcName.mp4' syncs on this PC"
+
+# Only NOW is it safe to go two-way
+& $exe cli config folders $FolderId type set sendreceive
 
 Write-Host ''
 Write-Host "Done. '! Jacky Rush Rendered' now syncs two-way with the Uploader PC," -ForegroundColor Green
