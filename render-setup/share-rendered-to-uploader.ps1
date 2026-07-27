@@ -1,6 +1,7 @@
 # Shares "! Jacky Rush Rendered" two-way with the Uploader PC, filtered by
 # origin: this PC only ever syncs videos whose filename carries its own tag
-# ("... - PC1.mp4"), which the watcher already bakes into every final name.
+# ("... - PC1.mp4", plus stealth variants "... - PC1_N_stealth_xxx.mp4"),
+# which the watcher already bakes into every final name.
 # A .stignore file makes it blind to the other render PCs' videos, so nothing
 # cross-copies - but a delete on the uploader DOES reach the PC that made the
 # file (that's the point: post-upload cleanup wipes the origin's copy too).
@@ -81,17 +82,23 @@ if ($old.ignore) {
     $old.ignore | ForEach-Object { Write-Host "  | $_" }
 }
 $body = @{ ignore = @(
-    "// Only sync videos this PC rendered (watcher tags every final name with - $PcName)",
+    "// Only sync videos this PC rendered (watcher tags every final name with - $PcName,",
+    "// and stealth variants append _N_stealth_xxx after the tag)",
     "!(?i)**/* - $PcName.mp4",
+    "!(?i)**/* - $($PcName)_*.mp4",
     "*"
 ) } | ConvertTo-Json
 Invoke-RestMethod -Uri "$guiUrl/rest/db/ignores?folder=$FolderId" -Method Post -Headers $hdr -Body $body -ContentType 'application/json' | Out-Null
 $check = Invoke-RestMethod -Uri "$guiUrl/rest/db/ignores?folder=$FolderId" -Headers $hdr
-if (-not ($check.ignore -contains "!(?i)**/* - $PcName.mp4")) { throw 'Ignore patterns did not stick - aborting before the two-way flip' }
-Write-Host "Ignore patterns set: only '* - $PcName.mp4' syncs on this PC"
+if (-not (($check.ignore -contains "!(?i)**/* - $PcName.mp4") -and ($check.ignore -contains "!(?i)**/* - $($PcName)_*.mp4"))) { throw 'Ignore patterns did not stick - aborting before the two-way flip' }
+Write-Host "Ignore patterns set: only '* - $PcName.mp4' and '* - $($PcName)_*.mp4' sync on this PC"
 
 # Only NOW is it safe to go two-way
 & $exe cli config folders $FolderId type set sendreceive
+
+# Rescan so files that were ignored under the old patterns get indexed now
+# instead of waiting for the next scheduled scan
+Invoke-RestMethod -Uri "$guiUrl/rest/db/scan?folder=$FolderId" -Method Post -Headers $hdr | Out-Null
 
 Write-Host ''
 Write-Host "Done. '! Jacky Rush Rendered' now syncs two-way with the Uploader PC," -ForegroundColor Green
