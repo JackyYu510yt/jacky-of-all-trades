@@ -201,6 +201,22 @@ foreach ($svc in 'wuauserv', 'UsoSvc', 'WaaSMedicSvc') {
 Ok "Windows Update disabled (policy + services off, incl. the medic service)."
 
 # ----------------------------------------------------------------------------
+# STEP 3b - enable Windows long paths
+#   Why: finished renders on PC3 (7-30-26) got stranded in render_scratch -
+#   their full paths crossed the 260-char MAX_PATH limit, so the watcher's
+#   os.path.isfile() said the final .mp4 didn't exist and it never shipped.
+#   Only affects processes STARTED AFTER this write; the watcher launches
+#   later in this same run so it's covered, and the recommended reboot at
+#   the end of setup covers everything else.
+# ----------------------------------------------------------------------------
+$fsKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
+Set-ItemProperty $fsKey -Name LongPathsEnabled -Value 1 -Type DWord
+if ((Get-ItemProperty $fsKey -Name LongPathsEnabled).LongPathsEnabled -ne 1) {
+    Fail "LongPathsEnabled did not read back as 1 - registry write failed (not elevated?). Long render paths would strand finished mp4s."
+}
+Ok "Windows long paths enabled (LongPathsEnabled=1, verified by read-back)."
+
+# ----------------------------------------------------------------------------
 # STEP 4 - Python 3.11
 # ----------------------------------------------------------------------------
 if (Test-Path $PyExe) { Ok "Python 3.11 already installed." }
