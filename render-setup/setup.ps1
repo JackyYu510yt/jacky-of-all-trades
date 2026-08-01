@@ -223,8 +223,20 @@ Ok "Windows long paths enabled (LongPathsEnabled=1, verified by read-back)."
 if (Test-Path $PyExe) { Ok "Python 3.11 already installed." }
 else {
     Log "Installing Python 3.11..."
-    Invoke-WithRetry { winget install --id Python.Python.3.11 --scope user --silent --accept-package-agreements --accept-source-agreements | Out-Null } 'Python install'
-    if (-not (Test-Path $PyExe)) { Fail "Python installed but not found at $PyExe" }
+    try {
+        Invoke-WithRetry { winget install --id Python.Python.3.11 --scope user --silent --accept-package-agreements --accept-source-agreements | Out-Null } 'Python install'
+    } catch { Warn "winget Python install failed: $($_.Exception.Message)" }
+    if (-not (Test-Path $PyExe)) {
+        # winget can report success without planting python.exe (hit live on PC1
+        # 2026-08-01) - fall back to the python.org installer, which targets the
+        # exact per-user path everything downstream expects
+        Warn "Python not at $PyExe after winget - falling back to the python.org installer..."
+        $pyInst = Join-Path $env:TEMP 'py311-setup.exe'
+        Invoke-WithRetry { Invoke-WebRequest 'https://www.python.org/ftp/python/3.11.9/python-3.11.9-amd64.exe' -OutFile $pyInst -UseBasicParsing } 'Python download'
+        Start-Process $pyInst -ArgumentList '/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_launcher=1' -Wait
+        Remove-Item $pyInst -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path $PyExe)) { Fail "Python not found at $PyExe even after the python.org fallback." }
     Ok "Python 3.11 installed."
 }
 
