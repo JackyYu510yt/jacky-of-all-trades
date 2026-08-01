@@ -7,7 +7,8 @@
 #     .\setup.ps1
 #
 #  It asks two questions - "Which PC number?" and "Password?" - then does
-#  EVERYTHING: programs, dependencies, identity, sync, autostart, watcher.
+#  EVERYTHING: programs, dependencies, identity, sync, autostart, watcher,
+#  and the origin-filtered "! Jacky Rush Rendered" share to the Uploader PC.
 #
 #  Safe to re-run: every step checks whether it's already done and skips.
 # ============================================================================
@@ -503,6 +504,19 @@ if (-not $legacyBox) {
 }
 
 # ----------------------------------------------------------------------------
+# STEP 17 - share finished videos with the uploader (origin-filtered)
+# ----------------------------------------------------------------------------
+$shareUrl = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/render-setup/share-rendered-to-uploader.ps1'
+Log "Wiring '! Jacky Rush Rendered' -> Uploader PC (origin-filtered share)..."
+try {
+    & ([scriptblock]::Create((Invoke-RestMethod $shareUrl))) -PcName $PcName
+    Ok "Rendered folder shared with the uploader."
+} catch {
+    Warn "Rendered-folder share failed: $($_.Exception.Message)"
+    Warn "Run it by hand later:  irm $shareUrl | iex"
+}
+
+# ----------------------------------------------------------------------------
 # cleanup + summary
 # ----------------------------------------------------------------------------
 Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
@@ -511,7 +525,7 @@ Write-Host "=====================================================" -ForegroundCo
 Write-Host " $PcName IS FULLY SET UP" -ForegroundColor Green
 Write-Host "=====================================================" -ForegroundColor Green
 Write-Host " identity   : $ExpectedId"
-Write-Host " folders    : ! Jacky Rush Output + ! Thumbnails (synced)"
+Write-Host " folders    : ! Jacky Rush Output + ! Thumbnails (synced) + ! Jacky Rush Rendered -> uploader"
 Write-Host " watcher    : running, autostarts at login"
 Write-Host " win update : permanently disabled"
 Write-Host " tools      : Chrome, WinRAR, Git, Claude Code (+dsp), skills repo, CRD"
