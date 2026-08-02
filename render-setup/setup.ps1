@@ -218,6 +218,44 @@ if ((Get-ItemProperty $fsKey -Name LongPathsEnabled).LongPathsEnabled -ne 1) {
 Ok "Windows long paths enabled (LongPathsEnabled=1, verified by read-back)."
 
 # ----------------------------------------------------------------------------
+# STEP 3.5 - per-PC wallpaper: giant "ShadowPCx" tiles so a remote session is
+# unmistakable at a glance (cosmetic - a failure here never stops setup)
+# ----------------------------------------------------------------------------
+try {
+    $wallPath = Join-Path $env:USERPROFILE "Pictures\wallpaper_$PcName.png"
+    New-Item -ItemType Directory -Force (Split-Path $wallPath) | Out-Null
+    Add-Type -AssemblyName System.Drawing
+    $wpBmp = New-Object Drawing.Bitmap(2560, 1440)
+    $wpG = [Drawing.Graphics]::FromImage($wpBmp)
+    $wpG.SmoothingMode = 'AntiAlias'
+    $wpG.TextRenderingHint = 'AntiAliasGridFit'
+    $wpG.Clear([Drawing.Color]::Black)
+    $wpFont = New-Object Drawing.Font('Arial Black', 120, [Drawing.FontStyle]::Bold)
+    $wpText = "Shadow$PcName "
+    $wpG.TranslateTransform(1280, 720)
+    $wpG.RotateTransform(-12)
+    $wpSz = $wpG.MeasureString($wpText, $wpFont)
+    for ($wpRow = -6; $wpRow -le 6; $wpRow++) {
+        $wpY = $wpRow * ($wpSz.Height * 0.88) - ($wpSz.Height / 2)
+        $wpX0 = -2800 - (($wpRow % 3 + 3) % 3) * ($wpSz.Width / 3)
+        for ($wpX = $wpX0; $wpX -lt 2800; $wpX += $wpSz.Width) {
+            $wpG.DrawString($wpText, $wpFont, [Drawing.Brushes]::White, $wpX, $wpY)
+        }
+    }
+    $wpG.Dispose()
+    $wpBmp.Save($wallPath, [Drawing.Imaging.ImageFormat]::Png)
+    $wpBmp.Dispose()
+    Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name Wallpaper -Value $wallPath
+    Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name WallpaperStyle -Value '10'
+    Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name TileWallpaper -Value '0'
+    if (-not ('Win32Native.Wallpaper' -as [type])) {
+        Add-Type -MemberDefinition '[DllImport("user32.dll", SetLastError=true)] public static extern bool SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);' -Name Wallpaper -Namespace Win32Native
+    }
+    [Win32Native.Wallpaper]::SystemParametersInfo(20, 0, $wallPath, 3) | Out-Null
+    Ok "Wallpaper set: $PcName identity background."
+} catch { Warn "Wallpaper step failed (cosmetic, continuing): $($_.Exception.Message)" }
+
+# ----------------------------------------------------------------------------
 # STEP 4 - Python 3.11
 # ----------------------------------------------------------------------------
 if (Test-Path $PyExe) { Ok "Python 3.11 already installed." }
