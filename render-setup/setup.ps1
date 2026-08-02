@@ -174,6 +174,16 @@ if (-not (Test-Path $TemplateDir)) {
     Ok "Template installed."
 } else { Ok "Template folder already present - leaving it alone." }
 
+# standalone tools ship next to the template in Desktop\Compiled Binaries
+$srcTools = Join-Path $work 'Compiled Binaries Tools'
+if (Test-Path $srcTools) {
+    foreach ($t in Get-ChildItem $srcTools -Directory) {
+        $dst = Join-Path (Split-Path $TemplateDir) $t.Name
+        if (Test-Path $dst) { Ok "Tool already present - leaving it alone: $($t.Name)" }
+        else { Copy-Item $t.FullName $dst -Recurse; Ok "Tool installed: $($t.Name)" }
+    }
+} else { Warn "Payload has no extra-tools folder (packed before tools were added) - skipping." }
+
 # ----------------------------------------------------------------------------
 # STEP 2 - preflight
 # ----------------------------------------------------------------------------
@@ -439,16 +449,50 @@ foreach ($f in $folders) {
 # STEP 12 - general tools: Chrome, WinRAR, Git, Claude Code + dsp + skills
 # (runs BEFORE the long sync so all interaction happens early)
 # ----------------------------------------------------------------------------
-foreach ($app in @(
-    @{ id = 'Google.Chrome'; name = 'Chrome' }
-    @{ id = 'RARLab.WinRAR'; name = 'WinRAR' }
-    @{ id = 'Git.Git';       name = 'Git' }
-)) {
+# winget can claim success without installing anything (hit live on PC1 for
+# Python AND for these three) - so every app gets a real "is the exe there?"
+# check plus a fallback straight from the maker's own download link.
+$apps = @(
+    @{ name = 'Chrome'; id = 'Google.Chrome'
+       test = { (Test-Path "$env:ProgramFiles\Google\Chrome\Application\chrome.exe") -or
+                (Test-Path "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe") }
+       fallback = {
+           $msi = Join-Path $env:TEMP 'chrome.msi'
+           Invoke-WithRetry { Invoke-WebRequest 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi' -OutFile $msi -UseBasicParsing } 'Chrome download'
+           Start-Process msiexec -ArgumentList '/i', "`"$msi`"", '/qn', '/norestart' -Wait
+           Remove-Item $msi -ErrorAction SilentlyContinue
+       } }
+    @{ name = 'WinRAR'; id = 'RARLab.WinRAR'
+       test = { Test-Path "$env:ProgramFiles\WinRAR\WinRAR.exe" }
+       fallback = {
+           $exe = Join-Path $env:TEMP 'winrar-setup.exe'
+           Invoke-WithRetry { Invoke-WebRequest 'https://www.rarlab.com/rar/winrar-x64-713.exe' -OutFile $exe -UseBasicParsing } 'WinRAR download'
+           Start-Process $exe -ArgumentList '/S' -Wait
+           Remove-Item $exe -ErrorAction SilentlyContinue
+       } }
+    @{ name = 'Git'; id = 'Git.Git'
+       test = { Test-Path "$env:ProgramFiles\Git\cmd\git.exe" }
+       fallback = {
+           $rel   = Invoke-WithRetry { Invoke-RestMethod 'https://api.github.com/repos/git-for-windows/git/releases/latest' } 'Git release lookup'
+           $asset = $rel.assets | Where-Object { $_.name -match '^Git-.*-64-bit\.exe$' } | Select-Object -First 1
+           if (-not $asset) { throw 'No 64-bit installer in the latest Git release.' }
+           $exe = Join-Path $env:TEMP 'git-setup.exe'
+           Invoke-WithRetry { Invoke-WebRequest $asset.browser_download_url -OutFile $exe -UseBasicParsing } 'Git download'
+           Start-Process $exe -ArgumentList '/VERYSILENT', '/NORESTART' -Wait
+           Remove-Item $exe -ErrorAction SilentlyContinue
+       } }
+)
+foreach ($app in $apps) {
+    if (& $app.test) { Ok "$($app.name) already installed."; continue }
     Log "Installing $($app.name)..."
-    try {
-        Invoke-WithRetry { winget install --id $app.id --silent --accept-package-agreements --accept-source-agreements | Out-Null } "$($app.name) install" 2
-        Ok "$($app.name) ready."
-    } catch { Warn "$($app.name) install failed - install it by hand later; setup continues." }
+    try { Invoke-WithRetry { winget install --id $app.id --silent --accept-package-agreements --accept-source-agreements | Out-Null } "$($app.name) install" 2 }
+    catch { Warn "winget $($app.name) install failed: $($_.Exception.Message)" }
+    if (-not (& $app.test)) {
+        Warn "$($app.name) not actually there after winget - using the official installer instead..."
+        try { & $app.fallback } catch { Warn "$($app.name) fallback failed: $($_.Exception.Message)" }
+    }
+    if (& $app.test) { Ok "$($app.name) ready." }
+    else { Warn "$($app.name) STILL missing - install it by hand later; setup continues." }
 }
 
 # Claude Code + the dsp command
@@ -601,6 +645,11 @@ Write-Host " folders    : ! Jacky Rush Output + ! Thumbnails (synced) + ! Jacky 
 Write-Host " watcher    : running, autostarts at login"
 Write-Host " win update : permanently disabled"
 Write-Host " tools      : Chrome, WinRAR, Git, Claude Code (+dsp), skills repo, CRD"
+# report the extra tools from what is ACTUALLY on disk - never claim unverified installs
+$cbRoot = Split-Path $TemplateDir
+$extrasOnDisk = @('Image Metadata Cleaner V1', 'Metadata Cleanser V1') | Where-Object { Test-Path (Join-Path $cbRoot $_) }
+if ($extrasOnDisk.Count -eq 2) { Write-Host " extras     : $($extrasOnDisk -join ' + ') (in Compiled Binaries)" }
+else { Write-Host " extras     : NOT all installed (payload likely packed before the tools were added) - re-pack payload.enc and re-run" -ForegroundColor Yellow }
 Write-Host ""
 Write-Host " Remaining by hand: run 'claude login' once (credentials are never bundled)."
 Write-Host " Reboot once to prove autostart if you want the full test."
