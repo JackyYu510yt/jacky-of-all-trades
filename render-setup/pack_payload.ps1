@@ -16,9 +16,20 @@ $TemplateDir = 'C:\Users\Shadow\Desktop\Testing\Jacky Rush Render PC Template'
 $KeysDir     = 'C:\Users\Shadow\Desktop\render-pc-identities'
 $OutFile     = Join-Path $PSScriptRoot 'payload.enc'
 
+# standalone tools that land in Desktop\Compiled Binaries on every render PC -
+# add a folder name here (must exist under $ToolsSrc) to ship a new tool
+$ToolsSrc   = 'C:\Users\Shadow\Desktop\Compiled Binaries'
+$ExtraTools = @(
+    'Image Metadata Cleaner V1'
+    'Metadata Cleanser V1'
+)
+
 if (-not (Test-Path $TemplateDir)) { throw "Template folder not found: $TemplateDir" }
 foreach ($pc in 'pc1', 'pc2', 'pc3') {
     if (-not (Test-Path "$KeysDir\$pc\key.pem")) { throw "Key bundle missing: $KeysDir\$pc" }
+}
+foreach ($t in $ExtraTools) {
+    if (-not (Test-Path "$ToolsSrc\$t")) { throw "Tool folder not found: $ToolsSrc\$t" }
 }
 
 if ($Password) { $p1 = $Password }
@@ -38,6 +49,17 @@ New-Item -ItemType Directory $stage | Out-Null
 Write-Host 'Staging template + keys...'
 Copy-Item $TemplateDir (Join-Path $stage 'Jacky Rush Render PC Template') -Recurse
 Copy-Item $KeysDir     (Join-Path $stage 'render-pc-identities') -Recurse
+Copy-Item (Join-Path $PSScriptRoot 'setup_settings.json') $stage
+
+Write-Host 'Staging extra tools...'
+$toolStage = Join-Path $stage 'Compiled Binaries Tools'
+New-Item -ItemType Directory $toolStage | Out-Null
+foreach ($t in $ExtraTools) {
+    Copy-Item (Join-Path $ToolsSrc $t) (Join-Path $toolStage $t) -Recurse
+}
+# empty the tools' work folders - test files from this machine never ship
+@(Get-ChildItem $toolStage -Recurse -Directory | Where-Object { $_.Name -match '^(inputFiles|outputFiles)$' }) |
+    ForEach-Object { Get-ChildItem $_.FullName -Force | Remove-Item -Recurse -Force }
 
 # strip machine-specific junk that must never ship (per the rebuild handoff)
 Get-ChildItem $stage -Recurse -Force -Include 'render_watcher_log.txt', '_render_manifest.*.json', '__pycache__' |
