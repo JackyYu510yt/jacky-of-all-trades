@@ -272,9 +272,31 @@ $st = Find-Syncthing
 if ($st) { Ok "Syncthing already installed: $st" }
 else {
     Log "Installing Syncthing..."
-    Invoke-WithRetry { winget install --id Syncthing.Syncthing --scope user --silent --accept-package-agreements --accept-source-agreements | Out-Null } 'Syncthing install'
+    try {
+        Invoke-WithRetry { winget install --id Syncthing.Syncthing --scope user --silent --accept-package-agreements --accept-source-agreements | Out-Null } 'Syncthing install'
+    } catch { Warn "winget Syncthing install failed: $($_.Exception.Message)" }
     $st = Find-Syncthing
-    if (-not $st) { Fail "Syncthing installed but its exe could not be located." }
+    if (-not $st) {
+        # winget can report success without planting the exe (same failure class
+        # as the Python step) - fall back to the official GitHub release zip,
+        # landed on the legacy path Find-Syncthing already checks
+        Warn "Syncthing not found after winget - falling back to the GitHub release zip..."
+        $stDir = Join-Path $env:LOCALAPPDATA 'Programs\Syncthing'
+        $rel   = Invoke-WithRetry { Invoke-RestMethod 'https://api.github.com/repos/syncthing/syncthing/releases/latest' } 'Syncthing release lookup'
+        $asset = $rel.assets | Where-Object { $_.name -like 'syncthing-windows-amd64-*.zip' } | Select-Object -First 1
+        if (-not $asset) { Fail "No windows-amd64 zip in the latest Syncthing release." }
+        $zip = Join-Path $env:TEMP 'syncthing.zip'
+        Invoke-WithRetry { Invoke-WebRequest $asset.browser_download_url -OutFile $zip -UseBasicParsing } 'Syncthing download'
+        $xtr = Join-Path $env:TEMP 'syncthing-extract'
+        if (Test-Path $xtr) { Remove-Item $xtr -Recurse -Force }
+        Expand-Archive $zip -DestinationPath $xtr -Force
+        $inner = Get-ChildItem $xtr -Directory | Select-Object -First 1
+        New-Item -ItemType Directory -Force $stDir | Out-Null
+        Copy-Item (Join-Path $inner.FullName '*') $stDir -Recurse -Force
+        Remove-Item $zip, $xtr -Recurse -Force -ErrorAction SilentlyContinue
+        $st = Find-Syncthing
+    }
+    if (-not $st) { Fail "Syncthing not found even after the GitHub release fallback." }
     Ok "Syncthing installed: $st"
 }
 
