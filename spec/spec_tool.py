@@ -95,6 +95,15 @@ def _prepend_block(content: str, block: str) -> str:
 
 
 def cmd_log(proj: str) -> int:
+    # stdin is decoded with the LOCALE codepage by default (cp1252 on Windows), while every
+    # read/write below pins utf-8. A block piped in as utf-8 therefore round-tripped as
+    # double-encoded mojibake: an em dash arrived as three cp1252 chars and was written back
+    # out as utf-8, so "--" became "a-EUR-\"". Measured 2026-08-05: 866 such sequences had
+    # accumulated in one project's SPEC.md. Pin stdin to utf-8 to match the rest of the file.
+    try:
+        sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass  # non-reconfigurable stream (piped/redirected oddly) -> fall back to old behaviour
     raw = sys.stdin.read().strip()
     if not raw:
         print("nothing to log: no block text on stdin", file=sys.stderr)
