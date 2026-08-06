@@ -217,6 +217,8 @@ Pattern: *"It seems like [hypothesis]. Do you want me to [action] to check?"*
 
 - Every offer names a hypothesis + a specific action + the evidence it will produce.
 
+- That shape IS the P11 debug loop's steps 3 / 5 / 6 (hypothesize → design the one-variable probe → run it). When the offer is about diagnosing a failure, use the P11 vocabulary: name what result CONFIRMS and what DISPROVES before the check runs.
+
 - The user remains the decider. The skill remains the hands.
 
 
@@ -829,6 +831,7 @@ function 2                 the file's style — naming, error
 - KISS (P5) — no class hierarchies for linear flows, no `tenacity` when a 5-line loop works, no CLI framework for ≤ 2 args.
 - Every subprocess and network call gets a retry wrapper. Every file write uses write-to-temp-then-rename.
 - **Visual smoke capture (P10 — see it before you call it).** When a function's smoke/REAL test touches a visual surface (a browser, a GUI window, a rendered frame), the generated test captures a screenshot at each state-change + assertion and prints a `[shot] <path>` line per capture. The test's PASS is not accepted until that shot is read — a passing exit code on a visual surface is necessary but not sufficient (a signed-out page exits 0 too). Non-visual tests get no shot. Mirrors /auto Hard Invariant #11.
+- **Pin the cause before the fix (P11) on any unexpected failure.** When a cycle phase fails in a way the spec didn't predict (RED won't fail, GREEN won't pass, REAL breaks in the pipeline), never guess-and-edit the prototype. Run the P11 debug loop — log the facts, list 2–4 ranked falsifiable causes, run ONE pre-registered cheapest one-variable probe at a time (variable / expected / CONFIRMS / DISPROVES written before the result exists), and edit only once exactly one cause has positive proof. Standard: /principles P11; full procedure: /repair; fast path only for one-read-obvious causes (typo, missing import).
 
 After each function clears AUDIT, ask the user one quick question: "Does this match what you pictured?" (Yes / Tweak / Rewrite). The user is reviewing a proven function, not a hopeful one.
 
@@ -864,12 +867,21 @@ Pull each item from the TESTING CONDITIONS card and run it:
        names (e.g., "200 prompts, single Chrome profile,
        8-hour wall clock, home network").
 
-[ ] Each named failure injection
+[ ] Each named failure injection — PRE-REGISTERED before it runs (P11)
+       For every injection, write three fields BEFORE running it:
+         expected:  <what the system should do when this failure hits>
+         confirms:  <the observable result that proves recovery worked>
+         disproves: <the observable result that proves it did not>
+       An injection result may NOT be interpreted until the three
+       fields are written — the pass/fail meaning exists before the
+       result, so the result can't be rationalized after the fact.
        Kill mid-run → resume from progress.jsonl
        Network drop → retry succeeds
        Auth expiry → recovery fires
        Malformed input → logs error, continues
-       (Each one a separate run. Pass/fail per row.)
+       (Each one a separate run. Pass/fail per row, judged against
+        its pre-registered fields. A failing row routes through the
+        P11 debug loop — never guess-and-edit the integrated system.)
 
 [ ] End-state signal from the WORKFLOW CONDITIONS card
        The thing that means "the whole pipeline ran right"

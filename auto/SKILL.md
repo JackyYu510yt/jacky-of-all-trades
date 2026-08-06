@@ -257,6 +257,18 @@ The blueprint's `DONE-WHEN`s and `VERIFY-REQUIRES` are the verify checks — the
 were already vetted by /spec's quality bar (and /audit if it ran), so the
 self-derived verify sanity pass is not needed for blueprint-sourced steps.
 
+**Assumptions & Unknowns → early probes.** When the bound SPEC.md carries an
+`Assumptions & Unknowns` section (see /spec — one unproven belief + its
+cheapest probe per line), schedule each **load-bearing** assumption's probe as
+an EARLY runbook step, before the phases that stand on that assumption; the
+step's verify is the probe's expected fact. A wrong assumption then dies on
+minute one, not at hour three of the run. A probe that DISPROVES its assumption
+is a failed foundation, not a fix-mode bug: branch like a failed pre-verify —
+an earlier phase can establish the real condition → STUCK naming it; the
+assumption was externally supplied → stop and surface the recipe. Assumptions
+whose probe no phase depends on may run in any order (KISS — don't front-load
+what nothing stands on).
+
 ### Per-phase loop — verify the foundation BEFORE the work
 
 For each phase in order:
@@ -399,8 +411,20 @@ BLOCKED → PARKED                      (5 approaches failed → continue
 Fix mode is the ONLY time /auto deviates from the runbook. When a step's verify fails:
 
 ```
-1. Mode → DIAGNOSING — read the failure signature
-2. Mode → ROTATING   — pick a different approach (Approach Rotation Rules)
+1. Mode → DIAGNOSING — read the failure signature, then run the P11 debug
+   loop (standard: /principles P11 "Pin the cause before the fix"; full
+   procedure: /repair — pointer, not a copy): log the known FACTS, then
+   ≥2 ranked falsifiable hypotheses — OR one explicit fast-path
+   declaration when the cause is genuinely one-read obvious (typo,
+   missing import). No hypothesis list and no fast-path line in the log
+   → rotation may NOT start.
+2. Mode → ROTATING   — pick the approach targeting the LEADING hypothesis
+   (Approach Rotation Rules). Before applying any edit, pre-register ONE
+   cheapest one-variable probe in the log — variable / expected /
+   CONFIRMS / DISPROVES — run it, and interpret against those written
+   predictions. Probe disproves the leader → re-rank survivors and probe
+   the next; NEVER edit on a disproved or untested cause (fast path
+   exempt).
 3. Restore the precondition (Re-entry hygiene), then apply + re-run the step
 4. Verify pass → Mode → NORMAL, mark DONE, advance
 5. 5 fails       → Mode → NORMAL, step PARKED, advance to next
@@ -498,7 +522,7 @@ Steps must be **atomic and verifiable**. "Implement the feature" is the GOAL, no
 
 If a step's verify can't be expressed as an observable check, the step is not atomic enough — split it.
 
-**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. This only fires on the bare path that lacks /prep's vetting.
+**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. For EVERY self-derived check, record the answer as a named **false-pass trap** on its runbook step — one line, `false-pass: <what a passing check would look like while the goal is still unmet>` — the pre-registered "DISPROVES" half of the check (P11): naming the trap before any result exists is what turns the sanity question from rhetorical into checkable. At verify time, a result matching the trap's shape is FAIL, not PASS. This only fires on the bare path that lacks /prep's vetting.
 
 **Freeze the self-derived Success line.** A Success line from /prep is frozen (line 137). A self-derived Success line gets the **same** freeze: once written to the runbook it is never re-derived or edited mid-run — only the steps beneath it change. This stops "done" from quietly redefining itself toward whatever was achieved after a compaction.
 
@@ -652,6 +676,9 @@ Bash command          command + exit code + duration
 File edit/write       file path + lines changed
 Mode transition       NORMAL → DIAGNOSING → ROTATING (or back)
 Approach choice       which N/5 + the reason
+Hypothesis list       DIAGNOSING: ranked falsifiable causes, or the explicit fast-path declaration
+Probe pre-reg         BEFORE the probe runs: variable / expected / CONFIRMS / DISPROVES
+Probe result          which pre-registered prediction fired; cause confirmed or disproved
 Verify result         PASS/FAIL + the check that ran
 Screenshot            shots/ path + trigger, then one-line Shot read verdict
 Sibling note          P7 violation parked for later
@@ -677,8 +704,10 @@ In Pattern 3 cron mode, every cron tick begins with reading the log tail before 
 [2026-04-30T22:01:08Z] [NORMAL] [Step 2] Ran: pytest test_module_a.py → FAIL
 [2026-04-30T22:01:08Z] [NORMAL] [Step 2] Stderr: AssertionError test_widget_count
 [2026-04-30T22:01:10Z] [DIAGNOSING] [Step 2] Reading test output, hypothesizing
-[2026-04-30T22:02:14Z] [DIAGNOSING] [Step 2] Diagnosis: widget_count off-by-one
-[2026-04-30T22:02:15Z] [ROTATING] [Step 2] Approach 1/5: edit widgets.py:42
+[2026-04-30T22:02:12Z] [DIAGNOSING] [Step 2] Hypothesis list: 1) widget_count off-by-one 2) stale test fixture
+[2026-04-30T22:02:14Z] [DIAGNOSING] [Step 2] Probe pre-reg: print len(items) at widgets.py:42 — expect 10; 11 CONFIRMS #1; 10 DISPROVES
+[2026-04-30T22:02:20Z] [DIAGNOSING] [Step 2] Probe result: len(items)=11 — #1 CONFIRMED, cause locked
+[2026-04-30T22:02:21Z] [ROTATING] [Step 2] Approach 1/5: edit widgets.py:42
 [2026-04-30T22:02:30Z] [ROTATING] [Step 2] Edit applied: len(items) → len(items)-1
 [2026-04-30T22:02:34Z] [ROTATING] [Step 2] Re-ran pytest → exit 0
 [2026-04-30T22:02:35Z] [NORMAL] [Step 2] Verify PASS, Mode → NORMAL
@@ -1564,6 +1593,8 @@ Then proceed. The user can interrupt mid-stream if they object. The default is f
 
 ## Approach Rotation Rules
 
+(Rotation is entered only via fix mode, so the P11 hypothesis gate has already run — each approach targets the current leading hypothesis, re-ranked as probes confirm or disprove.)
+
 When a step fails, before retrying, name the new approach in one line:
 
 ```
@@ -1772,6 +1803,11 @@ Goal:        <one sentence>
 Done:        <what landed>
 Missing:     <what didn't, with reason>
 Coverage:    <success checks passed, e.g. 5/7 = 71%>
+Ledger (for the missing part — the P11 facts/unknowns handoff):
+  Facts:                   <what is PROVEN about the gap, with evidence>
+  Unknowns:                <what is still unverified>
+  Leading hypothesis:      <best guess why + confidence high/med/low>
+  Next highest-value test: <the one probe that would teach the most>
 Next:        <concrete suggested move>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
@@ -1785,6 +1821,11 @@ Approaches tried (N):
   2. <approach> → <failure reason>
   ...
 Why I'm stopping: <why no 6th approach exists>
+Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead end):
+  Facts:                   <what is PROVEN, with evidence>
+  Unknowns:                <what is still unverified>
+  Leading hypothesis:      <best remaining guess + confidence high/med/low>
+  Next highest-value test: <the one probe that would teach the most>
 Hand back to user — recommend: <best concrete next step>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```

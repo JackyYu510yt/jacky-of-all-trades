@@ -19,7 +19,11 @@ smoke test, a probe, a specialized test that hits the real condition, not a
 proxy). When a Change Log or Findings entry claims something works, or explains
 *why*, it rests on observed evidence — a run, a probe, a test result — not on
 what seemed true. A suspected verdict stays flagged as suspected until a
-decisive check confirms it.
+decisive check confirms it. A `why:` that claims a **cause** must NAME the
+decisive check that pinned it — the one probe that isolated the variable
+(/principles P11, "Pin the cause before the fix") — or stay flagged
+"suspected". A cause with no named probe is a guess wearing a conclusion's
+clothes.
 
 ## Mode detection
 
@@ -58,7 +62,17 @@ time, plainly — then write the file:
    one-shot a human watches doesn't need them. (Planning-time twin of
    `/auto`'s Re-entry-hygiene rule: design how recovery is ordered; don't
    just hope the happy path holds.)
-5. **Phases / blueprint** — the **default** for any task beyond a trivial
+5. **Assumptions & Unknowns** — the ledger of unproven beliefs (P11's
+   facts-vs-unknowns split, applied at planning time). One line per thing we
+   *believe* but haven't proven ("the API returns UTF-8", "the session stays
+   live for 8h", "ffmpeg handles this codec"), each with the CHEAPEST probe
+   that would turn it into a fact. `/auto`, when bound to this spec, schedules
+   the load-bearing probes as EARLY runbook steps — a wrong assumption dies on
+   minute one, not at hour three. An assumption with no probe counts as a
+   blank HARD field (quality bar). Skip this section only when the task has no
+   real unknowns (KISS) — don't fabricate doubts for a trivial one-shot.
+
+6. **Phases / blueprint** — the **default** for any task beyond a trivial
    one-shot. Break the work into an ordered blueprint using the three-level
    format below (PHASES ▸ MILESTONES ▸ STEPS — only as deep as the task needs).
    This is the step-by-step plan `/auto` follows so it doesn't guess. Skip it
@@ -87,6 +101,12 @@ Log empty):
 <!-- Happy-path bar AND, for unattended tools, the recovery bar (self-heals known
      failures, checkpoints, no mid-run input, failures reported by count). -->
 - <...>
+
+## Assumptions & Unknowns (skip when the task has no real unknowns)
+<!-- One line per unproven belief + the CHEAPEST probe that turns it into a fact.
+     /auto schedules load-bearing probes as EARLY runbook steps. An assumption
+     with no probe = a blank HARD field. -->
+- ASSUME: <belief>   PROBE: <cheapest check that proves or disproves it>
 
 ## Phases (blueprint — default; omit only for a trivial one-shot)
 <!-- Ordered PHASE ▸ MILESTONE ▸ STEP plan /auto follows. One block per phase. -->

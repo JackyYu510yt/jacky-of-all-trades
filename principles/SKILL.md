@@ -1,6 +1,6 @@
 ---
 name: principles
-description: Core engineering and collaboration principles the user has codified from past failures. Each principle is a hard-earned rule meant to prevent a specific, real failure mode. Currently covers (1) test-at-scale — tests must exercise the actual target condition, not just set a config value; (2) figure-out-the-conditions-upfront — identify success, testing, and workflow conditions before starting any task; (3) keep-the-end-goal-in-sight — every action and every question must advance the stated goal; don't drift into tangents; don't stop to ask when the answer is already in the plan or prior context; (4) audit-against-the-goal-before-handback — before stopping, run an end-of-task checkpoint comparing current observable state to the end goal, then emit a decision-ready verdict (Result / Toward goal / Next) in one of four states (DONE / PARTIAL / BLOCKED / UNCLEAR); (5) KISS — pick the simplest solution that works; complexity must be justified by a concrete present requirement, not a hypothetical future one; duplication beats the wrong abstraction; rule of three before extracting; (6) think-before-coding — surface assumptions, forks, and tradeoffs *before* the implementation lands; present multiple interpretations rather than silently picking; push back when a simpler approach exists; name confusion instead of guessing; (7) surgical-changes — every changed line traces to the user's request; no drive-by improvements; no style impositions; mention pre-existing dead code instead of deleting it; clean only orphans your own change created; (8) goal-driven-execution — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable success criteria are what enable autonomous loops to keep going without pausing for guidance. Use when writing or running a test, claiming a value or threshold "works", reporting verification results, making any claim about code behavior, starting a non-trivial task, debugging, running a multi-step pipeline, running /auto or /loop, about to ask a clarifying question, mid-task considering a "while I'm here" detour, stalled by a question the context already answers, about to finish a task and hand output back to the user, designing a new component, refactoring, choosing between an abstraction and duplication, vibe-coding or prototyping, adding a factory/registry/wrapper/decorator/config layer, writing a class hierarchy, picking inheritance vs composition, editing existing code, fixing a bug, completing a focused feature ask, working in code with a style you'd write differently, noticing unrelated dead code or bugs, picking between two valid interpretations of a request, picking silent defaults (timeout, retry, format, library), starting work from an imperative without a checkable success criterion, writing a multi-step plan, autonomous run pausing at every fork, or about to say "tested" / "verified" / "confirmed" / "worked" / "fixed" / "done" / "should I" / "do you want me to" / "before I start" / "just to confirm" / "quick question" / "let me know if you want more" / "hope this helps" / "are we done?" / "what's next?" / "anything left?" / "in case we need it later" / "for future flexibility" / "to make it extensible" / "best practice" / "while I'm here" / "I also cleaned up" / "I improved" / "I refactored some adjacent code" / "I noticed" / "I'll just assume" / "they probably meant" / "I'll go with the standard" / "make it pass" / "get it green" / "keep going until" / "set and forget" / "until it's done" / "loop until done". Also covers (9) build-for-the-real-run — design for the actual operating envelope (real scale, real duration, unattended execution, messy/missing inputs, resource limits, recovery after partial failure); a passing demo is not the finish line, the real job surviving under real conditions is; only justifies robustness for conditions you can prove will occur (speculative robustness stays a P5/KISS violation), and is the tiebreaker when two principles conflict; trigger when code worked once on a small or clean input but must run for real, when a job runs overnight / unattended / under /auto or cron, or on "run it for real" / "this runs overnight" / "the real file is huge" / "set and forget" / "it died at 3am" / "works on my test clip but not the real one" / "it filled the disk" / "it hung halfway". Also covers (10) see-it-before-you-call-it — when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log line is not proof on a visual surface; capture inside the test, read before declaring pass/fail, and a captured-but-unread shot or a weak visible assertion ("element exists" when it exists in both the good and bad state) is the failure this prevents; trigger on "is it logged in", "did the page load", "did it render", "smoke test the UI", "is the account ready", "did the image generate", warmup/readiness checks, or any verify gated on a visual outcome. This skill is expected to grow — new principles will be appended over time, each following the template at the bottom.
+description: Core engineering and collaboration principles the user has codified from past failures. Each principle is a hard-earned rule meant to prevent a specific, real failure mode. Currently covers (1) test-at-scale — tests must exercise the actual target condition, not just set a config value; (2) figure-out-the-conditions-upfront — identify success, testing, and workflow conditions before starting any task; (3) keep-the-end-goal-in-sight — every action and every question must advance the stated goal; don't drift into tangents; don't stop to ask when the answer is already in the plan or prior context; (4) audit-against-the-goal-before-handback — before stopping, run an end-of-task checkpoint comparing current observable state to the end goal, then emit a decision-ready verdict (Result / Toward goal / Next) in one of four states (DONE / PARTIAL / BLOCKED / UNCLEAR); (5) KISS — pick the simplest solution that works; complexity must be justified by a concrete present requirement, not a hypothetical future one; duplication beats the wrong abstraction; rule of three before extracting; (6) think-before-coding — surface assumptions, forks, and tradeoffs *before* the implementation lands; present multiple interpretations rather than silently picking; push back when a simpler approach exists; name confusion instead of guessing; (7) surgical-changes — every changed line traces to the user's request; no drive-by improvements; no style impositions; mention pre-existing dead code instead of deleting it; clean only orphans your own change created; (8) goal-driven-execution — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable success criteria are what enable autonomous loops to keep going without pausing for guidance. Use when writing or running a test, claiming a value or threshold "works", reporting verification results, making any claim about code behavior, starting a non-trivial task, debugging, running a multi-step pipeline, running /auto or /loop, about to ask a clarifying question, mid-task considering a "while I'm here" detour, stalled by a question the context already answers, about to finish a task and hand output back to the user, designing a new component, refactoring, choosing between an abstraction and duplication, vibe-coding or prototyping, adding a factory/registry/wrapper/decorator/config layer, writing a class hierarchy, picking inheritance vs composition, editing existing code, fixing a bug, completing a focused feature ask, working in code with a style you'd write differently, noticing unrelated dead code or bugs, picking between two valid interpretations of a request, picking silent defaults (timeout, retry, format, library), starting work from an imperative without a checkable success criterion, writing a multi-step plan, autonomous run pausing at every fork, or about to say "tested" / "verified" / "confirmed" / "worked" / "fixed" / "done" / "should I" / "do you want me to" / "before I start" / "just to confirm" / "quick question" / "let me know if you want more" / "hope this helps" / "are we done?" / "what's next?" / "anything left?" / "in case we need it later" / "for future flexibility" / "to make it extensible" / "best practice" / "while I'm here" / "I also cleaned up" / "I improved" / "I refactored some adjacent code" / "I noticed" / "I'll just assume" / "they probably meant" / "I'll go with the standard" / "make it pass" / "get it green" / "keep going until" / "set and forget" / "until it's done" / "loop until done". Also covers (9) build-for-the-real-run — design for the actual operating envelope (real scale, real duration, unattended execution, messy/missing inputs, resource limits, recovery after partial failure); a passing demo is not the finish line, the real job surviving under real conditions is; only justifies robustness for conditions you can prove will occur (speculative robustness stays a P5/KISS violation), and is the tiebreaker when two principles conflict; trigger when code worked once on a small or clean input but must run for real, when a job runs overnight / unattended / under /auto or cron, or on "run it for real" / "this runs overnight" / "the real file is huge" / "set and forget" / "it died at 3am" / "works on my test clip but not the real one" / "it filled the disk" / "it hung halfway". Also covers (10) see-it-before-you-call-it — when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log line is not proof on a visual surface; capture inside the test, read before declaring pass/fail, and a captured-but-unread shot or a weak visible assertion ("element exists" when it exists in both the good and bad state) is the failure this prevents; trigger on "is it logged in", "did the page load", "did it render", "smoke test the UI", "is the account ready", "did the image generate", warmup/readiness checks, or any verify gated on a visual outcome. Also covers (11) pin-the-cause-before-the-fix — hypothesis-driven debugging / root cause analysis (RCA): on any unexpected failure, observe and collect evidence first, list 2-4 concrete falsifiable causes, rank by likelihood, design the cheapest probe that isolates ONE variable and pre-register its expected / confirming / disproving results BEFORE running it, run one test at a time, keep a facts/unknowns ledger on long investigations, and only edit code after exactly one cause has positive proof; a fast path exists only for causes genuinely obvious on first read (typo, missing import); trigger on "why is this failing", "debug this", "it's broken", "hypothesis-driven debugging", "root cause analysis", "RCA", "let me just try this", "guess and check", or any impulse to edit code before the cause is locked. This skill is expected to grow — new principles will be appended over time, each following the template at the bottom.
 ---
 
 # Principles
@@ -73,6 +73,8 @@ Linux    →  /home/<your-username>
 9. **Build for the real run** — design for the actual operating envelope: real scale, real duration, unattended execution, messy inputs, resource limits, recovery. The demo passing is not the goal; the real job surviving is. Only counts conditions you can prove will occur — speculative robustness still falls to P5.
 
 10. **See it before you call it** — when a result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log string is not proof on a visual surface.
+
+11. **Pin the cause before the fix** — hypothesis-driven debugging (RCA): evidence first → 2–4 ranked falsifiable causes → one pre-registered, cheapest, one-variable probe at a time → only edit code once exactly one cause has positive proof.
 
 > **Crosswalk to Karpathy's 4 principles:** Think Before Coding → P6 · Simplicity First → P5 · Surgical Changes → P7 · Goal-Driven Execution → P8 (also touches P2 + P4).
 
@@ -1553,6 +1555,131 @@ Surfaced 2026-06-18 from the account-95 incident: an autonomous run concluded "n
 `========================================`
 
 
+## Principle 11 — Pin the cause before the fix
+
+**Rule:** On any unexpected failure, run the debug loop before touching code: observe the actual failure artifact, collect the facts, list 2–4 concrete falsifiable causes, rank them by likelihood, then run ONE cheapest one-variable probe at a time — pre-registering what result confirms and what disproves BEFORE the probe runs — until exactly one cause has positive proof. Only then edit.
+
+**One-line form:** Hypothesis-driven debugging (RCA): rank causes, pre-register one cheap probe, lock the cause, THEN edit.
+
+### The canonical loop
+
+```
+THE DEBUG LOOP — hypothesis-driven debugging / root cause analysis
+(standard: P11 · full procedure: /repair)
+
+1. Observe            read the actual failure artifact — log, trace, output
+2. Collect evidence   list the known FACTS; separate facts from UNKNOWNS
+3. Hypothesize        2–4 concrete, falsifiable causes
+4. Rank               order by likelihood given the evidence; name the leader
+5. Design the test    cheapest probe that isolates ONE variable. Pre-register
+                      before running: variable tested / expected result /
+                      what result CONFIRMS / what result DISPROVES
+6. Run ONE test       one probe at a time — never a shotgun of changes
+7. Interpret          compare against the pre-registered predictions;
+                      confirm or rule out — only positive evidence locks
+8. Update + repeat    update the facts/unknowns ledger, re-rank survivors,
+                      loop 5–7 until ONE cause has positive proof
+9. Only then edit     no code change before the cause is locked
+
+Running ledger (long investigations): facts · unknowns · leading hypothesis
++ confidence · next highest-value test. In /auto this maps onto the
+activity log's DIAGNOSING entries.
+
+Fast path (KISS): cause genuinely obvious on first read (typo, missing
+import, wrong variable name) → name cause + fix in one sentence each,
+verify, done. First "let me just try this" = past the fast path — run the loop.
+```
+
+Pre-registration (step 5) is what makes step 7 honest: the pass/fail meaning of the probe is written down *before* the result exists, so the result can't be rationalized after the fact.
+
+### When it applies
+
+- Any unexpected failure, in any lane — a failing test, a wrong value, a crashed run, a misbehaving page, a regression. If the cause is not locked, the loop is on.
+
+- Mid-build (a prototype part breaks), mid-run (/auto verify fails), mid-analysis (a probe returns something surprising).
+
+- Trigger phrases: "why is this failing?", "debug this", "it's broken", "hypothesis-driven debugging", "root cause analysis", "RCA", "let me just try this", "I'll just change X and see".
+
+### Failure modes this catches
+
+- **Guess-and-edit** — editing code on the first plausible theory. The edit becomes a new variable, evidence is contaminated, and the real cause is now harder to find.
+
+- **Favorite-hypothesis lock-in** — chasing one cause without listing rivals; the actual bug was candidate #3 that never got written down.
+
+- **Shotgun probing** — changing three things at once; whatever happens next proves nothing (no single variable isolated).
+
+- **Post-hoc rationalizing** — running a probe with no pre-registered prediction, then reading whatever came back as support for the favorite theory.
+
+- **Elimination-as-proof** — ruling out three of four candidates and declaring the fourth guilty with no positive evidence of its own.
+
+### Check / gate before editing code
+
+1. **Are 2–4 falsifiable causes written down and ranked?** — one candidate is a hunch, not a differential.
+
+2. **Was the probe pre-registered?** — variable / expected / confirms / disproves stated before the result existed.
+
+3. **Did the probe isolate ONE variable?** — a multi-change probe locks nothing.
+
+4. **Does the surviving cause have POSITIVE proof?** — not just "everything else ruled out."
+
+5. **If claiming the fast path: is the cause genuinely one-read obvious?** — the first "let me just try this" means no.
+
+### Common invalid patterns
+
+- Error appears → immediately edit the line in the traceback → invalid (guess-and-edit; the traceback line is the trigger, not necessarily the cause).
+
+- "It's probably the cookie" → refresh the cookie → worked once → declared fixed → invalid (no isolating probe, no positive proof).
+
+- Change timeout + retries + input file at once, run passes → invalid (three variables; which one fixed it is unknown).
+
+- Probe run first, prediction written after → invalid (post-hoc rationalizing).
+
+### Hard NOs
+
+- Do not edit code before exactly one cause has positive proof (fast path excepted, honestly).
+
+- Do not run a probe without pre-registering what confirms and what disproves.
+
+- Do not change more than one variable per probe.
+
+- Do not treat process of elimination as proof.
+
+- Do not claim the fast path after the first failed "obvious" fix — that failure IS the evidence the cause wasn't obvious.
+
+### Worked examples
+
+**A — The loop, run properly**
+
+Stage 4 image gen returns `no_images_generated` for ~12% of beats.
+
+- ❌ "Probably rate limiting — I'll add a sleep." Edit shipped; failure rate unchanged; now the run is slower AND still broken.
+
+- ✅ Facts: failures cluster on one account; other accounts clean. Causes: (1) cookie expiry on that account, (2) quota hit, (3) content filter. Rank: cookie first (cheapest probe + failures started ~4h after login). Pre-register: "print the session cookie expiry; CONFIRMS if expiry < now; DISPROVES if expiry > now+1h." Probe → expiry was 3h ago → locked. Fix the refresh logic. One probe, one edit.
+
+**B — Fast path, honestly claimed**
+
+`NameError: name 'confg' is not defined` on a line written 2 minutes ago.
+
+- ✅ Typo, visible on first read. Name it, fix it, re-run. Loop not required — and if the re-run still fails, the fast path is over: run the loop.
+
+### Relationship to the other principles
+
+- **`/repair`** — the full 9-step *procedure* this standard compresses (Transform → Hypothesize → Lock → Isolate → RED → GREEN → Integrate → Step 2 → Audit). P11 is the rule that applies everywhere; /repair is the methodology when a repair is the task. Same split as P5 ↔ `/simplify`.
+
+- **P6 (think before coding)** covers assumptions before *new* code; **P11** covers causes before *fix* code. Both forbid running on a silent guess.
+
+- **P1 (test the condition)** — a probe that can't disprove anything is P1's failure mode inside the loop.
+
+- **/auto** — fix mode runs this loop (ranked hypotheses + pre-registered probe before any rotation edit). **/prep** — build/pentest failures route here. **/spec** — a `why:` claiming a cause must name the decisive probe that pinned it.
+
+### Origin
+
+Adopted 2026-08-06. The loop existed only as /repair's internal procedure; outside /repair (mid-build in /prep, fix mode in /auto, ad-hoc debugging) nothing formally forbade guess-and-edit. User asked to codify the observe → evidence → hypothesize → rank → cheapest-test → one-test → interpret → update → only-then-edit sequence as a standing principle, upgraded with pre-registration and the facts/unknowns ledger from a hypothesis-driven-debugging protocol comparison. Matches the existing "Pin the fix, don't guess" memory — this principle is its promoted, enforceable form.
+
+
+`========================================`
+
+
 ## Principle N — {{ short title, imperative if possible }}
 
 **Rule:** {{ one-sentence statement of the principle }}
@@ -1653,5 +1780,7 @@ can judge whether the rule still applies in edge cases }}
 - **P9 — build for the real run:** design for the real operating envelope — real scale, real duration, unattended execution, messy inputs, resource limits, recovery; a passing demo isn't the finish line, the real job surviving is. Only fires on conditions you can prove will occur — speculative robustness still falls to P5, which is its hard boundary. Real-world fit is also the tiebreaker when two principles conflict.
 
 - **P10 — see it before you call it:** when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion before trusting it; an exit code or matched log line is not proof on a visual surface. Capture inside the test at each state-change/assertion; a captured-but-unread shot is the account-95 miss. Encoded into /auto (Hard Invariant #11) and /prep (visual smoke capture).
+
+- **P11 — pin the cause before the fix:** hypothesis-driven debugging (RCA) — observe and collect evidence, list 2–4 ranked falsifiable causes, run one pre-registered cheapest one-variable probe at a time (confirms/disproves written before the result exists), keep a facts/unknowns ledger, and only edit code once exactly one cause has positive proof; fast path only for one-read-obvious causes. Standard here; full procedure in /repair; runs inside /auto fix mode and /prep build/pentest failures.
 
 - Append new principles using the template. Update the index and the frontmatter description when you do.

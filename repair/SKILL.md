@@ -473,6 +473,7 @@ Hand back to user.
     - **P6 think-before-coding** — push back on weak diagnoses; surface alternative causes; don't guess-and-edit
     - **P7 surgical-changes** — fix's blast radius matches the bug's; no "while I'm here" cleanup
     - **P8 goal-driven-execution** — the repair loop IS the P8 loop; standalone-fails-then-passes is the per-step verify
+    - **P11 pin-the-cause-before-the-fix** — the standard this procedure executes: steps 2–3 (Hypothesize → Lock) ARE the P11 loop — ranked falsifiable causes, one pre-registered cheapest probe at a time, positive proof before any edit
 
 - **After `deep-audit`** — if `deep-audit` surfaces a latent failure that the user wants fixed, /repair takes the surfaced issue and works it through the methodology.
 
