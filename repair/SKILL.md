@@ -74,6 +74,8 @@ These never bend, regardless of what's being repaired or how urgent it feels.
 
 17. **A one-shot patch is scaffolding, not the deliverable.** Making the thing "work once" is a legitimate *means* — to prove a hypothesis, unblock a probe, or smoke-test the pipeline end-to-end. It is never the *end*. The moment a throwaway patch makes it work, the job is not done — it has just earned the evidence to go heal the structural cause (HI #16). The end goal is a **healthy tool that survives the next-run-without-Claude test**, not a specific output that a bypass produced this once. So: patch to learn, then climb to the structural layer and fix it there; the patch comes out (or becomes the real fix) before DONE. Shipping the smoke-test patch *as* the repair is the exact drift this invariant exists to catch.
 
+18. **Discriminating tests, not confirming tests.** A probe earns its run only if its outcomes can distinguish between the live hypotheses. A test that merely confirms the current assumption teaches nothing — it passes whether the leading cause or a rival is true. Do not prematurely converge on the current hypothesis: before concluding, systematically consider the relevant alternative hypotheses and identify what evidence or tests would distinguish between them. Avoid **search-space neglect** (an alternative never listed can never be ruled out) and **anchoring bias** (the first plausible cause quietly becoming the only one probed) by actively checking plausible alternatives. Do not declare the task complete simply because the initial hypothesis appears correct — DONE requires a high-confidence conclusion supported by evidence, with the relevant alternatives investigated or explicitly ruled out.
+
 
 ## The Repair Loop in P8 Form
 
@@ -297,8 +299,8 @@ Skip the standalone-repro phase ONLY when the fix is verifiably one line and ver
 
 For any repair where the cause is not immediately obvious or the fix touches more than one place: the full discipline applies.
 
-- All 15 hard invariants.
-- All 11 universal principles.
+- All 18 hard invariants.
+- All 12 universal principles.
 - Standalone repro required.
 - PoC + actual-usecase verification both required.
 
@@ -491,4 +493,5 @@ Hand back to user.
 - **Two verifications: PoC and actual-usecase + different-instance probe.** PoC alone is never shippable. Step 2 must include a different-instance probe (different input / state / shard); same failure mode must NOT fire there.
 - **One fix, one scope.** No refactoring while repairing. No silencing the failure.
 - **Lock the structural cause, not the proximate trigger.** Step 3 isn't satisfied until the climb-one-layer test ("if I fix this exact line, does the condition still exist?") returns NO. Keep climbing until it does.
+- **Discriminating tests, not confirming tests.** A probe must be able to say NO to the favorite hypothesis — the relevant alternatives investigated or explicitly ruled out before DONE.
 - **DONE / PARTIAL / STUCK.** Honest reports, every time.

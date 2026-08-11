@@ -1192,6 +1192,8 @@ These never bend.
 
 12. **Restore the precondition before any retry.** Never re-attempt a step on top of the prior attempt's residue. At every recovery door — approach rotation, resume / cron-tick pickup of an IN-PROGRESS step, and a refuter re-opening a DONE step — run the step's `rollback:`, re-assert its `pre-verify`, and invalidate any downstream step whose foundation actually changed (checksum differs), BEFORE re-running. Re-entry that skips this ships a stale foundation. See "Re-entry hygiene."
 
+13. **No premature convergence — probes must discriminate, alternatives must be ruled out.** (Always cite as "HI #13" — heuristic #13 is a different rule.) In fix mode and on any judgment-shaped verdict, do not prematurely converge on the current hypothesis. The pre-registered probe must be a **discriminating test** — its CONFIRMS / DISPROVES outcomes must separate the leading hypothesis from its ranked rivals, not merely confirm the current assumption (a probe both hypotheses would pass discriminates nothing). Avoid **search-space neglect** and **anchoring bias** by actively checking plausible alternatives: DONE is not written simply because the initial hypothesis appears correct — the conclusion must be supported by evidence with the relevant alternatives investigated or explicitly ruled out (the hypothesis list + probe log is that evidence). This sharpens HI #10: #10 says manufacture the signal; this says the signal must be able to say NO to the favorite.
+
 
 ## Pre-Action One-Liner Format
 
@@ -1494,7 +1496,7 @@ Before emitting DONE on a **judgment-based** goal, the report must have passed t
 
 Judge every step and the final verdict against the REAL operating envelope, not the demo: the real input size, the real run duration, unattended execution, messy/missing inputs, resource limits, and recovery after a partial failure. A green run on a small or clean sample is NOT DONE if the real job is bigger, longer, or dirtier — verify against the conditions the task will actually meet. This covers only conditions you can prove will occur; a safeguard for an imaginary case is still a P5 (KISS) violation, not practicality.
 
-Most of /auto's machinery already serves this — the self-derived verify sanity pass (P1), stage-mode's different-input re-run, disk-is-truth (#8), the escalation tree (#13), checkpointed cron state, and the Terminal Refuter's "holds on a different input with no Claude present" check. P9 is the name that ties them together and the bar the final report is judged against. (Unnumbered on purpose — the numbered list 1–7 continues into the Operational Heuristics' #8–13, so this anchor sits outside that run to avoid renumbering them.)
+Most of /auto's machinery already serves this — the self-derived verify sanity pass (P1), stage-mode's different-input re-run, disk-is-truth (#8), the escalation tree (heuristic #13), checkpointed cron state, and the Terminal Refuter's "holds on a different input with no Claude present" check. P9 is the name that ties them together and the bar the final report is judged against. (Unnumbered on purpose — the numbered list 1–7 continues into the Operational Heuristics' #8–13, so this anchor sits outside that run to avoid renumbering them.)
 
 ## Operational Heuristics — patterns from production runs
 
@@ -1763,7 +1765,7 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 - a **baseline "before" reference if one exists** (git HEAD, a pre-change snapshot, the prior output dir) — part of the yardstick, so the refuter can diff the deliverables against it and flag unexplained or out-of-scope changes; greenfield builds have no baseline, so don't fabricate one (added 2026-06-14),
 - the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks).
 
-Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.)
+Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13).
 
 ### Verdict handling — severity-gated
 

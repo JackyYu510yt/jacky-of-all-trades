@@ -49,6 +49,8 @@ Born from real misreads (umbrella "FAILED/cooked" labels, a transitional URL tre
 
 5. **The map is the only interpreter.** Once a map exists, nothing improvises — not the tool, not Claude in a later session. A signal either matches an entry (act per its protocol) or it doesn't (UNMAPPED: capture, park, stop loud). Never paraphrase an error message — verbatim or nothing.
 
+6. **No anchoring — the first plausible reading is a candidate, not the verdict.** Before assigning a state's meaning, name the alternative states the same evidence is also consistent with, and record what would distinguish them (the `Distinguish-from:` field exists for exactly this). Verdict evidence must be a **discriminating test** — capable of separating the claimed state from its nearest neighbor — not merely consistent with the favorite reading. Avoid **search-space neglect**: an alternative never written down can never be ruled out, and Phase 2.5's WEAK verdict ("consistent with another explanation too") is this rule failing after the fact instead of being applied up front.
+
 ## Confidence tiers (what earns a real protocol)
 
 - **`confirmed`** — reproduced deliberately, evidence audited CONFIRMED. Gets a full protocol.
