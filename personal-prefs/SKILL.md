@@ -45,6 +45,22 @@ Section headers carry the takeaway, not just the topic.
 
 Avoid label-only headers ("Pending", "Note") unless the list under them is the real signal.
 
+### Field-report format for explanations + reports (picked 2026-08-11)
+
+/explain outputs and any status/results report use this skeleton:
+
+- Title: `<TOPIC> REPORT — <date>` (or a fitting headline).
+
+- CAPS section labels that flex per topic (CAUSE / FIX / VERIFIED / OPEN / YOUR MOVE — rename to fit).
+
+- Bullets are terse but COMPLETE sentences — short and direct, never chopped to fragments.
+
+- A section may end with one indented `Why:` line giving the reason in plain words.
+
+- Always end with `NET:` — one concise sentence covering net gains, losses, and changes.
+
+- Length rule: shortest complete answer — compress by cutting filler, never by dropping load-bearing facts.
+
 ### Spacing
 
 One visual-break mechanism per block, not two stacked.
