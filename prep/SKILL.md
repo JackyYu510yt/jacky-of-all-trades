@@ -566,6 +566,12 @@ did NOT write. Your job is to break it, not bless it. Evaluate:
 3. Are there simpler approaches that meet the same five properties
    (smooth, consistent, reliable, self-healing, optimized)?
 4. Answer the plan's OPEN QUESTIONS directly.
+5. Do the tests discriminate? For each field-13 RED / REAL check (when
+   per-function spec cards are present) and each success criterion:
+   could it pass while the goal is still unmet? Name the nearest
+   failure state it fails to distinguish (signed-out, empty output,
+   stale cache) — a check that cannot say NO merely confirms the
+   current assumption.
 Return specific, actionable defects ranked by severity — not approval.
 For each: what's wrong, why it bites, and the concrete fix.
 
@@ -831,7 +837,7 @@ function 2                 the file's style — naming, error
 - KISS (P5) — no class hierarchies for linear flows, no `tenacity` when a 5-line loop works, no CLI framework for ≤ 2 args.
 - Every subprocess and network call gets a retry wrapper. Every file write uses write-to-temp-then-rename.
 - **Visual smoke capture (P10 — see it before you call it).** When a function's smoke/REAL test touches a visual surface (a browser, a GUI window, a rendered frame), the generated test captures a screenshot at each state-change + assertion and prints a `[shot] <path>` line per capture. The test's PASS is not accepted until that shot is read — a passing exit code on a visual surface is necessary but not sufficient (a signed-out page exits 0 too). Non-visual tests get no shot. Mirrors /auto Hard Invariant #11.
-- **Pin the cause before the fix (P11) on any unexpected failure.** When a cycle phase fails in a way the spec didn't predict (RED won't fail, GREEN won't pass, REAL breaks in the pipeline), never guess-and-edit the prototype. Run the P11 debug loop — log the facts, list 2–4 ranked falsifiable causes, run ONE pre-registered cheapest one-variable probe at a time (variable / expected / CONFIRMS / DISPROVES written before the result exists), and edit only once exactly one cause has positive proof. Standard: /principles P11; full procedure: /repair; fast path only for one-read-obvious causes (typo, missing import).
+- **Pin the cause before the fix (P11) on any unexpected failure.** When a cycle phase fails in a way the spec didn't predict (RED won't fail, GREEN won't pass, REAL breaks in the pipeline), never guess-and-edit the prototype. Run the P11 debug loop — log the facts, list 2–4 ranked falsifiable causes, run ONE pre-registered cheapest one-variable probe at a time (variable / expected / CONFIRMS / DISPROVES written before the result exists), and edit only once exactly one cause has positive proof. Standard: /principles P11; full procedure: /repair; fast path only for one-read-obvious causes (typo, missing import). The pre-registered probe must be a **discriminating test** — its CONFIRMS / DISPROVES must separate the leading cause from its ranked rivals, not merely confirm the current assumption; avoid **search-space neglect** and **anchoring bias** by actively checking plausible alternatives (mirrors /repair Hard Invariant #18 + /auto Hard Invariant #13).
 
 After each function clears AUDIT, ask the user one quick question: "Does this match what you pictured?" (Yes / Tweak / Rewrite). The user is reviewing a proven function, not a hopeful one.
 

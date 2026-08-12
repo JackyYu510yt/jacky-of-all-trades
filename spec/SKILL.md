@@ -25,6 +25,17 @@ decisive check that pinned it — the one probe that isolated the variable
 "suspected". A cause with no named probe is a guess wearing a conclusion's
 clothes.
 
+The decisive check must be a **discriminating test** — one whose outcome
+separates the claimed cause from its plausible rivals, not one that merely
+confirms the current assumption (a check both causes would pass pins nothing).
+Same bar for success criteria and every `DONE-WHEN`: a check that would also
+pass while the goal is unmet is not a real check — it must distinguish
+goal-met from the nearest plausible not-met state (signed-in vs signed-out,
+rendered vs black frames). Do not prematurely converge on the first reading: a
+cause is written as fact only when the relevant alternatives were investigated
+or explicitly ruled out — avoid **search-space neglect** and **anchoring
+bias** by actively checking plausible alternatives.
+
 ## Mode detection
 
 - No `SPEC.md` in the current project dir → **INIT**.
@@ -204,7 +215,10 @@ or a `REQUIRES` with no source tag). On a phase flagged failure-prone or
 unattended, a missing or hand-wavy `RECOVERS-BY` trips this bar too
 (HARD-when-applicable); on a happy-path phase that can't leave partial state
 it's simply absent, and that's fine. A vague field is exactly the gap `/auto`
-would improvise into — close it here, at planning time. For a non-trivial
+would improvise into — close it here, at planning time. A HARD check that
+cannot say NO — a `VERIFY-REQUIRES` or `DONE-WHEN` that would also pass in the
+nearest failure state — is hand-wavy and trips this bar too (discriminating
+tests, not confirming tests). For a non-trivial
 blueprint, route it through `/audit` (independent review of the *plan*) before
 any step runs.
 
