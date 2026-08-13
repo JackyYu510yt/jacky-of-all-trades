@@ -69,6 +69,27 @@ One visual-break mechanism per block, not two stacked.
 
 - Never a wall of text. One thought per line. Walls fail even when short.
 
+### Confidence + risk footer — the last two lines, every time
+
+Every explain response ends with these two lines (after the NET line if one is used):
+
+```
+CONFIDENCE: HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
+RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and which parts are still unproven>
+```
+
+The scale is about **verification, not vibes**:
+
+- **HIGH confidence** — every load-bearing claim was checked directly this session (output read, file seen, screenshot read, command run). Nothing rests on memory or "should."
+
+- **MEDIUM confidence** — the core is verified but some parts are inferred, secondhand (a tool's own report), or unchecked since an earlier state.
+
+- **LOW confidence** — key claims rest on assumption, stale context, or an external service's say-so.
+
+**Hard cap:** if the answer contains anything pending, queued, retrying, waiting, expected, or "should" — CONFIDENCE cannot be HIGH, and the RISK line must name exactly which part is unproven. A cheerful summary with a hidden unverified core is the failure mode this footer exists to kill: the user acts on the NET line, so the footer is where false confidence gets caught before they close the chat.
+
+Never write a bare grade. "HIGH" alone is banned — the dash and the evidence are mandatory.
+
 
 ## No jargon — the heart of it
 
@@ -204,3 +225,5 @@ The session does not end until you've verified the user has **demonstrated** und
 - Length matches the question — short question, short answer.
 
 - Right gear: quick unless the user explicitly asked to be taught or quizzed.
+
+- Ends with the CONFIDENCE + RISK footer, each grade followed by its evidence — and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.

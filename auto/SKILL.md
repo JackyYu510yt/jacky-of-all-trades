@@ -1485,9 +1485,19 @@ Failures:    <every failure surfaced, not buried>
 
 Next:        <concrete next move if status != DONE,
               or "nothing — task complete" if DONE>
+
+Confidence:  HIGH | MEDIUM | LOW — <what was verified directly vs inferred vs assumed>
+Risk:        HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which parts are unproven>
 ```
 
 The report is the contract. If it says DONE, it's done. If it says PARTIAL, it lists exactly what's missing.
+
+**Confidence + Risk are mandatory and evidence-tied.** The scale:
+
+- Confidence HIGH — every claim above was verified this run (exit codes read, artifacts checked, shots read). MEDIUM — core verified, some parts inferred or reported secondhand by a tool. LOW — key claims rest on assumption or an external service's say-so.
+- Risk LOW — nothing pending, wrongness is cheap/reversible. MEDIUM — unverified pieces exist; wrongness costs rework or delay. HIGH — unverified pieces touch production, shared state, or user-facing output; wrongness ships something bad or blocks the pipeline silently.
+- **Hard cap:** any "waiting", "queued", "retrying", "should", "expected", or dependency on an external recovery anywhere in the report → Confidence cannot be HIGH. If the Status says DONE but a claim would need the cap, the STATUS is wrong — downgrade to PARTIAL; never inflate the rating to match the status.
+- A bare grade with no evidence clause is invalid. The dash and the justification are part of the line.
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
@@ -1795,6 +1805,8 @@ Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
 Coverage: <success checks passed, e.g. 7/7 = 100%>
+Confidence: HIGH|MEDIUM|LOW — <verified directly vs inferred; DONE with anything unverified is forbidden>
+Risk:       HIGH|MEDIUM|LOW — <what's exposed if this is wrong>
 Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
@@ -1811,6 +1823,8 @@ Ledger (for the missing part — the P11 facts/unknowns handoff):
   Leading hypothesis:      <best guess why + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
 Next:        <concrete suggested move>
+Confidence:  HIGH|MEDIUM|LOW — <verified vs inferred; the "Done" list must be all-verified or this drops>
+Risk:        HIGH|MEDIUM|LOW — <what the Missing part exposes; who/what gets hit if it stays missing>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
@@ -1829,6 +1843,8 @@ Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead
   Leading hypothesis:      <best remaining guess + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
 Hand back to user — recommend: <best concrete next step>
+Confidence:  HIGH|MEDIUM|LOW — <how solid the Facts list is; anything inferred drops it>
+Risk:        HIGH|MEDIUM|LOW — <what stays exposed while this sits stuck>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
@@ -1843,7 +1859,7 @@ Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/
 - Inline shape is the default. Cron only for truly unattended overnight.
 - Diagnose, rotate approaches, never advance on lies, stop on DONE or STUCK.
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
-- Final report is honest with numbers, not vibes.
+- Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
 - Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
 - Visual checkpoints: screenshot major events + ~10-min intervals on long visual steps, READ every shot; two identical job-surface shots + a flat artifact probe = STALLED.

@@ -36,6 +36,24 @@ cause is written as fact only when the relevant alternatives were investigated
 or explicitly ruled out — avoid **search-space neglect** and **anchoring
 bias** by actively checking plausible alternatives.
 
+## Confidence + risk footer (all user-facing /spec reports)
+
+Every user-facing /spec report — the INIT completion message, the LOG
+confirmation, any "spec updated" summary — ends with these two lines:
+
+```
+CONFIDENCE: HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
+RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
+```
+
+Confidence rates verification, not optimism: HIGH only when every claim in the
+report was directly observed this session; inferred or secondhand claims cap it
+at MEDIUM; assumptions cap it at LOW. **Hard cap:** anything pending, waiting,
+retrying, or "should work" in the report → Confidence cannot be HIGH, and the
+RISK line must name the unproven part. A bare grade with no evidence clause is
+invalid. This is the last-line defense against a spec session ending on false
+"all done" confidence.
+
 ## Mode detection
 
 - No `SPEC.md` in the current project dir → **INIT**.

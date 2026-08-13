@@ -975,10 +975,17 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 │         the ambiguity. Not "let me know if you want more."   │
 │         Include metrics to watch on first run when DONE.>    │
 │                                                              │
+│  Confidence: <HIGH/MED/LOW> — <what was verified directly    │
+│              (tests run, output seen) vs inferred/assumed>   │
+│  Risk: <HIGH/MED/LOW> — <what's exposed if this verdict is   │
+│        wrong; which parts are unproven on real inputs>       │
+│                                                              │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
 The headline contrasts current state with the END GOAL card, not with a sub-step. SHIPPABLE / NOT SHIPPABLE is implied by the state — DONE means shippable, anything else means not.
+
+**Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read); anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH. A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
 
 ### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
 
