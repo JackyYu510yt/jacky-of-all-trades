@@ -45,6 +45,22 @@ Section headers carry the takeaway, not just the topic.
 
 Avoid label-only headers ("Pending", "Note") unless the list under them is the real signal.
 
+### Completed means delivered (P12 — adopted 2026-08-12, always-on)
+
+A task is COMPLETE only when the user-visible result exists and was verified by observation. Fixes, loops, specs, and retries are progress, never completion.
+
+- Reports lead with what the user still does NOT have — failures and gaps FIRST, wins after.
+
+- The NET line states the result gap before the gains.
+
+- Tag claims VERIFIED (observed) vs ASSUMED (inferred) where it matters.
+
+- A dependency dead >~2h = incident: reroute (hand-verify, hand-deliver, swap providers), don't normalize the wait.
+
+- Success criteria are always phrased as the user's outcome, never machinery milestones.
+
+- Trigger phrase: "verified results only" invokes this whole standard explicitly.
+
 ### Field-report format for explanations + reports (picked 2026-08-11)
 
 /explain outputs and any status/results report use this skeleton:

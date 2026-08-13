@@ -16,7 +16,10 @@ Helper path: `C:\Users\Shadow\.claude\skills\spec\spec_tool.py`
 Never write an assumption into the spec as if it were fact. **Success criteria**
 especially must be things you can *prove* — each one empirically checkable (a
 smoke test, a probe, a specialized test that hits the real condition, not a
-proxy). When a Change Log or Findings entry claims something works, or explains
+proxy). And they must name the **user-visible result** (the deliverable existing
+in the world), never machinery milestones ("the loop runs", "the fix is merged")
+— machinery belongs in phases; criteria phrased as sub-goals produce truthful
+"DONE" reports over undelivered results (P12, adopted 2026-08-12). When a Change Log or Findings entry claims something works, or explains
 *why*, it rests on observed evidence — a run, a probe, a test result — not on
 what seemed true. A suspected verdict stays flagged as suspected until a
 decisive check confirms it. A `why:` that claims a **cause** must NAME the

@@ -160,6 +160,13 @@ Both of these must hold before any execution:
      visible artifact — not "looks right" or "should work")
 ```
 
+**The Success line must name the USER'S result, not machinery (P12).** "The retry
+loop works" / "the fix is merged" are sub-goals the run can pass while the user's
+actual outcome ("the correct thumbnail exists in the VA folder") stays unmet —
+that's goal substitution, and it produces truthful-but-false DONE reports. Write
+the Success line as the user-visible deliverable; machinery milestones belong in
+steps, never in the Success line.
+
 **If both clear** → state them in one line and proceed:
 
 ```
@@ -1491,6 +1498,13 @@ Risk:        HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; wh
 ```
 
 The report is the contract. If it says DONE, it's done. If it says PARTIAL, it lists exactly what's missing.
+
+**Result-gap first (P12, 2026-08-12):** whenever the user's deliverable is not fully
+met, the report LEADS with what the user still doesn't have — before any wins.
+Shipped machinery is reported as progress-toward, never as the headline. Claims are
+tagged VERIFIED (observed) / ASSUMED (inferred) where the difference matters. An
+external dependency dead >~2h is reported as an incident with a reroute, never as
+"retrying, fine."
 
 **Confidence + Risk are mandatory and evidence-tied.** The scale:
 
