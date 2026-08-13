@@ -26,6 +26,7 @@ $EXPECTED_DEVICE_ID = @{
     1 = 'VYEHZ24-DHRHMQ7-U6R4O4E-FL7DANW-WZIGZKO-AXL2PKZ-O5F4MRU-DDB4VQU'
     2 = 'NSBTRAN-KTBVNJH-TXEQDYW-6KA3RYS-WWV34MU-XSMYIL5-WWU7RRH-OYBI2A4'
     3 = 'ZGSLY26-WJMJXAC-6EU2K7I-C6U7FYU-RDXI5SI-FPVC5GR-IKCIUTA-2U2H2A5'
+    4 = 'XSXJ73D-M4ZEYXP-3TMZGIX-5AQTZBP-47ZN2S2-C6PXQF4-6TAB5MV-VDUSJQE'
 }
 
 $FOLDER_OUTPUT     = 'sjetj-h9jpa'   # ! Jacky Rush Output   (the work)
@@ -122,9 +123,9 @@ if (-not $isAdmin) {
 }
 
 $PcNumber = 0
-while ($PcNumber -notin 1, 2, 3) {
-    $in = Read-Host 'Which PC number is this? (1 / 2 / 3)'
-    if ($in -match '^\s*[123]\s*$') { $PcNumber = [int]$in.Trim() }
+while ($PcNumber -notin 1, 2, 3, 4) {
+    $in = Read-Host 'Which PC number is this? (1 / 2 / 3 / 4)'
+    if ($in -match '^\s*[1234]\s*$') { $PcNumber = [int]$in.Trim() }
 }
 $PcName     = "PC$PcNumber"
 $ExpectedId = $EXPECTED_DEVICE_ID[$PcNumber]
