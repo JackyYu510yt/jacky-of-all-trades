@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: ebc6e6ed-9992-4cc1-8fb3-8e137a5d94c3
-  modified: 2026-08-13T09:48:32.744Z
+  modified: 2026-08-13T09:54:21.152Z
 ---
 
 Every report from /explain, /auto, /prep, and /spec must END with this block:
@@ -30,6 +30,6 @@ RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which par
 - Hard cap: any "waiting", "queued", "retrying", "should", "expected", or external-dependency claim anywhere in the report → CONFIDENCE cannot be HIGH (PERFECT unreachable). If the status says DONE but the cap applies, the STATUS is wrong — downgrade the status, never inflate the grade.
 - Compass anti-drift: ULTIMATE GOAL is derived fresh PER SCENARIO (per conversation/objective — not a generic principle), framed at the systems level from the user's seat (a human building automation so they never have to give input). User's chosen shape (8/13/26): ALL FOUR lenses, every report — Delivers (factory view: finished result arrives with zero input), Heals (organism view: failures recover or surface themselves), Replaces (operator view: whose job/attention the system deletes), Guarantees (structure view: what wrongness is impossible by construction). Fill every lens; a genuinely inapplicable lens gets "n/a — why", never a silent skip. Lens WRITING STYLE (user-confirmed 8/13/26 — "i like the logic and reasoning and explanation style from these examples"): concrete and first-person from the user's seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated ("one bad item never costs the other 200") — never abstract boilerplate like "the system operates autonomously". Once stated it is frozen — rewording it toward what was achieved is exactly the drift the user wants to catch. SUGGESTED ACTION is one move (not a menu) and must state how it advances both the next step and the goal; an action whose chain doesn't connect is drift and must not be suggested. Goal reached → NEXT STEP "none", SUGGESTED ACTION "nothing — goal reached".
 - A bare grade with no evidence clause is invalid.
-- Codified in: /explain (goal compass + footer section + final check), /auto (report contract + compass rules + all 3 final templates + TL;DR), /prep (FINAL VERDICT card rows + compass/confidence rules), /spec (goal-compass + footer section under Evidence discipline).
+- Codified in: /principles P13 "The report grades itself" (the canonical statement, added 8/13/26), /explain (goal compass + footer section + final check), /auto (report contract + compass rules + all 3 final templates + TL;DR), /prep (FINAL VERDICT card rows + compass/confidence rules), /spec (goal-compass + footer section under Evidence discipline).
 
 Related: [[see-it-before-you-call-it]], [[probe-dont-assume]], [[evidence-first-error-recon]]
