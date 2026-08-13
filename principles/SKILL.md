@@ -78,6 +78,8 @@ Linux    →  /home/<your-username>
 
 12. **Completed means delivered** — a task is complete ONLY when the user-visible result exists in the world and was verified (seen, not inferred); shipped machinery (fixes, loops, specs, retries) is progress, never completion. Reports lead with the result gap and failures FIRST; a dependency dead >2h is an incident to reroute around, not a wait state to normalize.
 
+13. **The report grades itself** — every report ends with the goal-compass (4-lens ULTIMATE GOAL derived per scenario — Delivers/Heals/Replaces/Guarantees — plus NEXT STEP and one SUGGESTED ACTION) and a self-grade (CONFIDENCE: PERFECT/HIGH/MED/LOW + RISK, each with named evidence). Anything pending caps confidence below HIGH; PERFECT requires proven full-autopilot (no human thought, no human intervention, no Claude in the loop); the goal block is frozen — rewording it toward what was achieved is the drift the footer exists to expose.
+
 > **Crosswalk to Karpathy's 4 principles:** Think Before Coding → P6 · Simplicity First → P5 · Surgical Changes → P7 · Goal-Driven Execution → P8 (also touches P2 + P4).
 
 > **Tiebreaker:** when two principles pull opposite ways, ask which choice keeps the thing working for the *real job* — real-world fit (P9) breaks the tie. This does NOT license speculative complexity: P9 only fires on conditions you can prove will occur, so "practicality" can never be the reason for a safeguard against an imaginary case (that's still a P5 violation). Real fit wins ties; it does not win invented ones.
@@ -1701,6 +1703,64 @@ Adopted 2026-08-06. The loop existed only as /repair's internal procedure; outsi
 ### Origin
 
 Adopted 2026-08-12 from the thumbnail-pipeline incident: two days of truthful "DONE — everything good" reports (leak fixed, health line live, retry loops armed) while the user's actual result — correct thumbnails delivered to the VA — did not exist, and a core dependency sat dead for 32 hours framed as "retrying, fine." The user's standard: if the desired result isn't coming out, it is not working. Promoted from the `definition-of-completed` memory to a standing principle; enforced through /auto's Success-line authoring, /spec's success criteria, and the always-on personal-prefs.
+
+
+`========================================`
+
+
+## Principle 13 — The report grades itself
+
+**Rule:** Every report ends with a goal-compass and a self-grade: a 4-lens ULTIMATE GOAL derived fresh per scenario (Delivers / Heals / Replaces / Guarantees), a NEXT STEP, one SUGGESTED ACTION whose chain visibly connects to the goal, a CONFIDENCE grade (PERFECT / HIGH / MEDIUM / LOW) with named evidence, and a RISK grade naming the exposure and the unproven parts.
+
+**One-line form:** A report you can't grade is a report you can't trust — the footer IS the grade.
+
+### When it applies
+
+- Every report from /explain, /auto, /prep, /spec — and any end-of-task summary or DONE claim anywhere.
+
+- Trigger phrases: any status report, any "done/finished/fixed" claim, any NET line, any handback.
+
+### Failure modes this catches
+
+- **False confidence** — a summary reads "all done" while work is pending or unverified; the user acts on it and closes the chat.
+
+- **Goal drift** — the stated goal quietly rewords itself toward whatever got achieved, so partial work grades as complete.
+
+- **Buried live wires** — a dangerous unknown (unverified claim touching production) hides mid-report instead of being named on the risk line.
+
+- **Aimless next moves** — a suggested action that doesn't advance the user's actual goal (tangent work dressed as progress).
+
+### Check / gate before claiming done
+
+1. **Is the footer present and complete?** — all four lenses filled (or "n/a — why"), next step, one suggested action, both grades with evidence clauses.
+
+2. **Does the confidence grade survive the hard cap?** — anything waiting/queued/retrying/"should" anywhere in the report → below HIGH. PERFECT only with every angle tested (happy + failure paths, real inputs) AND proven full-autopilot (no human thought, no human intervention, no Claude in the loop) AND an independent breaker-check failed to break it — tests named.
+
+3. **Does the goal block match the user's original ask?** — compare against what the user actually said, not what got built. Frozen once stated.
+
+4. **Does the risk line name the live wire?** — every unproven claim that touches production/user-facing output is called out, not summarized away.
+
+### Common invalid patterns
+
+- Bare grade with no evidence clause ("CONFIDENCE: HIGH") → invalid
+
+- PERFECT without a named unattended-run proof → invalid
+
+- Status DONE + confidence capped by pending work → the STATUS is wrong; downgrade the status, never inflate the grade
+
+- Goal lens filled with abstract boilerplate ("the system operates autonomously") → invalid; lenses use the user's concrete style (real actors, real stakes, good state vs bad state, consequences)
+
+### Hard NOs
+
+- Do not reword the frozen ULTIMATE GOAL toward what was achieved.
+
+- Do not award PERFECT on faith, inference, or "should work" — it requires empirical proof of full-autopilot operation.
+
+- Do not suggest an action whose connection to the goal can't be stated in the same line.
+
+### Origin
+
+Adopted 2026-08-13 from the thumbnail-pipeline aftermath: the user nearly closed a chat on a false "all done" reading (P12's origin incident), then asked for reports to carry their own trust-gauge — a confidence/risk footer, a PERFECT tier meaning "full autopilot, no human thought, no human intervention," and a per-scenario goal compass so drift is visible at a glance. Codified in /explain, /auto, /prep, /spec + the confidence-risk-footer memory; this principle is the canonical statement.
 
 
 `========================================`
