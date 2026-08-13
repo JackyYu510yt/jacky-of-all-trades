@@ -397,9 +397,10 @@ Status:
   Parked steps:      []
   Mode reason:       (filled when Mode != NORMAL)
   Refuter:           n/a   (judgment-based goals: pending | clean | <n> BLOCKERs | round 1|2)
+  RedTeam:           n/a   (unattended/stateful deliverables: pending | clean | <n> BREAKS | round 1|2)
 ```
 
-`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate).
+`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate).
 
 ### Per-step lifecycle
 
@@ -1490,8 +1491,11 @@ Toward goal: <how this moves the goal forward, honestly>
 
 Failures:    <every failure surfaced, not buried>
 
-Ultimate goal:    <the user's end goal, in THEIR words — frozen, never
-                   reworded to match what was achieved>
+Ultimate goal (4 lenses, derived from THIS run's scenario — frozen):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
 
 Next step:        <the immediate milestone between current state and that
                    goal — "none" if the goal is fully reached>
@@ -1515,13 +1519,13 @@ external dependency dead >~2h is reported as an incident with a reroute, never a
 
 **Confidence + Risk are mandatory and evidence-tied.** The scale:
 
-- Confidence PERFECT — the 100%-guaranteed, run-unattended grade. Requires ALL of: every angle empirically tested (happy path AND failure/recovery paths, on real inputs at real scale — the P1/P9 bar), every verify directly observed this run, zero pending/external anything, AND an independent adversarial check (Terminal Refuter or an equivalent discriminating test) tried to break it and failed. The evidence clause must NAME the tests that covered each angle. One untested angle → HIGH at best. PERFECT is the only grade that licenses "run this with zero human input" — a false PERFECT is the worst failure the footer can commit.
+- Confidence PERFECT — the 100%-guaranteed, full-autopilot grade. Requires ALL of: every angle empirically tested (happy path AND failure/recovery paths, on real inputs at real scale — the P1/P9 bar), every verify directly observed this run, zero pending/external anything, an independent adversarial check (Terminal Refuter or an equivalent discriminating test) tried to break it and failed, AND the autopilot itself was PROVEN — the deliverable ran (and recovered) end-to-end with no human thought, no human decision, no human intervention, and no Claude in the loop (the structural-fix bar: next run, different input, nobody watching, still works). The evidence clause must NAME the tests that covered each angle, including the unattended-run proof. One untested angle → HIGH at best. PERFECT is the only grade that licenses "walk away, it needs zero human input" — a false PERFECT is the worst failure the footer can commit.
 - Confidence HIGH — every claim above was verified this run (exit codes read, artifacts checked, shots read), but not every angle was adversarially tested. MEDIUM — core verified, some parts inferred or reported secondhand by a tool. LOW — key claims rest on assumption or an external service's say-so.
 - Risk LOW — nothing pending, wrongness is cheap/reversible. MEDIUM — unverified pieces exist; wrongness costs rework or delay. HIGH — unverified pieces touch production, shared state, or user-facing output; wrongness ships something bad or blocks the pipeline silently.
 - **Hard cap:** any "waiting", "queued", "retrying", "should", "expected", or dependency on an external recovery anywhere in the report → Confidence cannot be HIGH. If the Status says DONE but a claim would need the cap, the STATUS is wrong — downgrade to PARTIAL; never inflate the rating to match the status.
 - A bare grade with no evidence clause is invalid. The dash and the justification are part of the line.
 
-**Goal-compass rules (anti-drift):** `Ultimate goal` restates what the user asked for in their terms — it is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the line against their original ask. `Next step` is the immediate milestone between here and that goal. `Suggested action` is ONE move, not a menu, and its line must state how it advances BOTH the next step and the ultimate goal — an action whose chain doesn't connect to the goal is drift and must not be suggested.
+**Goal-compass rules (anti-drift):** `Ultimate goal` is derived fresh PER RUN from the current scenario — the end-state of THIS objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Once stated the block is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the block against their original ask. `Next step` is the immediate milestone between here and that goal. `Suggested action` is ONE move, not a menu, and its line must state how it advances BOTH the next step and the ultimate goal — an action whose chain doesn't connect to the goal is drift and must not be suggested.
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
@@ -1806,6 +1810,18 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 
 Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13).
 
+### RED-TEAM rider — unattended / stateful deliverables
+
+When the deliverable will run unattended or holds state across runs (a pipeline, a cron job, a helper daemon, fallback/routing logic, a queue — anything no human watches per-step), dispatch a SECOND fresh agent in parallel with the refuter: the **RED-TEAM**. Its canonical brief lives in `~/.claude/skills/audit/SKILL.md` under the heading "**The brief handed to the RED-TEAM**" — read it there at dispatch time and hand it the actual artifact paths (code, runbook, logs). It generates concrete hostile scenarios across 10 attack categories (mid-op death, check-then-act races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walks each through the real code to HANDLED / DEGRADES / BREAKS / UNKNOWN.
+
+- **Fires on the deliverable's nature, not the goal's shape** — see "When it fires." It runs even when the refuter is skipped; the runbook `RedTeam:` field carries the obligation across compaction exactly like `Refuter:` (pending → clean before `Status: DONE`).
+
+- **BREAKS = BLOCKER** → re-enter fix mode on the owning step (Re-entry hygiene applies). **DEGRADES, and UNKNOWN on a load-bearing scenario,** = CONCERN → logged to the Notes file's Open Questions; does not block DONE.
+
+- **Shares the max-2-rounds bound** with the refuter — see "Bound."
+
+- **Internal, not a user gate** — same rule as the refuter; it passes silently or auto-re-enters fix mode within the bound.
+
 ### Verdict handling — severity-gated
 
 - **BLOCKER** (maps to a specific unmet Success item / failed verify) → re-enter fix mode on that item (Re-entry hygiene: map it to its owning step(s) and restore each before redo). ONLY a BLOCKER re-opens /auto.
@@ -1814,7 +1830,7 @@ Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT 
 
 ### Bound (so it can never loop forever)
 
-Max **2 refute rounds** per run. /auto has no other run-level loop counter — without this bound, a refuter that keeps finding holes prevents termination. On the 2nd round still BLOCKER → stop and emit **AUTO PARTIAL** listing the refuter's open holes. Never silently loop; never silently DONE.
+Max **2 refute rounds** per run — a round is any terminal-gate dispatch (refuter and/or RED-TEAM together count as ONE round). /auto has no other run-level loop counter — without this bound, a gate that keeps finding holes prevents termination. On the 2nd round still BLOCKER (or RED-TEAM BREAKS) → stop and emit **AUTO PARTIAL** listing the open holes. Never silently loop; never silently DONE.
 
 ### Not a user-facing gate
 
@@ -1834,6 +1850,9 @@ Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
 Coverage: <success checks passed, e.g. 7/7 = 100%>
+Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
+Next step: <"none" if fully reached, else the milestone remaining>
+Suggested action: <"nothing — goal reached", or the one move + how it advances the goal>
 Confidence: PERFECT|HIGH|MEDIUM|LOW — <verified directly vs inferred; DONE with anything unverified is forbidden; PERFECT only with all angles tested + refuter-clean, tests named>
 Risk:       HIGH|MEDIUM|LOW — <what's exposed if this is wrong>
 Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -1851,7 +1870,9 @@ Ledger (for the missing part — the P11 facts/unknowns handoff):
   Unknowns:                <what is still unverified>
   Leading hypothesis:      <best guess why + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
-Next:        <concrete suggested move>
+Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
+Next step:     <the immediate milestone between here and that goal>
+Suggested action: <ONE concrete move + how it advances the next step and the goal>
 Confidence:  HIGH|MEDIUM|LOW — <verified vs inferred; the "Done" list must be all-verified or this drops; PERFECT is impossible on a PARTIAL>
 Risk:        HIGH|MEDIUM|LOW — <what the Missing part exposes; who/what gets hit if it stays missing>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -1871,7 +1892,9 @@ Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead
   Unknowns:                <what is still unverified>
   Leading hypothesis:      <best remaining guess + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
-Hand back to user — recommend: <best concrete next step>
+Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
+Next step:     <the milestone this STUCK is blocking>
+Suggested action (hand back to user): <best concrete next step + how it unblocks the path to the goal>
 Confidence:  HIGH|MEDIUM|LOW — <how solid the Facts list is; anything inferred drops it; PERFECT is impossible on a STUCK>
 Risk:        HIGH|MEDIUM|LOW — <what stays exposed while this sits stuck>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)

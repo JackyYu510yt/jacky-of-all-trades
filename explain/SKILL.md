@@ -74,7 +74,11 @@ One visual-break mechanism per block, not two stacked.
 Every explain response ends with this block (after the NET line if one is used):
 
 ```
-ULTIMATE GOAL: <the end result the user is driving toward, in their words — or "none active — standalone question">
+ULTIMATE GOAL (4 lenses — or "none active — standalone question"):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
 NEXT STEP: <the immediate milestone between here and that goal — or "none">
 SUGGESTED ACTION: <ONE concrete move to take now — and how it pushes the next step and the ultimate goal forward>
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
@@ -83,7 +87,9 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 **The compass rules (anti-drift):**
 
-- ULTIMATE GOAL restates what the user actually asked for, in their terms. It is FROZEN — never quietly reworded toward whatever was achieved. If this line ever drifts from what the user wanted, that's exactly what they'll call out.
+- ULTIMATE GOAL is derived fresh PER SCENARIO — it's the end-state of THIS conversation's objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (the factory view — what finished result arrives with zero input), **Heals** (the organism view — how failures recover or surface themselves), **Replaces** (the operator view — whose job/attention the system deletes), **Guarantees** (the structure view — what wrongness is impossible by construction). Fill every lens for the scenario; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip.
+
+- Once stated for a scenario, the line is FROZEN — never quietly reworded toward whatever was achieved. If this line ever drifts from what the user wanted, that's exactly what they'll call out.
 
 - SUGGESTED ACTION is one move, not a menu — and its line must say how it advances BOTH the next step and the ultimate goal. An action that doesn't connect to the goal is drift; don't suggest it.
 
@@ -91,7 +97,7 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 The scale is about **verification, not vibes**:
 
-- **PERFECT confidence** — 100% guaranteed, run-it-blind grade. Every angle was empirically tested: the happy path AND the failure paths, on real inputs at real scale, results verified with my own eyes — and an independent check tried to break it and couldn't. PERFECT means the user can act on this with zero human input and nothing needs watching. Claiming it requires NAMING the tests that covered each angle in the evidence clause. If even one angle went untested, the grade is HIGH at best. PERFECT should be rare — a false PERFECT is the worst failure this footer can commit.
+- **PERFECT confidence** — 100% guaranteed, run-it-blind grade. Every angle was empirically tested: the happy path AND the failure paths, on real inputs at real scale, results verified with my own eyes — and an independent check tried to break it and couldn't. PERFECT means **full autopilot**: the thing was PROVEN to run and recover with no human thought, no human decision, and no human intervention anywhere in the loop — and no Claude in the loop either (the structural-fix bar: next run, different input, nobody watching, still works). Claiming it requires NAMING the tests that covered each angle in the evidence clause, including the test that proved the unattended run itself. If even one angle went untested, the grade is HIGH at best. PERFECT should be rare — a false PERFECT is the worst failure this footer can commit.
 
 - **HIGH confidence** — every load-bearing claim was checked directly this session (output read, file seen, screenshot read, command run). Nothing rests on memory or "should." But not every angle was adversarially tested — solid, not guaranteed.
 
