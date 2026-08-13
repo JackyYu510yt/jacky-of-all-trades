@@ -12,7 +12,7 @@ irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/rend
 
 It asks two questions:
 
-1. **Which PC number is this?** (1 / 2 / 3) - picks the identity + watcher name
+1. **Which PC number is this?** (1 / 2 / 3 / 4) - picks the identity + watcher name
 2. **Password?** - unlocks the identity keys sealed inside the payload
 
 Then it does everything: Windows Update kill, Python + packages, Syncthing with
@@ -74,10 +74,13 @@ Shadow PCs: 256 GB SSD (C:) + purchased 1 TB HDD.
 | PC1 | `VYEHZ24` | Shadow |
 | PC2 | `NSBTRAN` | Shadow |
 | PC3 | `ZGSLY26` | Shadow |
+| PC4 | `XSXJ73D` | Shadow |
 | Uploader | `MSZZ6T4` | Finished videos two-way origin-tagged (+ thumbnails from the farmer), see `../uploader-setup/` |
 
 The farmer + PC2 already trust these identities - a rebuilt PC reconnects with
-zero changes on any other machine.
+zero changes on any other machine. (PC4 added 2026-08-13: the farmer trusts
+it; PC2 will show a pending-device prompt the first time PC4 connects -
+accept once or ignore, sync flows via the farmer either way.)
 
 ## Sync to the Uploader PC (origin-tagged two-way)
 
