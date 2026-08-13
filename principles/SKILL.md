@@ -76,6 +76,8 @@ Linux    →  /home/<your-username>
 
 11. **Pin the cause before the fix** — hypothesis-driven debugging (RCA): evidence first → 2–4 ranked falsifiable causes → one pre-registered, cheapest, one-variable probe at a time → only edit code once exactly one cause has positive proof.
 
+12. **Completed means delivered** — a task is complete ONLY when the user-visible result exists in the world and was verified (seen, not inferred); shipped machinery (fixes, loops, specs, retries) is progress, never completion. Reports lead with the result gap and failures FIRST; a dependency dead >2h is an incident to reroute around, not a wait state to normalize.
+
 > **Crosswalk to Karpathy's 4 principles:** Think Before Coding → P6 · Simplicity First → P5 · Surgical Changes → P7 · Goal-Driven Execution → P8 (also touches P2 + P4).
 
 > **Tiebreaker:** when two principles pull opposite ways, ask which choice keeps the thing working for the *real job* — real-world fit (P9) breaks the tie. This does NOT license speculative complexity: P9 only fires on conditions you can prove will occur, so "practicality" can never be the reason for a safeguard against an imaginary case (that's still a P5 violation). Real fit wins ties; it does not win invented ones.
