@@ -39,23 +39,39 @@ cause is written as fact only when the relevant alternatives were investigated
 or explicitly ruled out — avoid **search-space neglect** and **anchoring
 bias** by actively checking plausible alternatives.
 
-## Confidence + risk footer (all user-facing /spec reports)
+## Goal-compass + confidence/risk footer (all user-facing /spec reports)
 
 Every user-facing /spec report — the INIT completion message, the LOG
-confirmation, any "spec updated" summary — ends with these two lines:
+confirmation, any "spec updated" summary — ends with this block:
 
 ```
-CONFIDENCE: HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
+ULTIMATE GOAL: <the spec's Goal, restated in the user's terms — FROZEN, never reworded to match progress>
+NEXT STEP: <the immediate milestone between current state and that goal>
+SUGGESTED ACTION: <ONE concrete move to take now — and how it advances the next step and the ultimate goal>
+CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
 RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
 ```
 
-Confidence rates verification, not optimism: HIGH only when every claim in the
-report was directly observed this session; inferred or secondhand claims cap it
-at MEDIUM; assumptions cap it at LOW. **Hard cap:** anything pending, waiting,
-retrying, or "should work" in the report → Confidence cannot be HIGH, and the
-RISK line must name the unproven part. A bare grade with no evidence clause is
-invalid. This is the last-line defense against a spec session ending on false
-"all done" confidence.
+The compass is the anti-drift anchor: ULTIMATE GOAL restates the spec's Goal
+section verbatim-in-spirit — if a report's goal line ever differs from what the
+user actually asked, that IS the drift they want to catch, so never quietly
+reword it toward what was achieved. SUGGESTED ACTION must trace to the NEXT
+STEP and the goal; an action whose chain doesn't connect is drift and must not
+be suggested. Goal fully reached → next step "none", suggested action
+"nothing — goal reached".
+
+Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed
+run-unattended grade — every angle empirically tested (happy AND failure paths,
+real inputs at real scale), every claim directly observed, zero pending items,
+and an independent adversarial check found nothing; the evidence clause must
+name the tests, and one untested angle drops it to HIGH. HIGH only when every
+claim in the report was directly observed this session (but not every angle
+adversarially tested); inferred or secondhand claims cap it at MEDIUM;
+assumptions cap it at LOW. **Hard cap:** anything pending, waiting, retrying,
+or "should work" in the report → Confidence cannot be HIGH (PERFECT
+unreachable), and the RISK line must name the unproven part. A bare grade with
+no evidence clause is invalid. This is the last-line defense against a spec
+session ending on false "all done" confidence.
 
 ## Mode detection
 

@@ -333,13 +333,15 @@ Phase 5 (risky-function interviews)
            priority). Document the rationale in field 2 (Reasoning)
            of that function's spec.
 
-Phase 7 (AUDITOR audit)
-  Normal:  Dispatch the AUDITOR second-brain, then pause to walk the
-           user through its findings one at a time.
-  Auto:    Dispatch the AUDITOR second-brain (independent reviewer
-           subagent), integrate its feedback automatically with
-           `> [AUDITOR]` callouts, and note in the plan's
-           open-questions card that the auto path was taken.
+Phase 7 (AUDITOR audit + RED-TEAM)
+  Normal:  Dispatch the AUDITOR second-brain and the RED-TEAM attacker
+           in parallel, then pause to walk the user through their
+           findings one at a time (RED-TEAM BREAKS items first).
+  Auto:    Dispatch both (independent reviewer + scenario-attacker
+           subagents), integrate their feedback automatically with
+           `> [AUDITOR]` / `> [RED-TEAM]` callouts — a RED-TEAM BREAKS
+           must be fixed in the plan, not just noted — and note in the
+           plan's open-questions card that the auto path was taken.
 
 Phase 8 (per-function approval)
   Normal:  Ask "does this match what you pictured?" after each
@@ -580,10 +582,13 @@ For each: what's wrong, why it bites, and the concrete fix.
 === PLAN ENDS ===
 ```
 
-When the AUDITOR's findings come back, integrate each item explicitly with the user:
+**The RED-TEAM — second independent attacker, dispatched IN PARALLEL with the AUDITOR (same message, two `Agent` calls).** Its ONLY job is scenario attack: generate concrete hostile scenarios across the 10 canonical attack categories (mid-op death, check-then-act races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walk each one through the plan to a verdict — HANDLED / DEGRADES / BREAKS / UNKNOWN. The canonical RED-TEAM brief lives in `~/.claude/skills/audit/SKILL.md` under the heading "**The brief handed to the RED-TEAM**" — read it there at dispatch time and hand the agent the plan contents as the target. Mandatory when the planned tool is unattended, long-running, stateful, or concurrent; skippable only for a plainly attended one-shot, noted in the plan as `RED-TEAM: skipped — not unattended/stateful`.
 
-- For each AUDITOR point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
-- Update the plan file with every accepted change, noted with a `> [AUDITOR]` callout so edits are traceable.
+When the findings come back (AUDITOR + RED-TEAM), integrate each item explicitly with the user — RED-TEAM **BREAKS** items first:
+
+- For each point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
+- Update the plan file with every accepted change, noted with a `> [AUDITOR]` or `> [RED-TEAM]` callout so edits are traceable.
+- A RED-TEAM **UNKNOWN** on a load-bearing scenario becomes an open-questions item carrying the cheapest probe that would resolve it.
 
 Loop until the user says they are satisfied (optionally re-running the AUDITOR on the revised plan for a second pass). Do not proceed to Phase 7.5 without explicit user go-ahead.
 
@@ -975,8 +980,17 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 │         the ambiguity. Not "let me know if you want more."   │
 │         Include metrics to watch on first run when DONE.>    │
 │                                                              │
-│  Confidence: <HIGH/MED/LOW> — <what was verified directly    │
-│              (tests run, output seen) vs inferred/assumed>   │
+│  Ultimate goal: <the END GOAL card, restated verbatim —     │
+│                 never re-derived to match what was built>    │
+│  Next step: <the immediate milestone between here and it>    │
+│  Suggested action: <ONE concrete move to take now — and how  │
+│                    it advances the next step and the goal>   │
+│                                                              │
+│  Confidence: <PERFECT/HIGH/MED/LOW> — <what was verified     │
+│              directly (tests run, output seen) vs inferred;  │
+│              PERFECT only if all angles incl. failure paths  │
+│              tested on real inputs + AUDITOR found nothing — │
+│              name the tests>                                 │
 │  Risk: <HIGH/MED/LOW> — <what's exposed if this verdict is   │
 │        wrong; which parts are unproven on real inputs>       │
 │                                                              │
@@ -985,7 +999,9 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 
 The headline contrasts current state with the END GOAL card, not with a sub-step. SHIPPABLE / NOT SHIPPABLE is implied by the state — DONE means shippable, anything else means not.
 
-**Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read); anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH. A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
+**Goal-compass rules (mandatory):** `Ultimate goal` restates the END GOAL card in the user's terms — it is FROZEN; never quietly reworded to match what got built (that rewording is exactly the drift the user wants to catch). `Next step` is the immediate milestone between current state and that goal. `Suggested action` is ONE concrete move, and its line must say how it advances BOTH the next step and the ultimate goal — an action whose chain doesn't connect to the goal is drift and must not be suggested. If the goal is fully reached: next step "none", suggested action "nothing — goal reached".
+
+**Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — PERFECT is the 100%-guaranteed, run-unattended grade: every angle tested empirically (happy path AND failure paths, real inputs at real scale), every result directly observed, zero pending items, AND the independent AUDITOR/pentest tried to break it and found nothing — the evidence clause must name the tests per angle; one untested angle → HIGH at best. HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read) but not every angle was adversarially tested; anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH (and PERFECT is unreachable). A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
 
 ### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
 

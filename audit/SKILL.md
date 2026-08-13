@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Review proposed changes one last time before they're applied, using an independent AUDITOR second-brain (a fresh reviewer subagent that re-derives risk from the actual files, not the same context that proposed the change). Lists every change, checks scope match to the discussed intent, flags destructive or irreversible actions, surfaces silent assumptions and regression risks, and presents a final go/revise/stop verdict. Use right before executing any non-trivial change — edits to multiple files, deletions, refactors, config changes, git operations, external API calls, or any action the user might regret. Acts as a safety gate between "plan" and "execute". Use when the user says "audit this", "before you do that", "double check", "what are you about to do", "hold on — review first", or any pause-before-action prompt.
+description: Review proposed changes one last time before they're applied, using an independent AUDITOR second-brain (a fresh reviewer subagent that re-derives risk from the actual files, not the same context that proposed the change) plus a dedicated RED-TEAM attacker subagent that invents hostile scenarios (mid-operation resource death, races, half-done re-entry, poison pills, lying success signals) and walks each through the change to a HANDLED/DEGRADES/BREAKS/UNKNOWN verdict. Lists every change, checks scope match to the discussed intent, flags destructive or irreversible actions, surfaces silent assumptions and regression risks, and presents a final go/revise/stop verdict. Use right before executing any non-trivial change — edits to multiple files, deletions, refactors, config changes, git operations, external API calls, or any action the user might regret. Acts as a safety gate between "plan" and "execute". Use when the user says "audit this", "before you do that", "double check", "what are you about to do", "hold on — review first", or any pause-before-action prompt.
 ---
 
 # Audit
@@ -140,11 +140,11 @@ Flag each concrete regression risk. If the answer is "probably fine," say "proba
 
 `========================================`
 
-### Phase 5.5: Dispatch the Independent Reviewer (Second Brain)
+### Phase 5.5: Dispatch the Independent Reviewers (Second Brain + Red Team)
 
-This is the heart of the audit. Phases 1–5 are *your* pass — the same brain that proposed the change. Now hand it to a brain that didn't.
+This is the heart of the audit. Phases 1–5 are *your* pass — the same brain that proposed the change. Now hand it to brains that didn't. Two independent agents, two different jobs: the **AUDITOR** re-derives scope / reversibility / assumptions / regressions; the **RED-TEAM** invents hostile scenarios and walks each one through the change until something breaks. When both apply, dispatch them IN PARALLEL — one message, two `Agent` calls.
 
-**Dispatch an independent reviewer (in priority order):**
+**Dispatch the AUDITOR (in priority order):**
 
 1. **Preferred — a fresh reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available). Give it ONLY:
    - the user's stated goal, in the user's own words (not your paraphrase),
@@ -153,7 +153,7 @@ This is the heart of the audit. Phases 1–5 are *your* pass — the same brain 
 
    Crucially, do **not** feed it your scope/assumption/regression conclusions — those are what you want it to re-derive independently. It must form its own view.
 
-2. **Fallback — only if subagents are unavailable.** Open a section headed `=== AUDITOR (second brain) ===`, drop the author's stance, and review as a skeptic whose job is to catch what the author missed. State clearly that this was a same-context fallback, not a true independent pass.
+2. **Fallback — only if subagents are unavailable.** Open a section headed `=== AUDITOR (second brain) ===`, drop the author's stance, and review as a skeptic whose job is to catch what the author missed. Run the RED-TEAM the same way — a second section headed `=== RED-TEAM (fallback) ===` walking the scenario categories below. State clearly that this was a same-context fallback, not a true independent pass.
 
 **The brief handed to the reviewer:**
 
@@ -181,7 +181,64 @@ Stated goal: <verbatim>
 Proposed changes: <Phase 1 enumeration>
 ```
 
-**Reconcile.** When the reviewer returns, merge its findings with your own Phase 1–5 pass. Anything the reviewer flagged that you missed is exactly the value of the second brain — surface it prominently. Disagreements get shown to the user, not silently resolved.
+**When the RED-TEAM is mandatory vs skippable.** Mandatory whenever the change touches anything unattended, long-running, stateful, or concurrent — pipelines, cron jobs, helper daemons, fallback/routing logic, queues, anything that writes checkpoints or gets retried without a human watching. For a plainly attended one-shot (a config flip, a rename the user watches happen), it may be skipped — but the Phase 6 report must then carry the explicit line `RED-TEAM: skipped — not unattended/stateful`. Silence is not a skip.
+
+**The brief handed to the RED-TEAM:**
+
+```
+You are the RED-TEAM — an independent attacker reviewing a change you
+did NOT write. Your ONLY success metric is breaking it with concrete
+scenarios. Scope, style, and regressions are the AUDITOR's job — do
+not spend words there.
+
+1. READ the actual target files (and plan, if given) yourself first.
+2. GENERATE at least one concrete hostile scenario per category below —
+   two for any category the change touches directly. Skipping a
+   category requires writing "N/A — <why it cannot apply>".
+   C1  MID-OP DEATH        a resource (credits/quota/disk/network) dies
+                           HALFWAY through an operation, not before it
+   C2  CHECK-THEN-ACT      state flips between the decision and the act
+   C3  HALF-DONE RE-ENTRY  process killed mid-write — what does the
+                           NEXT run find on disk, and what does it do
+                           with the partial?
+   C4  FLAPPING            fail → recover → fail again inside one poll
+                           window
+   C5  TWO ACTORS          a human or a second process acts
+                           mid-automation
+   C6  BOUNDARIES          0 items, 1 item, exactly-at-cap,
+                           empty/missing file
+   C7  TIME WINDOWS        poll interval straddles a batch boundary;
+                           restart mid-window; long stall then burst
+   C8  RECOVERY FAILS      the recovery path itself errors (probe
+                           passes but the real call fails; flag delete
+                           fails; rollback interrupted)
+   C9  POISON PILL         one item that LOOKS valid but fails every
+                           retry, re-enters the queue each run, and
+                           starves everything behind it
+   C10 LYING SUCCESS       exit 0 / plausible artifact that is wrong
+                           (black frames, a signed-out page saved as
+                           valid HTML) — attack the success check
+                           itself
+3. WALK each scenario through the real code/plan step by step to its
+   end-state — cite the exact line/step where the outcome is decided.
+4. VERDICT each scenario:
+   HANDLED  — cite the line/mechanism that absorbs it
+   DEGRADES — bounded loss; name the cost out loud
+   BREAKS   — name the concrete bad END-STATE (data loss, wedge,
+              duplicate output, silent stop), not just the trigger
+   UNKNOWN  — the artifact doesn't contain enough to trace the
+              outcome; say exactly what's missing. Never guess a
+              verdict.
+Return the scenario table, BREAKS first, then UNKNOWN, then DEGRADES,
+then HANDLED. Do not manufacture findings to look busy — but if every
+row came back HANDLED, re-check that you walked each scenario to its
+actual end-state instead of trusting the change's own description.
+
+Stated goal: <verbatim>
+Target files / plan: <paths, or plan contents>
+```
+
+**Reconcile.** When the reviewers return, merge their findings with your own Phase 1–5 pass — the RED-TEAM's scenario table goes into the report verbatim. Anything a reviewer flagged that you missed is exactly the value of the second brain — surface it prominently. Disagreements — yours vs a reviewer's, or AUDITOR vs RED-TEAM — get shown to the user, not silently resolved.
 
 `========================================`
 
@@ -219,6 +276,14 @@ Independent reviewer (second brain):
  - Agreed with author on items 3, 4.
  - (or: "fallback same-context review — no subagent available")
 
+Scenario attack (RED-TEAM):
+ #   Cat  Scenario                                    Verdict
+ 1   C1   engine cap dies at item 3 of 8, mid-write   HANDLED — requeued next batch (helper.py:214)
+ 2   C2   flag deleted between check and dispatch     DEGRADES — ≤1 batch on wrong engine
+ 3   C3   killed mid-folder-write                     BREAKS — next run ships the half-written folder
+ ... (all 10 categories covered or explicitly N/A)
+ (or: "RED-TEAM: skipped — not unattended/stateful")
+
 Verdict: NEEDS REVISION
 Recommendation: drop item 4 (out of scope); reviewer found item 2
 clobbers an existing key — re-check before applying; update the 3
@@ -234,6 +299,8 @@ Verdict options:
 - **NEEDS REVISION** — something is out of scope, or an unchecked assumption is too important to skip. Revise the plan and re-audit.
 
 - **STOP** — a destructive or cross-user action that should not happen without deeper review. Back to planning phase.
+
+**Hard rule:** any RED-TEAM scenario with verdict **BREAKS** caps the verdict at **NEEDS REVISION** (or **STOP** if the broken end-state is destructive or external). BREAKS is never "noted and passed." A load-bearing **UNKNOWN** doesn't block on its own, but must appear under unchecked assumptions with the cheapest probe that would resolve it.
 
 `========================================`
 
@@ -285,6 +352,8 @@ Audit IS required for:
 
 - Do not skip the independent reviewer (Phase 5.5) and call your own Phase 1–5 pass "the audit." The author brain re-reading its own plan is not a second brain. If a subagent truly can't run, say so explicitly and mark the review as a same-context fallback.
 
+- Do not skip the RED-TEAM scenario attack on anything unattended, long-running, stateful, or concurrent — and never accept a scenario table that drops a category without an explicit N/A reason, or a skip without the explicit `RED-TEAM: skipped` line in the report.
+
 - Do not approve-and-proceed in the same breath — the user gets to see the audit and decide.
 
 - Do not continue past a NEEDS REVISION verdict without the user's explicit acknowledgement.
@@ -296,7 +365,7 @@ Audit IS required for:
 
 ## Relationship to Other Skills
 
-- **`prep`** — plans new work from scratch, runs an independent AUDITOR second-brain review before execution. `audit` is the inline equivalent, run right before executing any non-trivial plan — and it uses the same independent-reviewer second brain (Phase 5.5).
+- **`prep`** — plans new work from scratch, runs an independent AUDITOR second-brain review before execution. `audit` is the inline equivalent, run right before executing any non-trivial plan — and both use the same independent AUDITOR + RED-TEAM pair (Phase 5.5 holds the canonical RED-TEAM brief that `prep` and `auto` reference).
 
 - **`repair`** — after a failure. `audit` is before an execution. Opposite ends of the same principle: prove what you think is true.
 
@@ -309,6 +378,7 @@ Audit IS required for:
 
 - **Pre-execution gate** — runs right before any non-trivial change is applied.
 - **Independent second brain** — a fresh reviewer subagent reads the real files and re-derives the risks, so the audit isn't the same brain agreeing with itself.
+- **Scenario attack** — a dedicated RED-TEAM agent invents hostile scenarios across 10 attack categories (mid-op death, races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walks each through the change to HANDLED / DEGRADES / BREAKS / UNKNOWN; any BREAKS blocks GO.
 - **Lists every change** — files, commands, external calls, state modifications.
 - **Checks scope** — match to what the user actually asked for, flag out-of-scope.
 - **Classifies risk** — safe, reversible, irreversible, external, destructive.

@@ -69,18 +69,31 @@ One visual-break mechanism per block, not two stacked.
 
 - Never a wall of text. One thought per line. Walls fail even when short.
 
-### Confidence + risk footer — the last two lines, every time
+### Goal compass + confidence/risk footer — the closing block, every time
 
-Every explain response ends with these two lines (after the NET line if one is used):
+Every explain response ends with this block (after the NET line if one is used):
 
 ```
-CONFIDENCE: HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
+ULTIMATE GOAL: <the end result the user is driving toward, in their words — or "none active — standalone question">
+NEXT STEP: <the immediate milestone between here and that goal — or "none">
+SUGGESTED ACTION: <ONE concrete move to take now — and how it pushes the next step and the ultimate goal forward>
+CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
 RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and which parts are still unproven>
 ```
 
+**The compass rules (anti-drift):**
+
+- ULTIMATE GOAL restates what the user actually asked for, in their terms. It is FROZEN — never quietly reworded toward whatever was achieved. If this line ever drifts from what the user wanted, that's exactly what they'll call out.
+
+- SUGGESTED ACTION is one move, not a menu — and its line must say how it advances BOTH the next step and the ultimate goal. An action that doesn't connect to the goal is drift; don't suggest it.
+
+- Goal fully reached → NEXT STEP: "none", SUGGESTED ACTION: "nothing — goal reached".
+
 The scale is about **verification, not vibes**:
 
-- **HIGH confidence** — every load-bearing claim was checked directly this session (output read, file seen, screenshot read, command run). Nothing rests on memory or "should."
+- **PERFECT confidence** — 100% guaranteed, run-it-blind grade. Every angle was empirically tested: the happy path AND the failure paths, on real inputs at real scale, results verified with my own eyes — and an independent check tried to break it and couldn't. PERFECT means the user can act on this with zero human input and nothing needs watching. Claiming it requires NAMING the tests that covered each angle in the evidence clause. If even one angle went untested, the grade is HIGH at best. PERFECT should be rare — a false PERFECT is the worst failure this footer can commit.
+
+- **HIGH confidence** — every load-bearing claim was checked directly this session (output read, file seen, screenshot read, command run). Nothing rests on memory or "should." But not every angle was adversarially tested — solid, not guaranteed.
 
 - **MEDIUM confidence** — the core is verified but some parts are inferred, secondhand (a tool's own report), or unchecked since an earlier state.
 

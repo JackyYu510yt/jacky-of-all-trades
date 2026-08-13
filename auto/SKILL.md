@@ -1490,10 +1490,17 @@ Toward goal: <how this moves the goal forward, honestly>
 
 Failures:    <every failure surfaced, not buried>
 
-Next:        <concrete next move if status != DONE,
-              or "nothing — task complete" if DONE>
+Ultimate goal:    <the user's end goal, in THEIR words — frozen, never
+                   reworded to match what was achieved>
 
-Confidence:  HIGH | MEDIUM | LOW — <what was verified directly vs inferred vs assumed>
+Next step:        <the immediate milestone between current state and that
+                   goal — "none" if the goal is fully reached>
+
+Suggested action: <ONE concrete move to take now, and how it advances the
+                   next step AND the ultimate goal — "nothing — goal
+                   reached" if DONE>
+
+Confidence:  PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred vs assumed>
 Risk:        HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which parts are unproven>
 ```
 
@@ -1508,10 +1515,13 @@ external dependency dead >~2h is reported as an incident with a reroute, never a
 
 **Confidence + Risk are mandatory and evidence-tied.** The scale:
 
-- Confidence HIGH — every claim above was verified this run (exit codes read, artifacts checked, shots read). MEDIUM — core verified, some parts inferred or reported secondhand by a tool. LOW — key claims rest on assumption or an external service's say-so.
+- Confidence PERFECT — the 100%-guaranteed, run-unattended grade. Requires ALL of: every angle empirically tested (happy path AND failure/recovery paths, on real inputs at real scale — the P1/P9 bar), every verify directly observed this run, zero pending/external anything, AND an independent adversarial check (Terminal Refuter or an equivalent discriminating test) tried to break it and failed. The evidence clause must NAME the tests that covered each angle. One untested angle → HIGH at best. PERFECT is the only grade that licenses "run this with zero human input" — a false PERFECT is the worst failure the footer can commit.
+- Confidence HIGH — every claim above was verified this run (exit codes read, artifacts checked, shots read), but not every angle was adversarially tested. MEDIUM — core verified, some parts inferred or reported secondhand by a tool. LOW — key claims rest on assumption or an external service's say-so.
 - Risk LOW — nothing pending, wrongness is cheap/reversible. MEDIUM — unverified pieces exist; wrongness costs rework or delay. HIGH — unverified pieces touch production, shared state, or user-facing output; wrongness ships something bad or blocks the pipeline silently.
 - **Hard cap:** any "waiting", "queued", "retrying", "should", "expected", or dependency on an external recovery anywhere in the report → Confidence cannot be HIGH. If the Status says DONE but a claim would need the cap, the STATUS is wrong — downgrade to PARTIAL; never inflate the rating to match the status.
 - A bare grade with no evidence clause is invalid. The dash and the justification are part of the line.
+
+**Goal-compass rules (anti-drift):** `Ultimate goal` restates what the user asked for in their terms — it is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the line against their original ask. `Next step` is the immediate milestone between here and that goal. `Suggested action` is ONE move, not a menu, and its line must state how it advances BOTH the next step and the ultimate goal — an action whose chain doesn't connect to the goal is drift and must not be suggested.
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
@@ -1768,14 +1778,19 @@ Before /auto writes `Status: DONE`, one fresh agent tries to prove it is NOT don
 
 Only when "done" is a **judgment call**. If the runbook's success line is a deterministic machine check that already passed (`pytest` exits 0, checksum matches, file exists at expected size), **SKIP** the refuter — that verify check IS the independent oracle, and self-preference can't bias a green test. Fire it when success is judgment-shaped: "pipeline handles real input", "output looks right", "report is complete", "no regressions in adjacent features".
 
+The **RED-TEAM rider** (below) has its own, independent firing rule: it fires on the deliverable's NATURE — unattended, long-running, stateful, or concurrent — even when the refuter is skipped. A green deterministic test proves the happy path ran once; it says nothing about credits dying mid-write, a flag flipping between check and act, or a half-written folder on re-entry. Machine-checked goal + unattended deliverable ⇒ refuter skipped, RED-TEAM still fires alone (the runbook `RedTeam:` field carries the obligation).
+
 ### Sequence (refute first, flip second)
 
 ```
 1. All runbook steps verified PASS   (necessary, NOT sufficient for DONE)
-2. → set runbook Refuter: pending, dispatch refuter   (Status still NOT DONE)
-3a. refuter clean      → set Refuter: clean → write Status: DONE → emit AUTO DONE
-3b. refuter BLOCKER    → set Refuter: <n> BLOCKERs → keep Status non-DONE,
-                          re-enter fix mode on the unmet item
+2. → set runbook Refuter: pending (and RedTeam: pending when the rider
+   applies), dispatch refuter + RED-TEAM in parallel   (Status still NOT DONE)
+3a. refuter clean AND RedTeam clean/n/a → set fields → write Status: DONE
+                          → emit AUTO DONE
+3b. refuter BLOCKER or RedTeam BREAKS   → record in the owning field →
+                          keep Status non-DONE, re-enter fix mode on the
+                          unmet item
 ```
 
 Running the refuter AFTER flipping Status would release the Stop hook (see auto-stop enforcement + Hard Invariant #9) and the run couldn't re-enter cleanly. Refute first, flip second — and the `Refuter:` field carries this in the runbook so it survives compaction.
@@ -1819,7 +1834,7 @@ Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
 Coverage: <success checks passed, e.g. 7/7 = 100%>
-Confidence: HIGH|MEDIUM|LOW — <verified directly vs inferred; DONE with anything unverified is forbidden>
+Confidence: PERFECT|HIGH|MEDIUM|LOW — <verified directly vs inferred; DONE with anything unverified is forbidden; PERFECT only with all angles tested + refuter-clean, tests named>
 Risk:       HIGH|MEDIUM|LOW — <what's exposed if this is wrong>
 Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
@@ -1837,7 +1852,7 @@ Ledger (for the missing part — the P11 facts/unknowns handoff):
   Leading hypothesis:      <best guess why + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
 Next:        <concrete suggested move>
-Confidence:  HIGH|MEDIUM|LOW — <verified vs inferred; the "Done" list must be all-verified or this drops>
+Confidence:  HIGH|MEDIUM|LOW — <verified vs inferred; the "Done" list must be all-verified or this drops; PERFECT is impossible on a PARTIAL>
 Risk:        HIGH|MEDIUM|LOW — <what the Missing part exposes; who/what gets hit if it stays missing>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
@@ -1857,7 +1872,7 @@ Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead
   Leading hypothesis:      <best remaining guess + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
 Hand back to user — recommend: <best concrete next step>
-Confidence:  HIGH|MEDIUM|LOW — <how solid the Facts list is; anything inferred drops it>
+Confidence:  HIGH|MEDIUM|LOW — <how solid the Facts list is; anything inferred drops it; PERFECT is impossible on a STUCK>
 Risk:        HIGH|MEDIUM|LOW — <what stays exposed while this sits stuck>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
@@ -1873,7 +1888,7 @@ Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/
 - Inline shape is the default. Cron only for truly unattended overnight.
 - Diagnose, rotate approaches, never advance on lies, stop on DONE or STUCK.
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
-- Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH.
+- Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH. PERFECT = all angles tested + refuter-clean + tests named; the only grade licensing zero-human-input runs.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
 - Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
 - Visual checkpoints: screenshot major events + ~10-min intervals on long visual steps, READ every shot; two identical job-surface shots + a flat artifact probe = STALLED.
