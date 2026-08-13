@@ -25,7 +25,7 @@ $ExtraTools = @(
 )
 
 if (-not (Test-Path $TemplateDir)) { throw "Template folder not found: $TemplateDir" }
-foreach ($pc in 'pc1', 'pc2', 'pc3') {
+foreach ($pc in 'pc1', 'pc2', 'pc3', 'pc4') {
     if (-not (Test-Path "$KeysDir\$pc\key.pem")) { throw "Key bundle missing: $KeysDir\$pc" }
 }
 foreach ($t in $ExtraTools) {
