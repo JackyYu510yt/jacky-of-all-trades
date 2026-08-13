@@ -65,7 +65,10 @@ building automation so they never have to give input), through ALL FOUR lenses:
 (operator view — whose job/attention the system deletes), **Guarantees**
 (structure view — what wrongness is impossible by construction). Fill every
 lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent
-skip. Once stated, the block is frozen — if a report's goal block ever differs
+skip. Write each lens in the user's confirmed style (8/13/26): concrete and
+first-person from their seat, real actors and real stakes ("me", "the VA",
+"at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong
+and quiet"), consequences stated — never abstract boilerplate. Once stated, the block is frozen — if a report's goal block ever differs
 from what the user actually asked, that IS the drift they want to catch, so
 never quietly reword it toward what was achieved. SUGGESTED ACTION must trace to the NEXT
 STEP and the goal; an action whose chain doesn't connect is drift and must not
