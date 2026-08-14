@@ -27,6 +27,11 @@ $EXPECTED_DEVICE_ID = @{
     2 = 'NSBTRAN-KTBVNJH-TXEQDYW-6KA3RYS-WWV34MU-XSMYIL5-WWU7RRH-OYBI2A4'
     3 = 'ZGSLY26-WJMJXAC-6EU2K7I-C6U7FYU-RDXI5SI-FPVC5GR-IKCIUTA-2U2H2A5'
     4 = 'XSXJ73D-M4ZEYXP-3TMZGIX-5AQTZBP-47ZN2S2-C6PXQF4-6TAB5MV-VDUSJQE'
+    # PC5 pre-provisioned 2026-08-13: keypair generated on the farmer,
+    # registered there with both folders shared. PC2-side registration
+    # pending until PC2 returns from its usage cap (harmless - farmer
+    # connectivity alone syncs everything).
+    5 = 'OBY47V5-FXCSZCM-2WQT55V-IHMJXJF-QKGUFXG-J6RONWC-UFMJKL7-EPWRFAG'
 }
 
 $FOLDER_OUTPUT     = 'sjetj-h9jpa'   # ! Jacky Rush Output   (the work)
@@ -123,9 +128,9 @@ if (-not $isAdmin) {
 }
 
 $PcNumber = 0
-while ($PcNumber -notin 1, 2, 3, 4) {
-    $in = Read-Host 'Which PC number is this? (1 / 2 / 3 / 4)'
-    if ($in -match '^\s*[1234]\s*$') { $PcNumber = [int]$in.Trim() }
+while ($PcNumber -notin 1, 2, 3, 4, 5) {
+    $in = Read-Host 'Which PC number is this? (1 / 2 / 3 / 4 / 5)'
+    if ($in -match '^\s*[12345]\s*$') { $PcNumber = [int]$in.Trim() }
 }
 $PcName     = "PC$PcNumber"
 $ExpectedId = $EXPECTED_DEVICE_ID[$PcNumber]
