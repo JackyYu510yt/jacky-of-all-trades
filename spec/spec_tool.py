@@ -4,14 +4,18 @@
 Run from the project dir that holds SPEC.md. Subcommands:
   log    read a structured block (field lines) from stdin, stamp the date,
          prepend it newest-first under "## Change Log" via a lock-guarded
-         atomic write, then advance the durable line-count marker.
+         atomic write, then advance the durable line-count marker. If the
+         session is BOUND (see bind), the block goes to the bound spec file
+         and a one-line pointer is prepended to SPEC.md.
+  bind   bind this session to a specialized spec file: `bind SPEC-x.md --sid S`.
+         Stored in .spec/binding-<sid>; log/status honor it. `bind --clear` unbinds.
   skip   arm a one-shot skip marker so the Stop guard releases once.
   status print the count of unlogged in-project edits (debug).
 
-Keeping the lock / atomic-write / marker logic here (tested Python) instead of
-in skill prose means the guard/collector invariants hold deterministically.
-The active session is the one whose pending trail was modified most recently
-(you log right after editing, so that's this chat). See prep-spec-system.txt.
+All subcommands accept `--sid <session-id>`. PASS IT ALWAYS in parallel-chat
+folders: without it the active session is guessed as the one whose pending
+trail was modified most recently — which cross-stamps markers when several
+chats run at once (proven failure 2026-08-13). See prep-spec-system.txt.
 """
 from __future__ import annotations
 
