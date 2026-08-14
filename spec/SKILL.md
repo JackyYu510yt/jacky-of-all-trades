@@ -92,11 +92,38 @@ unreachable), and the RISK line must name the unproven part. A bare grade with
 no evidence clause is invalid. This is the last-line defense against a spec
 session ending on false "all done" confidence.
 
+## Session id discipline (parallel-chat folders)
+
+Every `spec_tool.py` call takes `--sid <session-id>` — **always pass your own**
+(derive it from your scratchpad/task directory path: the UUID segment). Without
+it the tool guesses "active session = freshest pending trail", which
+cross-stamps markers when chats run in parallel (proven failure 2026-08-13).
+
 ## Mode detection
 
 - No `SPEC.md` in the current project dir → **INIT**.
 - The user's arg is `skip` → **SKIP**.
-- `SPEC.md` exists and no `skip` arg → **LOG**.
+- The user's arg is `bind` (or asks to bind/attach this session to a spec) → **BIND**.
+- `SPEC.md` exists and no `skip`/`bind` arg → **LOG**.
+
+## BIND — one session ↔ one specialized spec
+
+For folders where several chats work in parallel, each session binds to ITS
+spec so "the spec" is never ambiguous and log blocks land in the right file.
+
+1. List candidates: existing `SPEC-*.md` files (+ `ACTIVE-LANES.md` rows if the
+   file exists). Ask the user which this session is — or whether to create a
+   new specialized spec (run the INIT interview, but Write it as
+   `SPEC-<short-slug>.md` instead of `SPEC.md`).
+2. Bind: `python spec_tool.py bind SPEC-<slug>.md --sid <sid>`
+   (unbind: `bind --clear --sid <sid>`).
+3. From then on, LOG blocks from this session go to the bound spec's Change
+   Log, and a one-line pointer (`see: SPEC-<slug>.md -- <title>`) is prepended
+   to the shared `SPEC.md` so its timeline stays complete. A missing bound file
+   falls back to `SPEC.md` with a warning.
+4. If `ACTIVE-LANES.md` exists, also claim/update your lane row there
+   (scope + last-touch) — the board and the binding cover different halves:
+   the board tells OTHER chats what you own; the binding routes YOUR logs.
 
 ## INIT — full interview, then scaffold
 
@@ -303,10 +330,11 @@ any step runs.
    ```
 
 3. Pipe those field lines to the helper on stdin (it stamps the date, prepends
-   newest-first under a lock, and advances the marker):
+   newest-first under a lock, and advances the marker — for a BOUND session the
+   block goes to the bound spec + a pointer line in SPEC.md):
 
    ```
-   python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log
+   python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log --sid <your-sid>
    ```
 
 4. Confirm to the user: one block written, marker advanced.
@@ -337,7 +365,7 @@ stated fact when you see one.
 ## SKIP — throwaway session
 
 ```
-python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" skip
+python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" skip --sid <your-sid>
 ```
 
 Arms a one-shot release so the Stop guard lets this chat end once without a log
