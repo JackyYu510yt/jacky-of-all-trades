@@ -98,7 +98,61 @@ def _prepend_block(content: str, block: str) -> str:
     return "".join(lines[:insert_at]) + block_text + "".join(lines[insert_at:])
 
 
-def cmd_log(proj: str) -> int:
+def _binding_target(proj: str, sid):
+    """Return the bound spec filename for this session, or None (unbound/invalid)."""
+    if not sid:
+        return None
+    f = _spec_dir(proj) / f"binding-{sid}"
+    try:
+        name = f.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not name or name == "SPEC.md":
+        return None
+    target = Path(proj) / name
+    if not target.is_file():
+        print(f"warning: bound spec '{name}' missing -- falling back to SPEC.md",
+              file=sys.stderr)
+        return None
+    return name
+
+
+def cmd_bind(proj: str, sid, args) -> int:
+    spec_dir = _spec_dir(proj)
+    sid = sid or _latest_session(proj)
+    if not sid:
+        print("bind failed: no session trail yet and no --sid given", file=sys.stderr)
+        return 1
+    if "--clear" in args:
+        try:
+            (spec_dir / f"binding-{sid}").unlink(missing_ok=True)
+        except OSError as e:
+            print(f"unbind failed: {e}", file=sys.stderr)
+            return 1
+        print(f"Session {sid} unbound (logs go to SPEC.md).")
+        return 0
+    names = [a for a in args[1:] if not a.startswith("--")
+             and a != sid and not a.endswith(os.sep)]
+    name = names[0] if names else ""
+    if not name:
+        print("usage: spec_tool.py bind <SPEC-file.md> [--sid S] | bind --clear [--sid S]",
+              file=sys.stderr)
+        return 1
+    if not (Path(proj) / name).is_file():
+        print(f"bind failed: {name} not found in {proj} -- create it first (INIT interview)",
+              file=sys.stderr)
+        return 1
+    try:
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / f"binding-{sid}").write_text(name, encoding="utf-8")
+    except OSError as e:
+        print(f"bind failed: {e}", file=sys.stderr)
+        return 1
+    print(f"Session {sid} bound -> {name} (log blocks go there + pointer in SPEC.md).")
+    return 0
+
+
+def cmd_log(proj: str, sid_arg=None) -> int:
     # stdin is decoded with the LOCALE codepage by default (cp1252 on Windows), while every
     # read/write below pins utf-8. A block piped in as utf-8 therefore round-tripped as
     # double-encoded mojibake: an em dash arrived as three cp1252 chars and was written back
@@ -121,16 +175,31 @@ def cmd_log(proj: str) -> int:
     body = "\n".join("  " + ln.rstrip() for ln in raw.splitlines() if ln.strip())
     block = f"- date: {now}\n{body}"
 
-    sid = _latest_session(proj)
+    sid = sid_arg or _latest_session(proj)
+    bound = _binding_target(proj, sid)
     spec_dir = _spec_dir(proj)
     lock = _acquire_lock(proj)
     warned = "" if lock else " (lock timeout -- wrote unlocked; check if parallel chats)"
     try:
-        content = spec.read_text(encoding="utf-8")
-        new = _prepend_block(content, block)
-        tmp = spec.with_name("SPEC.md.tmp")
-        tmp.write_text(new, encoding="utf-8")
-        os.replace(str(tmp), str(spec))
+        if bound:
+            # Full block -> the session's own spec; one-line pointer -> shared SPEC.md.
+            target = Path(proj) / bound
+            content = target.read_text(encoding="utf-8")
+            tmp = target.with_name(target.name + ".tmp")
+            tmp.write_text(_prepend_block(content, block), encoding="utf-8")
+            os.replace(str(tmp), str(target))
+            title = next((ln.split(":", 1)[1].strip() for ln in raw.splitlines()
+                          if ln.strip().lower().startswith("change:")), "(untitled)")
+            pointer = f"- date: {now}\n  see: {bound} -- {title}"
+            content = spec.read_text(encoding="utf-8")
+            tmp = spec.with_name("SPEC.md.tmp")
+            tmp.write_text(_prepend_block(content, pointer), encoding="utf-8")
+            os.replace(str(tmp), str(spec))
+        else:
+            content = spec.read_text(encoding="utf-8")
+            tmp = spec.with_name("SPEC.md.tmp")
+            tmp.write_text(_prepend_block(content, block), encoding="utf-8")
+            os.replace(str(tmp), str(spec))
         if sid:
             trail = spec_dir / f"pending-{sid}.jsonl"
             n = 0
@@ -143,12 +212,13 @@ def cmd_log(proj: str) -> int:
         return 1
     finally:
         _release_lock(lock)
-    print(f"Logged 1 block to SPEC.md{warned}.")
+    dest = f"{bound} (+ pointer in SPEC.md)" if bound else "SPEC.md"
+    print(f"Logged 1 block to {dest}{warned}.")
     return 0
 
 
-def cmd_skip(proj: str) -> int:
-    sid = _latest_session(proj) or "manual"
+def cmd_skip(proj: str, sid_arg=None) -> int:
+    sid = sid_arg or _latest_session(proj) or "manual"
     spec_dir = _spec_dir(proj)
     try:
         spec_dir.mkdir(parents=True, exist_ok=True)
@@ -160,8 +230,8 @@ def cmd_skip(proj: str) -> int:
     return 0
 
 
-def cmd_status(proj: str) -> int:
-    sid = _latest_session(proj)
+def cmd_status(proj: str, sid_arg=None) -> int:
+    sid = sid_arg or _latest_session(proj)
     if not sid:
         print("No session trail yet -- nothing recorded.")
         return 0
@@ -199,13 +269,20 @@ def main() -> int:
         i = args.index("--dir")
         if i + 1 < len(args):
             proj = args[i + 1]
+    sid = None
+    if "--sid" in args:
+        i = args.index("--sid")
+        if i + 1 < len(args):
+            sid = args[i + 1]
     if cmd == "log":
-        return cmd_log(proj)
+        return cmd_log(proj, sid)
+    if cmd == "bind":
+        return cmd_bind(proj, sid, args)
     if cmd == "skip":
-        return cmd_skip(proj)
+        return cmd_skip(proj, sid)
     if cmd == "status":
-        return cmd_status(proj)
-    print("usage: spec_tool.py [log|skip|status] [--dir DIR]", file=sys.stderr)
+        return cmd_status(proj, sid)
+    print("usage: spec_tool.py [log|bind|skip|status] [--sid SID] [--dir DIR]", file=sys.stderr)
     return 2
 
 
