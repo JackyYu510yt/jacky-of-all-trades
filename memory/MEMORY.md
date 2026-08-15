@@ -21,6 +21,7 @@
 - [Autonomous engine, optional startup gate](feedback_startup_gate_autonomous_engine.md) — engine runs blind, no input() mid-pipeline; startup gate is optional (some scripts auto-detect from inputs)
 - [Structural fix vs patch](feedback_structural_fix_vs_patch.md) — DONE only if next run, different input, no Claude in loop, doesn't hit same failure
 - [/auto has no phase gates](feedback_auto_no_phase_gates.md) — under /auto, skill phase boundaries are not confirmation gates; only DONE or STUCK ends the loop
+- [Function-author subagent](feedback_function_author_subagent.md) — /auto never one-shots load-bearing functions; dedicated author subagent on RISKY/core + escalation after 2 failed fixes (codified in /auto 2026-08-15)
 - [/auto Stop-hook enforcement](project_auto_stop_hook_enforcement.md) — ~/.claude/hooks/auto-stop-block.py blocks Stop while a runbook exists without Status DONE/STUCK; harness-level autonomy without /goal typing
 - [/auto-runs folder layout](project_auto_runs_folder_layout.md) — /auto nests ALL artifacts under one per-run ./auto-runs/<slug>/ folder; no more loose auto-* files in CWD
 - ["Leaning toward" is a question](feedback_leaning_toward_not_authorization.md) — tentative phrasings ask for more info; wait for explicit "apply / go / do it / yes" before acting

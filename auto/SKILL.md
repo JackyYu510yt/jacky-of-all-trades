@@ -684,6 +684,7 @@ Bash command          command + exit code + duration
 File edit/write       file path + lines changed
 Mode transition       NORMAL → DIAGNOSING → ROTATING (or back)
 Approach choice       which N/5 + the reason
+Author dispatch       dispatch + return lines (function-author sub-agent)
 Hypothesis list       DIAGNOSING: ranked falsifiable causes, or the explicit fast-path declaration
 Probe pre-reg         BEFORE the probe runs: variable / expected / CONFIRMS / DISPROVES
 Probe result          which pre-registered prediction fired; cause confirmed or disproved
@@ -1399,7 +1400,7 @@ When in doubt for shorter tasks, prefer Pattern 2 over Pattern 1.
 
 ## Sub-agent Delegation — fan-out & context offloading
 
-Two execution disciplines that keep /auto fast and survivable on long jobs. Both delegate to throwaway sub-agents (the `Agent` tool) with isolated context, so the **driver's own context stays lean**. A sub-agent never inherits the session history — construct exactly the scope + inputs it needs, and take back only its conclusion.
+Three execution disciplines that keep /auto fast, survivable, and high-quality on long jobs. All delegate to throwaway sub-agents (the `Agent` tool) with isolated context, so the **driver's own context stays lean**. A sub-agent never inherits the session history — construct exactly the scope + inputs it needs, and take back only its conclusion (or, for the function author, its finished code).
 
 ### Fan-out — same action × N independent items
 
@@ -1442,6 +1443,57 @@ Don't:    content you must edit or quote exactly   → read it directly in the d
 **Re-confirm before acting on a returned pointer.** The sub-agent's context is discarded, so its answer can't be audited later — a wrong or hallucinated path would silently send the driver editing the wrong file. Before acting on a returned path/line, the driver does one cheap check that it exists (a `Read` of that line, a `Test-Path`). Confirm, then act.
 
 This is the long-job survival lever: a lean driver runs a multi-hour pipeline end to end without hitting the context wall.
+
+### Function-author sub-agent — dedicated writer for load-bearing functions
+
+A driver juggling the whole run (runbook, verifies, logs, monitors) one-shots functions minimally — working, but bare. For the functions that carry the pipeline, delegate the WRITING itself: dispatch a throwaway sub-agent whose only job is that one function, hand it an explicit context packet, take back the finished code, and verify it exactly like any other step output.
+
+**Trigger — either one fires:**
+
+```
+1. RISKY / core   — the function is tagged RISKY by /prep (source-1 runbooks),
+                    OR it is core logic in any build (sources 1, 3, or 4): the
+                    function doing the pipeline's actual job (render, upload,
+                    transform, classify) — not glue, config, or small helpers.
+2. Escalation     — a function-write step's verify has failed 2 distinct
+                    approaches in fix mode AND the leading hypothesis implicates
+                    the function's own implementation (not a fixture, caller,
+                    input, or environment — P11: never rewrite on a disproved
+                    or untested cause). Then the next approach IS the author
+                    dispatch, counting as one of the five distinct approaches.
+                    On prep-derived steps where fix mode runs as a /repair
+                    sub-loop, "2 failed approaches" = 2 failed fix attempts
+                    inside that sub-loop.
+```
+
+Below-trigger functions (path joins, small wrappers, arg parsing) are written inline — KISS (P5).
+
+**The context packet.** The sub-agent inherits no session history (delegation rule above), so the driver constructs the packet explicitly:
+
+```
+- Goal + Success line, verbatim from the runbook
+- The function contract: name, inputs → outputs, callers, data shapes
+- The surrounding code it must fit (the stage file / module it lands in)
+- Source-1 functions: that function's /prep card verbatim (RED/GREEN/REAL/AUDIT)
+- Constraints in force: bounded retries on subprocess/network/disk calls,
+  checkpointing for long operations, perf/storage limits from the plan
+- The step's verify check (what the function must survive)
+- Escalation only: the failing version + both failure signatures — snapshot
+  these into the packet BEFORE Re-entry hygiene's restore reverts/deletes them
+```
+
+**Return contract.** The author returns ONE function + a ≤3-line note on what it optimized for — never edits to surrounding files; the driver is the only writer. One dispatch may cover one tightly-coupled unit (a mutually recursive pair, a function + its class) when splitting would hand the author half the logic. Before integrating, the driver READS the returned code for silent failure-swallowing (bare `except`, default-return-on-error) — a swallow that would let a shallow verify pass while hiding failure is a REJECTED return (one failed approach), not a pass. Then integrate and run the step's normal verify. Standard rules hold: the verify is the oracle (author confidence is not a pass), a non-answer/timeout is a failure (fan-out rule above), and fix mode on the result belongs to the driver, not the author.
+
+**Bounds + re-dispatch (the one-author rule).** Per function: at most ONE write-time dispatch (trigger 1) plus at most ONE escalation re-dispatch (trigger 2, carrying the failure packet) — never a third; a failed escalation dispatch is never repeated (HI #4), rotation continues with non-author approaches. A dispatch that died in flight (Author dispatch logged, no Author returned line) counts as that approach's timeout failure and does NOT consume the allowance — re-entry may re-dispatch cleanly. Pattern 3: give the author a deadline SHORTER than the cron tick interval (or size the interval above expected author latency at runbook generation) — never leave a dispatch in flight past the tick that opened it. If sub-agents are unavailable, write the function inline with the same packet discipline and log the fallback.
+
+**Log lines (model-written):**
+
+```
+[ts] [Mode] [Step N] Author dispatch: <function> (trigger: risky|core|escalation)
+[ts] [Mode] [Step N] Author returned: <one-line summary> → running verify
+```
+
+**KISS bounds (P5):** no panels, no variant tournaments; one function (or one tightly-coupled unit) per dispatch — a stage with 3 risky functions = 3 dispatches; no author dispatch below the trigger just to follow the rule.
 
 
 ## Universal Principles (apply in both shapes)
@@ -1649,6 +1701,7 @@ If the new approach is *not* meaningfully different from a prior one, that's a s
 - Different code path (different function, different fallback)
 - Different input (different file, different data shape)
 - Different stage boundary (re-run a parent stage to regenerate input)
+- Escalating a function-write to the function-author sub-agent (see Sub-agent Delegation) — the dispatch counts as one of the five distinct approaches
 
 "Different" does NOT mean:
 
