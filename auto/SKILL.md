@@ -376,6 +376,9 @@ Success: <checkable bar — what makes the whole task DONE>
 Pattern: <1 synchronous | 2 background+monitor | 3 cron+monitor+shell>
 Mode:    NORMAL | DIAGNOSING | ROTATING
 
+Functions:  (build tasks only — labeled by the author checklist; see Function-author sub-agent)
+  <name>: AUTHOR | INLINE — <one-line reason naming the deciding checklist line>
+
 Steps:
   1. [PENDING] <action one-liner>
         requires:   <precondition + source tag: ← from step X | ← external: recipe>  (optional)
@@ -398,6 +401,7 @@ Status:
   Mode reason:       (filled when Mode != NORMAL)
   Refuter:           n/a   (judgment-based goals: pending | clean | <n> BLOCKERs | round 1|2)
   RedTeam:           n/a   (unattended/stateful deliverables: pending | clean | <n> BREAKS | round 1|2)
+  Classified:        n/a   (build tasks: pending | clean | checklist-only)
 ```
 
 `Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate).
@@ -685,6 +689,7 @@ File edit/write       file path + lines changed
 Mode transition       NORMAL → DIAGNOSING → ROTATING (or back)
 Approach choice       which N/5 + the reason
 Author dispatch       dispatch + return lines (function-author sub-agent)
+Classification        Functions-block labels, reviewer promotions, mid-run appends
 Hypothesis list       DIAGNOSING: ranked falsifiable causes, or the explicit fast-path declaration
 Probe pre-reg         BEFORE the probe runs: variable / expected / CONFIRMS / DISPROVES
 Probe result          which pre-registered prediction fired; cause confirmed or disproved
@@ -1451,10 +1456,15 @@ A driver juggling the whole run (runbook, verifies, logs, monitors) one-shots fu
 **Trigger — either one fires:**
 
 ```
-1. RISKY / core   — the function is tagged RISKY by /prep (source-1 runbooks),
-                    OR it is core logic in any build (sources 1, 3, or 4): the
-                    function doing the pipeline's actual job (render, upload,
-                    transform, classify) — not glue, config, or small helpers.
+1. AUTHOR-classed — the function is tagged RISKY by /prep (source-1 runbooks),
+                    OR promoted by the classification review below,
+                    OR any checklist line below is YES — or even UNCERTAIN
+                    (ties promote to AUTHOR, never demote):
+                      - touches subprocess/ffmpeg, network, or disk I/O
+                      - transforms the user's actual data (not config plumbing)
+                      - implements retries, recovery, or checkpointing
+                      - sits in the main loop / hot path of the pipeline
+                    All lines NO → INLINE (glue, config, small helpers).
 2. Escalation     — a function-write step's verify has failed 2 distinct
                     approaches in fix mode AND the leading hypothesis implicates
                     the function's own implementation (not a fixture, caller,
@@ -1466,7 +1476,11 @@ A driver juggling the whole run (runbook, verifies, logs, monitors) one-shots fu
                     inside that sub-loop.
 ```
 
-Below-trigger functions (path joins, small wrappers, arg parsing) are written inline — KISS (P5).
+INLINE-classed functions (path joins, small wrappers, arg parsing) are written inline — KISS (P5). Non-build tasks (fixes, renames, config tweaks) have no classification machinery at all.
+
+**Classification table + one-shot review (runbook generation).** For build tasks, every function the plan names gets an explicit `AUTHOR` or `INLINE` label in the runbook's `Functions:` block, with a one-line reason that NAMES the deciding checklist line (`AUTHOR — disk I/O`, `INLINE — all four checklist lines NO`) — the call is re-checkable later, never just asserted. Then ONE cheap reviewer sub-agent — fresh context, handed ONLY the Goal + Success line and the labeled list with reasons, with a deadline (Pattern 3: shorter than the tick interval; timeout = returned nothing) — answers a single question: *"which INLINE function could wreck the user's outcome if written half-assed?"* Every VALID flag (validate names against the list you sent; unknown names are ignored + logged) is promoted UNCONDITIONALLY, and the promotion is written on paper: rewrite that function's `Functions:` line in place to `AUTHOR (promoted) — <reviewer reason>` BEFORE any step executes. If every function is already AUTHOR, skip the dispatch and set `Classified: clean` with a `no INLINE candidates` log line. Reviewer returns nothing → retry once; still nothing → set `Classified: checklist-only`, log it, proceed — this leniency is the reviewer's alone (it is a second net, not an oracle) and NEVER extends to verify verdicts, where a non-answer stays a failure. The review's state rides in the runbook Status block as `Classified:` (`pending` before dispatch → `clean` / `checklist-only` on completion) so it survives compaction like `Refuter:`; a resume finding `pending` re-runs the reviewer before executing steps.
+
+**Mid-run functions + the one-way ratchet.** The Functions block is the generation-time record, not a cage: any function born AFTER classification (fix mode, approach rotation, plan drift/renames) is classified by the same checklist AT WRITE TIME, appended to the block with its reason, and logged — no function is ever written unclassified, and a block entry whose function no longer exists is inert. Labels ratchet one way: INLINE may be promoted (reviewer flag or a fresh checklist read), AUTHOR is never demoted mid-run — same freeze discipline as the Success line; if the block shows a demotion contradicting a promotion log line, trust the promotion and restore it. The swallow-read applies to INLINE writes too: before a step's verify, re-read any just-written INLINE function for failure-swallowing, same rejection rule as author returns.
 
 **The context packet.** The sub-agent inherits no session history (delegation rule above), so the driver constructs the packet explicitly:
 
@@ -1489,7 +1503,7 @@ Below-trigger functions (path joins, small wrappers, arg parsing) are written in
 **Log lines (model-written):**
 
 ```
-[ts] [Mode] [Step N] Author dispatch: <function> (trigger: risky|core|escalation)
+[ts] [Mode] [Step N] Author dispatch: <function> (trigger: author-classed|promoted|escalation)
 [ts] [Mode] [Step N] Author returned: <one-line summary> → running verify
 ```
 
