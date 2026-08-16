@@ -1,6 +1,6 @@
 ---
 name: auto
-description: Universal autonomous mode. The user runs `/auto` (or says "go autonomous", "no gates", "just do it", "set and forget", "keep going until it's done") to authorize Claude to drive a task end-to-end without further prompts. The invocation IS the authorization — there is no follow-up confirmation gate. Claude states briefly what it's about to do, then executes, diagnosing and re-trying as needed, stopping only on genuine success (DONE) or genuine stuck (STUCK). Applies to any task — a single fix, a multi-step build, a long unattended job — not just pipelines. For long unattended jobs, an optional cron+monitor+shell architecture is available (see "Cron mode" section).
+description: Universal autonomous mode. The user runs `/auto` (or says "go autonomous", "no gates", "just do it", "set and forget", "keep going until it's done") to authorize Claude to drive a task end-to-end without further prompts. The invocation IS the authorization — there is no follow-up confirmation gate. Claude states briefly what it's about to do, then executes, diagnosing and re-trying as needed, stopping only on genuine success (DONE) or genuine stuck (STUCK). Applies to any task — a single fix, a multi-step build, a long unattended job — not just pipelines. Any run that would pause unfinished arms a session-lifetime Goal-Guardian cron that keeps pushing toward a pinned contract (success + circumstances + never-do) until DONE or genuinely user-blocked — PARTIAL is a checkpoint, never an ending (see "Goal-Guardian" section). For long unattended jobs the cron+monitor architecture (Pattern 3) rides under the guardian.
 ---
 
 # Auto
@@ -357,7 +357,11 @@ The file contains the slug as its single line of content. `<session_id>` is the 
 
 The PostToolUse hook (`hooks/auto-log-hook.py`) reads this marker on every tool call. If a marker for the firing session exists, the hook routes the log line to that session's slug-specific log file. Without the marker, two parallel chats in the same directory writing to `auto-runs/*/log.txt` would race for the "most recently modified" runbook and trample each other's logs. With the marker, each session's tool calls flow only to its own log.
 
-On DONE or STUCK, /auto deletes its session marker as part of the final report step. If the chat closes mid-run without a terminal verdict, the marker file is harmless leftover — the next /auto run will overwrite it (same session) or ignore it (different session).
+On a terminal verdict (DONE / STUCK-user / STUCK (stopped by user)), /auto deletes its session marker as part of the final report step — but ONLY if the marker's content names this run's slug; if it names another coexisting run's slug, leave it and log one line (Goal-Guardian rule). If the chat closes mid-run without a terminal verdict, the marker file is harmless leftover — the next /auto run will overwrite it (same session) or ignore it (different session).
+
+### Contract + Guardian (universal)
+
+Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `APPROACHES.md` + `PROGRESS.md` for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
 
 ### Runbook file location
 
@@ -400,8 +404,14 @@ Status:
   Parked steps:      []
   Mode reason:       (filled when Mode != NORMAL)
   Refuter:           n/a   (judgment-based goals: pending | clean | <n> BLOCKERs | round 1|2)
-  RedTeam:           n/a   (unattended/stateful deliverables: pending | clean | <n> BREAKS | round 1|2)
+  RedTeam:           n/a   (fires on deliverable NATURE or ≥1 guardian tick: pending | clean | <n> BREAKS | round 1|2)
   Classified:        n/a   (build tasks: pending | clean | checklist-only)
+  Guardian:          unarmed | armed <cron-id>, every N min, expires <date> | stood-down (<reason>)
+  Contract:          pinned <date> | pinned+asked
+  Round:             0/3   (guardian re-attack rounds used)
+  Jobs:              []    (live background jobs: id/PID + artifact path + expected duration)
+  Reviewer:          n/a | pending | <last verdict>
+  Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
 
 `Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate).
@@ -492,12 +502,18 @@ _(Added 2026-06-30 — closes the orphaned-`rollback:` gap: the field was define
 Resumption is **explicit-only** — /auto never auto-resumes a prior run by globbing for runbooks. The slug must be supplied by the invocation itself. Two ways this happens:
 
 ```
-1. Pattern 3 cron tick — the CronCreate command encodes the slug
-   in its prompt (e.g., "/auto resume slug=paginate-off-by-one-143205").
-   Each tick reads ONLY the runbook matching that exact slug.
+1. Guardian tick — the cron prompt is pinned verbatim:
+   "/auto guardian slug=<slug> run=<absolute run-folder path>".
+   Each tick reads ONLY the runbook matching that exact slug and
+   follows the Goal-Guardian tick protocol.
 
 2. User-initiated resume — the user types
-   "/auto resume <slug>" to manually pick up a prior interrupted run.
+   "/auto resume <slug>" to manually pick up a prior interrupted run
+   (e.g., after a session close killed the crons).
+
+3. Kill switch — the user types "/auto stop slug=<slug>": CronDelete
+   + honest STOPPED report (ledger + resume command) + Status: STUCK
+   (stopped by user) + session marker deleted if it names this slug.
 ```
 
 On resume, the runbook file is the source of truth:
@@ -510,7 +526,7 @@ On resume, the runbook file is the source of truth:
 
 If no slug is supplied, /auto generates a fresh one and starts a new run — parallel chats and accidental re-invocations never collide on someone else's state.
 
-This is what makes Pattern 3 (cron mode) survive a chat going silent — the cron schedule carries the slug, and the heartbeat keeps reading the exact runbook it owns.
+This is what makes Pattern 3 (cron mode) survive a chat going silent — the cron schedule carries the slug, and the heartbeat keeps reading the exact runbook it owns. (Silent = idle. A CLOSED window kills the session's crons — see Goal-Guardian's session-lifetime honesty; resume then is explicit via `/auto resume slug=<slug>`.)
 
 ### Generating the runbook — sources in priority order
 
@@ -1171,7 +1187,7 @@ These never bend.
    - A step is taking longer than expected (use Monitor, continue planning)
    - A choice has to be made about a default (timeout, retry count, format) — pick the modern reasonable default, log it, proceed
 
-   The ONLY exits from /auto: **DONE**, **STUCK** (after 5 distinct failed approaches), or a Hard-Invariant trip in "Auto Does NOT Waive." Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the **missing-external-condition stop** — whether from Phase Blueprint Mode or a condition-first self-derived runbook — which can fire mid-run at a phase/step boundary when an `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
+   The ONLY exits from a /auto RUN: **DONE**, **STUCK-user** (genuinely blocked on something only the user can supply — including guardian round-cap exhaustion), **/auto stop**, or a Hard-Invariant trip in "Auto Does NOT Waive." A SESSION turn may end at `PARTIAL (checkpoint)` — that ends the turn, never the run: the Goal-Guardian cron carries the run onward. Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the **missing-external-condition stop** — whether from Phase Blueprint Mode or a condition-first self-derived runbook — which can fire mid-run at a phase/step boundary when an `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
 
 2. **Pre-action context, not pre-action gate.** Before doing something non-trivial, Claude states one or two sentences naming what it's about to do and why. This is for *user awareness*, not for *user approval*. There is no waiting period. Claude finishes the sentence and proceeds.
 
@@ -1179,7 +1195,7 @@ These never bend.
 
 4. **Never repeat a failed approach.** Each retry must differ from prior attempts in at least one concrete variable (different parameter, different prompt, different command flag, different input). If five distinct approaches have all failed, declare STUCK and stop. Don't burn budget on cosmetic variations.
 
-5. **Stop on DONE or STUCK, not on "looks good enough."** DONE means the actual success condition is met and verified. STUCK means approach rotation is exhausted and Claude can't honestly identify a sixth distinct approach.
+5. **Stop on DONE or STUCK-user, not on "looks good enough."** DONE means the actual success condition is met and verified against the pinned contract (circumstances + never-dos included). STUCK-user means the run is genuinely blocked on something only the user can supply — a step merely exhausting its 5 approaches gets PARKED and re-attacked by the guardian (up to 3 rounds), not declared terminal.
 
 6. **Honest reporting.** If 24 of 269 things failed, the report says 24 failed. Not "245 succeeded" with the rest swept under. The user can decide what to do with partial success — Claude's job is to surface it accurately.
 
@@ -1258,13 +1274,15 @@ Use whenever the work needs the heartbeat + stateless tick architecture: build p
 **The architecture is in-session — Claude Code itself is the executor.** Pattern 3 uses three claude code tools coordinating around state files on disk:
 
 ```
-CronCreate    Schedules wake-ups every N minutes. Each fire spawns
-              a fresh claude code session that re-invokes /auto.
-              The cron's prompt MUST encode the slug, e.g.
-              "/auto resume slug=<slug>" — so every tick targets
-              the exact runbook this cron owns. Without the explicit
-              slug, parallel /auto runs in the same directory would
-              collide on Phase 0 slug derivation.
+CronCreate    Schedules wake-ups every N minutes. Each fire enqueues
+              its prompt as a new TURN into THIS same session while
+              the REPL is idle (session-only; dies with the window;
+              7-day auto-expiry — see Goal-Guardian). The cron's
+              prompt is PINNED, e.g. "/auto guardian slug=<slug>
+              run=<absolute path>" — so every tick targets the exact
+              runbook this cron owns and the skill reloads after
+              compaction. The Goal-Guardian IS this cron — one cron
+              per run, ever.
 
 Monitor       In-session: streams events from a Bash background
               process so /auto can wait on a "done" pattern in a
@@ -1274,7 +1292,7 @@ Bash          Runs the actual work. Use run_in_background=true for
               steps >30s so /auto keeps planning while they run.
 ```
 
-There are NO external shell scripts (`monitor.py`, `shell.sh`, `teardown.sh` are gone). The assistant IS the monitor and shell. Each cron tick is a fresh model run that reads files, decides next action, executes, writes back, exits.
+There are NO external shell scripts (`monitor.py`, `shell.sh`, `teardown.sh` are gone). The assistant IS the monitor and shell. Each cron tick is a fresh TURN in this same session that re-reads the files (HI #8 — files beat memory, surviving compaction), decides the next action, executes, writes back, and checkpoint-exits.
 
 Trigger conditions (any of these → Pattern 3):
 
@@ -1309,10 +1327,15 @@ auto-runs/<slug>/log.txt       Append-only activity log (also lives at
 auto-runs/<slug>/VERDICT_DONE  Touched on terminal success.
                           On detection at start of any tick,
                           /auto invokes CronDelete and exits.
+                          NEVER written at PARTIAL (checkpoints
+                          write no VERDICT file).
 
-auto-runs/<slug>/VERDICT_STUCK Touched on terminal failure (5 approaches
-                          per blocking step, all parked).
-                          On detection, CronDelete + exit.
+auto-runs/<slug>/VERDICT_STUCK Touched ONLY on STUCK-user or
+                          STUCK (stopped by user). A legacy
+                          VERDICT_STUCK carrying the old all-
+                          parked/machine-retryable meaning is
+                          treated as a CHECKPOINT, not a
+                          terminus (Goal-Guardian rule).
 
 auto-runs/<slug>/logs/         Per-tick logs:
   tick-<ISO>.log          One file per cron tick.
@@ -1325,20 +1348,19 @@ auto-runs/<slug>/shots/        Visual checkpoints — one PNG per capture
 ### How a cron tick actually flows
 
 ```
-Tick fires → fresh claude code session → /auto re-invoked
+Tick fires → new TURN in this same session → /auto re-invoked by the pinned prompt
 
   1. Read auto-runs/<slug>/RUNBOOK.md (state, current step, mode)
   2. Read auto-runs/<slug>/GOAL.md (frozen goal — never trust memory)
   3. Read tail of auto-runs/<slug>/logs/run.log (~30 lines of recent history)
   4. Check for auto-runs/<slug>/VERDICT_DONE or auto-runs/<slug>/VERDICT_STUCK
        If either exists → CronDelete + exit (loop self-uninstalls)
-  4b. TICK LOCK — check auto-runs/<slug>/TICK_LOCK:
-       - fresh lock (timestamp < one interval old) → a prior tick is
-         still working; exit immediately (do NOT start a duplicate —
-         this is what prevents two ffmpeg jobs on the same output)
-       - stale lock (older than one interval) → prior tick died mid-step;
-         treat its in-progress step as STALLED, escalate per heuristic #13
-       - no lock → write TICK_LOCK with current timestamp, continue
+  4b. OWN-JOBS CHECK (replaces the retired TICK_LOCK — same-session
+      turns serialize, so no lock file is needed): read the runbook's
+      Jobs: field (never conversation memory). Any of this run's
+      background jobs alive → no success probe, no reviewer-step
+      execution this tick; task-alive OUTRANKS artifact-flat (see
+      Goal-Guardian tick step 4 — canonical).
   4c. If the runbook shows a long step IN PROGRESS with a visual
       surface → capture + read a visual checkpoint (see Visual
       Checkpoints). Job surface identical to the previous tick's shot
@@ -1346,8 +1368,11 @@ Tick fires → fresh claude code session → /auto re-invoked
       step as STALLED (heuristic #13). Background jobs with no window:
       frame-grab the output artifact instead of the desktop.
   5. Pick first non-DONE / non-PARKED step from runbook
-       (if none and success unmet → write Status: PARTIAL + VERDICT, exit —
-        the all-parked terminus; never tick forever with nothing to do)
+       (if none and success unmet → NOT a terminus: increment Round,
+        dispatch the blocker-review subagent, act on its verdict via
+        the constraint compass — Goal-Guardian tick step 8. Round
+        cap exhausted → STUCK-user with the ledger. PARTIAL is only
+        ever a checkpoint; no VERDICT file is written at PARTIAL)
   6. Execute that step (if it was left IN PROGRESS by a dead tick, restore its
      precondition first — Re-entry hygiene):
        - Bash for direct commands
@@ -1358,11 +1383,12 @@ Tick fires → fresh claude code session → /auto re-invoked
        Fail → enter fix mode, /repair sub-loop, rotate up to 5x
   8. Update auto-runs/<slug>/RUNBOOK.md and auto-runs/<slug>/logs/run.log
   9. Write auto-runs/<slug>/PROGRESS.md with one-line "this tick did X" summary
- 10. Remove auto-runs/<slug>/TICK_LOCK (release for the next tick), then exit.
-     Next tick fires N min later.
+ 10. CHECKPOINT-EXIT: write all state atomically, set Status:
+     PARTIAL (checkpoint), end the turn. Next tick fires N min
+     later and flips it back to active.
 ```
 
-Each tick is **stateless from the model's perspective** — every file read on every tick. No conversation memory carries between ticks. This is what makes the architecture survive context compression and chat idleness.
+Each tick **trusts files over memory** — every state file is re-read at tick start (HI #8), so the architecture survives context compression and chat idleness. (Ticks fire in the SAME session and may retain conversation context — but they never rely on it; the files are the truth. The session closing ends the crons: resume then needs `/auto resume slug=<slug>`.)
 
 ### Cron interval rule of thumb
 
@@ -1398,7 +1424,7 @@ Multi-hour task OR explicit "overnight" / "while I sleep"    → Pattern 3
 Everything else (3-10 steps, 5-30 min, user present)         → Pattern 2
 ```
 
-`/prep + /auto` is the canonical Pattern 3 trigger. Build pipelines always warrant the cron heartbeat + stateless tick architecture, regardless of whether the user is present. The chat may close, the session may compress; the cron survives both.
+`/prep + /auto` is the canonical Pattern 3 trigger. Build pipelines always warrant the cron heartbeat + files-first tick architecture, regardless of whether the user is present. The session may idle or compress and the cron survives both — a CLOSED window does kill it (session-only crons), which is why every checkpoint leaves the runbook resumable via `/auto resume slug=<slug>`.
 
 When in doubt for shorter tasks, prefer Pattern 2 over Pattern 1.
 
@@ -1728,7 +1754,7 @@ If the new approach is *not* meaningfully different from a prior one, that's a s
 
 Auto absorbs most decisions. But some things must surface to the user:
 
-- **Genuine STUCK.** All 5 approaches exhausted, no honest sixth available. Stop, report, hand back.
+- **Genuine STUCK-user.** The run is blocked on something only the user can supply, or the guardian's 3 re-attack rounds are exhausted with no legal move left. Stop, report exactly what's needed + the resume command, hand back. (A single step exhausting 5 approaches is a PARK, not a surface — the guardian re-attacks it.)
 - **Discovery that contradicts the goal.** Mid-task you find the user's stated goal can't be achieved as described (e.g., "fix the test" → the test is testing impossible behavior). Stop, report the contradiction, ask for redirect.
 - **Cross-system irreversibility.** About to do something that affects external state in a way that can't be undone (see "Auto Does NOT Waive" above).
 - **The single-line heads-up format above.** Brief acknowledgment, proceed.
@@ -1812,22 +1838,187 @@ Halting the whole run for one stuck step is the worst version of pause-and-ask. 
 
 This is P3 example J applied: park and flag, never halt and ask.
 
-**The all-parked terminus (never freeze).** When no step is PENDING or IN PROGRESS — every remaining step is DONE or PARKED — the run is terminal. It MUST write a verdict, never keep ticking with nothing to advance:
+**The all-parked checkpoint (never freeze, never quit).** When no step is PENDING or IN PROGRESS — every remaining step is DONE or PARKED — the run is NOT terminal (Goal-Guardian rule, 2026-08-15):
 
 ```
 - Success condition met (despite parked steps)  → refuter gate, then Status: DONE
-- Success condition NOT met (parked steps blocked it) → Status: PARTIAL,
-  listing each parked step + reason
+- Success condition NOT met → Status: PARTIAL (checkpoint), listing each
+  parked step + reason — then the guardian's next tick re-attacks:
+  Round++ → blocker-review subagent → constraint compass → act.
+  Round cap (3) exhausted → STUCK-user with the ledger.
 ```
 
-A runbook with no advanceable step and no terminal `Status:` line is the silent-freeze failure: the Stop hook keeps returning "continue" while there is nothing to do. `PARTIAL` is a terminal verdict the Stop hook honors — writing it ends the run cleanly. Never leave an all-parked runbook without a `Status:` verdict.
+`PARTIAL (checkpoint)` releases the SESSION cleanly (the Stop hook honors PARTIAL) while the GOAL stays owned by the guardian cron. A runbook with no advanceable step and no `Status:` line at turn-end is still the silent-freeze failure — always write the checkpoint. PARTIAL is never a final answer; only DONE or STUCK-user ends a run.
 
 
-## Cron Mode (see Pattern 3 above)
+## Cron Mode (see Pattern 3 above + Goal-Guardian below)
 
-Cron mode is Pattern 3 in the Execution Shape section above. The full architecture — CronCreate + Monitor + Bash, in-session, with state files on disk and self-uninstall via CronDelete on terminal verdict — is documented there.
+Cron mode is Pattern 3 in the Execution Shape section above; the Goal-Guardian section below is the universal layer that owns the cron on EVERY run. When reading older docs or code that still references `monitor.py` / `shell.sh` / `schtasks`: those are obsolete. Everything is **claude code's own tools** (CronCreate, Monitor, Bash, Agent) coordinating around state files. There are no external scripts.
 
-The key thing to remember when reading older docs or code that still references `monitor.py` / `shell.sh` / `schtasks`: those are obsolete. Pattern 3 today is **claude code's own tools** (CronCreate, Monitor, Bash) coordinating around state files. There are no external scripts.
+
+## Goal-Guardian — the run outlives the turn (universal)
+
+_(Added 2026-08-15 by user directive after 9 of the last 25 runs orphaned at PARTIAL. Design pinned in `prep-goal-guardian.txt` v4; survived three independent AUDITOR/RED-TEAM rounds. This section is CANONICAL — where older text conflicts, this wins.)_
+
+The guardian is one in-session cron per run that refuses to stand down until the run's **pinned contract** is observably satisfied (DONE) or the run is genuinely blocked on something only the user can supply (STUCK-user). PARTIAL is a **checkpoint, never an ending**.
+
+**Session-lifetime honesty (verified 2026-08-15):** CronCreate jobs are session-only — in-memory, they fire prompts as new TURNS into THIS session while its REPL is idle, they die when the window closes, and they auto-expire after 7 days. The guardian therefore lives exactly as long as the window does. Keep the window open and it pushes all night; close it and the run waits for `/auto resume slug=<slug>`. The old claim that a cron "survives the chat closing" was false and is retired.
+
+### The pinned contract (contract-pin)
+
+A stated goal is a headline, not a contract. Before autonomy starts, expand the invocation into a contract, frozen in `./auto-runs/<slug>/GOAL.md` (write-once, atomic):
+
+```
+Goal:          <one observable sentence>
+Success:       <checkable bar — the user's outcome, not machinery>
+Circumstances: <what makes it COUNT: free / local / unattended /
+                deadline / quality floor>
+Never-do:      <moves that are cheating even if they "work" —
+                paid APIs in a free tool, deleting sources,
+                asking a human mid-run>
+Validation:    <type-aware probes for the deliverable + any
+                FULL-RERUN flags for specific deliverables>
+False-pass:    <what a passing check would look like while the
+                goal is still unmet>
+Run-start:     <ISO timestamp — the provenance anchor>
+```
+
+- **Ask once, only when genuinely ambiguous.** Derive from the invocation + context. If two materially different readings survive, ask the user ONE startup question (this is a startup gate, allowed). Then the engine runs blind — never a mid-run question. Log the decision either way: readings considered + which fired, or `readings considered: 1`.
+- The arming one-liner prints the contract summary — the user's veto point for a wrong pin.
+- **Frozen means frozen.** Steps change; the contract never does. A wrong contract surfaces at STUCK-user and is fixed by the user restating the goal — never by the run editing GOAL.md.
+
+### Lazy arming (guardian-arm)
+
+**The invariant: nothing pauses unfinished unguarded.** Arm at the FIRST moment the run would end a turn non-terminal (it coincides with the checkpoint flip-back moment below). Runs that reach DONE inline never arm — zero overhead on trivial tasks.
+
+- `CronCreate` one recurring job, off-minute, prompt PINNED verbatim: `/auto guardian slug=<slug> run=<ABSOLUTE run-folder path>` — the `/auto` trigger reloads this skill after compaction; the absolute path defeats cwd drift.
+- Interval: adaptive — ~2× the longest expected step, **floor 10 min** (guardian ticks cost a subagent-capable turn; the Pattern 3 1-2 min band does not apply), 30-60 min for overnight renders.
+- Record `armed:`/`expires:` dates + cron id in the runbook `Guardian:` field, mirrored to PROGRESS.md. Print: `[auto] Guardian armed (every N min, expires <date>) — lives in this window; keep it open.`
+- **Near-expiry rotation overrides idempotency:** cron present but <24h to expiry → CronCreate the replacement → update cron-id + expires in BOTH files → CronDelete the old id. Rotation-create fails → retry next tick, one log line, never fatal while the old cron lives. Cron present and >24h out → no-op. Cron missing → recreate. This liveness check runs on EVERY /auto activity in the session (any turn type, via the HI #8 re-read), not just ticks.
+- **CronCreate fails at first arming** → log one line, cap the report's Confidence at HIGH with that reason, and the run may NOT checkpoint: it drives to a terminal in-turn or goes STUCK-user. An unarmed checkpoint is an orphan — the exact disease this section cures.
+- The guardian SUBSUMES the Pattern 3 execution cron: **one cron per run, ever.**
+
+### Universal state files (every run, every pattern)
+
+```
+./auto-runs/<slug>/GOAL.md           the contract (write-once)
+./auto-runs/<slug>/runbook.txt|RUNBOOK.md  + new Status fields:
+     Guardian:  armed <cron-id>, every N min, expires <date>
+                | unarmed | stood-down (<reason>)
+     Contract:  pinned <date> | pinned+asked
+     Round:     K/3 re-attack rounds used
+     Jobs:      <id/PID + artifact path + expected duration>
+                per live background job (registered at launch)
+     Reviewer:  n/a | pending | <last verdict>
+     Turn-end rule: checkpoint = Status: PARTIAL (checkpoint);
+                STUCK only when user-blocked
+./auto-runs/<slug>/APPROACHES.md     append-only approach history
+./auto-runs/<slug>/PROGRESS.md       last-tick summary + deliverable
+     artifact BASELINE (paths/sizes/mtimes at arming) + MIRRORS of
+     Round / cron-id / blocker-since (rebuild-proof)
+./auto-runs/<slug>/spend-<YYYY-MM-DD>.txt  per-slug tick counter
+```
+
+The `Turn-end rule` line is not decoration — it is the compaction-proof carrier of the checkpoint protocol (the file, not this skill text, is what every turn re-reads). **ALL state files use atomic temp+rename writes** — load-bearing twice over: a truncated runbook breaks the next tick AND trips the Stop hook's fail-open path.
+
+### The tick protocol (guardian-tick) — strict order
+
+A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in guardian mode for one slug. Steps, in order:
+
+```
+1. SPEND GATE — read/increment ./auto-runs/<slug>/spend-<today>.txt
+   (~30 ticks/day per run). Over cap → one pause note, checkpoint-
+   exit. Two consecutive counter WRITE failures → STUCK-user (disk
+   trouble is a real blocker). Resets at date rollover.
+2. RE-READ + LIVENESS — GOAL.md + runbook + log tail (~30) +
+   PROGRESS.md (HI #8; files beat memory). Guardian liveness /
+   near-expiry rotation (above). Corrupt GOAL.md → stand down +
+   STUCK-user naming the corruption (never improvise a contract).
+   Corrupt runbook → rebuild steps from GOAL.md + log tail; Round /
+   cron-id / since restored from the PROGRESS.md mirrors; the
+   contract is never re-derived. Slug folder missing but auto-runs/
+   root present → stand down (CronDelete + one line).
+3. TERMINAL CHECK — Status DONE / STUCK-user / STUCK (stopped by
+   user) → CronDelete (recorded id; fallback: resolve by name
+   auto_guardian_<slug>) → exit.
+4. OWN-JOBS CHECK (before ANY DONE path) — read the Jobs: field
+   (never conversation memory). Any job alive → NO success probe,
+   NO reviewer-step execution this tick.
+     alive + artifact growing → noop tick (one log line)…
+       …but past ~10× expected duration → dispatch blocker-review
+       even while growing (no immortal healthy-noop).
+     alive + flat → the ~2× stall clock governs (visual checkpoint
+       on visual steps); only an expired clock escalates (kill/
+       drain per heuristic #13). Task-alive OUTRANKS artifact-flat.
+5. SUCCESS PROBE — validate vs the contract (type-aware floor +
+   PROVENANCE: deliverable must postdate Run-start; the arming
+   baseline corroborates, run-start decides; consult False-pass).
+   Met → Terminal Refuter Gate / RED-TEAM per their rules → DONE →
+   CronDelete.
+6. SUSPECT — no own jobs, artifact flat → mark SUSPECT (any growth
+   tick clears it). SECOND consecutive flat tick → blocker-review.
+7. PENDING STEPS — runbook has runnable steps → execute the next
+   one normally (re-entry hygiene on redo).
+8. DRY/PARKED/BLOCKED → increment Round FIRST (post-increment K>3
+   → STUCK-user with the ledger; = 3 real re-attack rounds) →
+   dispatch blocker-review → act on its verdict via the constraint
+   compass. Un-parking uses the 4th re-entry door: rollback →
+   re-assert pre-verify → invalidate downstream → retry.
+   GOAL-MET verdicts re-enter step 5 — never direct DONE.
+9. CHECKPOINT-EXIT — the ONLY legal non-terminal turn end: write
+   all state atomically, set Status: PARTIAL (checkpoint), exit.
+```
+
+### Checkpoint-writer — how ANY turn legally ends mid-run
+
+The Stop hook releases a turn only on DONE / STUCK / PARTIAL. So, in an armed session, **every turn of every type** (tick, Monitor notification, user exchange) ends the same way: if the run is non-terminal, last act = arm-if-unarmed, then `Status: PARTIAL (checkpoint)`. Tick-start flips PARTIAL → active; turn-end flips it back.
+
+- The hook's stderr reflex ("do not return control until DONE or STUCK") is SATISFIED by checkpoint-then-stop — never escape via a false STUCK: a false STUCK reads as terminal and kills the guardian with the goal unmet (the worst failure this section defines). The runbook's `Turn-end rule` line carries this across compaction.
+- Esc-interrupt recovery: a turn killed before its flip-back costs exactly ONE hook-dragged turn (which arms + checkpoints), then frees. Designed recovery, not a bug.
+- The hook enforces `Refuter:` on DONE but not `RedTeam:` — model discipline + the runbook field carry that obligation.
+- Between ticks the runbook always reads PARTIAL, so a user who repurposes the session is never dragged — their turns release instantly.
+
+### Blocker-review — the fresh-eyes subagent
+
+Dispatched by tick steps 6/8 (one at a time — `Reviewer: pending` in the runbook enforces it across turns). Hand ONE fresh general-purpose subagent: the contract (GOAL.md), runbook, APPROACHES.md, log tail (~30), the claimed blocker/stall, the deliverable/artifact paths, and an explicit **read-only probe license** (Read/Glob/ffprobe-class commands; writes forbidden) — it grades evidence from disk, not the run's testimony.
+
+Brief: *"You did not do this work. Decide: (a) FALSE-BLOCKER — the run can legally continue; return the ONE next step (must trace to Success, violate zero Never-dos, differ from every APPROACHES.md entry); (b) REAL-machine — name the machine-checkable condition + its probe; (c) REAL-user — name exactly what only the user can supply; (d) GOAL-MET — cite the validating evidence. Default to skepticism of the run's own excuses."*
+
+- **Verdict validity:** every verdict must cite the specific contract line(s) + observable evidence read from disk. No citation or no evidence = UNRESOLVED — retry once with a tightened brief, then treat as REAL-user with "reviewer could not rule" noted. Never silently continue.
+- GOAL-MET decides nothing by itself — it re-enters tick step 5 (machine probes) and the Terminal Refuter.
+- The DRIVER validates and executes the proposed step; the reviewer never acts.
+- REAL-machine → slow-heartbeat: re-arm at 30-60 min; `since` = FIRST seen, never reset by flaps; two clear probes apart before resuming; 24h unresolved → STUCK-user (a dead dependency is an incident, not a wait).
+- Subagents unavailable → same-context skeptic pass, explicitly marked as the weaker fallback.
+
+### Constraint compass — no winning by cheating
+
+Before ANY derived, reviewer-proposed, or un-parked step executes: (a) it traces to the frozen Success line; (b) it violates ZERO Never-do lines; (c) it differs from every APPROACHES.md entry. Any failure → step REJECTED (logged with the broken constraint; the rejection consumes an approach slot so cosmetic variants can't loop). Every remaining path violates a constraint → **STUCK-user with the tradeoff spelled out**: "goal reachable only by breaking <constraint> — your call." The purpose is never traded away silently.
+
+### Terminals + kill switch
+
+```
+DONE                       validated deliverable + refuter/redteam
+                           per their rules → CronDelete → marker
+                           deleted IF it names this slug.
+STUCK-user                 only-the-user-can-supply blocker, round
+                           cap exhausted, 24h dead dependency, or
+                           compass dead-end. Names exactly what is
+                           needed + the resume command. CronDelete.
+STUCK (stopped by user)    /auto stop slug=<slug>: CronDelete +
+                           honest STOPPED report with ledger +
+                           resume command + marker deleted IF it
+                           names this slug. Always works — the
+                           spelling is hook-regex-safe by design.
+PARTIAL (checkpoint)       NOT a terminus. Never writes a VERDICT
+                           file. Never seals the notes. The
+                           guardian carries the run onward.
+```
+
+Legacy `VERDICT_STUCK` files (the old all-parked, machine-retryable shape) are treated as checkpoints, not termini — only STUCK-user stands the guardian down. Session-marker deletion always checks content: delete only if it names YOUR slug; if it names another run's, leave it and log one line (with coexisting runs the hook backstops the marker's run; the others are guarded by their own crons + checkpoint discipline).
+
+### RED-TEAM scoping under the guardian
+
+The RED-TEAM rider fires on the deliverable's NATURE (unchanged rule) **or** when the guardian actually fired ≥1 tick — proof the run ran unattended in practice. Never on mere armament: a 20-second attended run stays cheap.
 
 
 ## Hard NOs
@@ -1837,7 +2028,8 @@ The key thing to remember when reading older docs or code that still references 
 - **No asking after a plan is written.** When /auto is chained with a planning skill (`/auto /prep`, `/auto /optimize`, `/auto /repair`), the plan landing is the runbook-generation trigger — NOT a confirmation point. Asking "should I build the plan now?" or "Phase 8 ready, proceed?" is a hard-invariant violation. Plan → runbook → execute is one continuous flow.
 - **No silently advancing on bad output.** If a step failed, say so and rotate the approach.
 - **No declaring DONE without evidence.** "I think it worked" is not done.
-- **No requiring cron/monitor/shell for every /auto.** That architecture is for unattended overnight jobs only. Most /auto tasks are inline.
+- **No standing down before the goal.** The guardian cron is deleted ONLY on DONE, STUCK-user, or /auto stop. (The old "cron is for overnight jobs only" rule is retired 2026-08-15 by user directive — any run that pauses unfinished is armed; instant-finish runs never arm, so trivial tasks stay free.)
+- **No treating PARTIAL as an ending.** PARTIAL is a checkpoint the guardian pushes past — a report may say PARTIAL, the run doesn't end there.
 - **No burning past 5 failed approaches without declaring STUCK.** The whole point is bounded autonomy.
 
 
@@ -1881,7 +2073,7 @@ Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT 
 
 When the deliverable will run unattended or holds state across runs (a pipeline, a cron job, a helper daemon, fallback/routing logic, a queue — anything no human watches per-step), dispatch a SECOND fresh agent in parallel with the refuter: the **RED-TEAM**. Its canonical brief lives in `~/.claude/skills/audit/SKILL.md` under the heading "**The brief handed to the RED-TEAM**" — read it there at dispatch time and hand it the actual artifact paths (code, runbook, logs). It generates concrete hostile scenarios across 10 attack categories (mid-op death, check-then-act races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walks each through the real code to HANDLED / DEGRADES / BREAKS / UNKNOWN.
 
-- **Fires on the deliverable's nature, not the goal's shape** — see "When it fires." It runs even when the refuter is skipped; the runbook `RedTeam:` field carries the obligation across compaction exactly like `Refuter:` (pending → clean before `Status: DONE`).
+- **Fires on the deliverable's nature — or on ≥1 guardian tick having fired** (proof the run ran unattended in practice; never on mere guardian armament) — see "When it fires." It runs even when the refuter is skipped; the runbook `RedTeam:` field carries the obligation across compaction exactly like `Refuter:` (pending → clean before `Status: DONE`; a guardian tick that fires while `RedTeam: n/a` flips it to `pending`).
 
 - **BREAKS = BLOCKER** → re-enter fix mode on the owning step (Re-entry hygiene applies). **DEGRADES, and UNKNOWN on a load-bearing scenario,** = CONCERN → logged to the Notes file's Open Questions; does not block DONE.
 
@@ -1897,7 +2089,7 @@ When the deliverable will run unattended or holds state across runs (a pipeline,
 
 ### Bound (so it can never loop forever)
 
-Max **2 refute rounds** per run — a round is any terminal-gate dispatch (refuter and/or RED-TEAM together count as ONE round). /auto has no other run-level loop counter — without this bound, a gate that keeps finding holes prevents termination. On the 2nd round still BLOCKER (or RED-TEAM BREAKS) → stop and emit **AUTO PARTIAL** listing the open holes. Never silently loop; never silently DONE.
+Max **2 refute rounds** per re-attack round — a round is any terminal-gate dispatch (refuter and/or RED-TEAM together count as ONE round). On the 2nd round still BLOCKER (or RED-TEAM BREAKS) → emit **AUTO PARTIAL (checkpoint)** listing the open holes — the guardian's next re-attack round owns them (within the 3-round guardian cap, whose exhaustion → STUCK-user). Never silently loop; never silently DONE; never treat the refute bound as a final ending while the guardian lives.
 
 ### Not a user-facing gate
 
@@ -1968,15 +2160,24 @@ Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
 ```
 
 ### Cron auto, on terminal verdict
-Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/VERDICT_STUCK` and the cron self-uninstalls.
+Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/VERDICT_STUCK` and the cron self-uninstalls. VERDICT files are written ONLY at true termini (DONE / STUCK-user / stopped-by-user) — never at a PARTIAL checkpoint.
+
+### Any report on a non-terminal run
+Add one line so the user always knows who owns the goal:
+```
+Guardian: armed (every N min, expires <date>) — next tick <~time>.
+          Stop anytime: /auto stop slug=<slug>
+```
 
 
 ## TL;DR
 
 - /auto = behavior mode, not pipeline architecture.
 - Invocation is authorization. Zero follow-up gates.
-- Inline shape is the default. Cron only for truly unattended overnight.
-- Diagnose, rotate approaches, never advance on lies, stop on DONE or STUCK.
+- Inline shape is the default; any run that would pause unfinished arms the Goal-Guardian cron (session-lifetime, lazy, one per run) — nothing pauses unfinished unguarded.
+- The goal is a pinned CONTRACT (success + circumstances + never-do, frozen in GOAL.md); no step may win by cheating it; PARTIAL is a checkpoint, never an ending.
+- Every non-terminal turn ends with Status: PARTIAL (checkpoint); ticks flip it active and back. Only DONE (validated + provenance-checked) or STUCK-user ends a run; /auto stop slug=<x> is the kill switch.
+- Diagnose, rotate approaches, never advance on lies; parked steps get up to 3 guardian re-attack rounds via the fresh-eyes blocker-review subagent (citations required).
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH. PERFECT = all angles tested + refuter-clean + tests named; the only grade licensing zero-human-input runs.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
