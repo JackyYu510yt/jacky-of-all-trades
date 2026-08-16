@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: e6363a73-2f90-4170-84ec-7d9e243c8ed7
+  modified: 2026-08-16T09:58:00.985Z
 ---
 
 Build a strong foundation by climbing in rungs: **smoke (1 item) → batch (small set) → full set**, where each rung is a verify gate and the next does not start until the prior rung's output is checked.
@@ -17,4 +18,6 @@ Build a strong foundation by climbing in rungs: **smoke (1 item) → batch (smal
 - **Conditional, not always-on (KISS):** only fires when there's real volume (batch, many items, long unattended run). Skip for renames, config tweaks, one-shot single-item tasks — don't fabricate a `1 → 10 → all` ladder for a task that only ever runs once.
 - Every rung uses REAL inputs (P1 test-at-scale) — a ramp on toy fixtures proves nothing.
 
-Encoded directly in the `/auto` ("Graduated Scale-Up" section) and `/spec` (INIT success-criteria step) skill files on 2026-06-17. Relates to [[feedback_kiss_optimization]] and [[feedback_structural_fix_vs_patch]].
+- **Baseline extension (2026-08-16, user re-affirmed as "extremely vital"):** each PASSING rung's observed numbers (counts, durations, resource readings like chrome/RAM) are recorded in PROGRESS.md/log as the baseline. When rung N+1 fails, diagnosis starts from the DELTA between rungs — never re-litigating what the lower rung proved; rerunning the lower rung is the built-in discriminating test (machinery regressed vs scale broke it).
+
+Encoded directly in the `/auto` ("Graduated Scale-Up" section, baseline paragraph added 2026-08-16) and `/spec` (INIT success-criteria step) skill files. Relates to [[feedback_kiss_optimization]], [[feedback_structural_fix_vs_patch]], and [[feedback_discriminating_tests]].
