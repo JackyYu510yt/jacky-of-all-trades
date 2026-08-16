@@ -1990,6 +1990,7 @@ Brief: *"You did not do this work. Decide: (a) FALSE-BLOCKER — the run can leg
 - GOAL-MET decides nothing by itself — it re-enters tick step 5 (machine probes) and the Terminal Refuter.
 - The DRIVER validates and executes the proposed step; the reviewer never acts.
 - REAL-machine → slow-heartbeat: re-arm at 30-60 min; `since` = FIRST seen, never reset by flaps; two clear probes apart before resuming; 24h unresolved → STUCK-user (a dead dependency is an incident, not a wait).
+- **A REAL-machine blocker with a known recovery path is NEVER a user decision** (incident 2026-08-16, gemini-fallback-live-023001: run parked itself on an "A/B?" menu where A was the protocol's own prescribed path). The run CONTINUES on the recovery path automatically. A bar-lowering shortcut ("accept the partial proof, skip ahead") may be OFFERED as a non-blocking aside in the checkpoint report — but the run keeps driving toward the frozen Success line without waiting for an answer. Parking a legal path to await permission is a menu-stall (violates HI #1 + Principle 5); only a genuine contract dead-end or user-only supply justifies waiting.
 - Subagents unavailable → same-context skeptic pass, explicitly marked as the weaker fallback.
 
 ### Constraint compass — no winning by cheating
