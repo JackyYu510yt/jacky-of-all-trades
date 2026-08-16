@@ -670,6 +670,8 @@ Steps:
 
 **Real inputs on every rung (P1 test-at-scale).** The smoke and batch rungs use REAL data and REAL paths — a ramp on toy fixtures proves nothing about the full run. The point of the ladder is to hit the actual target condition at increasing volume, not to exercise a happy path on fake input.
 
+**Each passing rung is the BASELINE for the next (diagnosis anchor — added 2026-08-16, user directive).** Record every passing rung's observed numbers — item counts, sizes/durations, and resource readings (process counts, RAM, chrome tabs) — in PROGRESS.md and the log at the moment it passes. When rung N+1 fails, the cause lives in the DELTA between the passing rung and the failing one (more volume, more concurrency, longer duration — whatever changed between them); diagnosis STARTS by naming that delta and never re-litigates what the lower rung already proved. The rung pair is a ready-made discriminating test (HI #13): rerunning the lower rung mid-diagnosis instantly separates "the machinery regressed" from "the scale broke it."
+
 **KISS bounds (P5) — when NOT to ramp:**
 
 - One-shot single-item tasks (convert THIS file, fix THIS bug) — there's only ever 1, so there's no ladder to climb. Don't fabricate `1 → 10 → all` rungs for a task that runs once.
