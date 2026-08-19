@@ -51,6 +51,42 @@ Born from real misreads (umbrella "FAILED/cooked" labels, a transitional URL tre
 
 6. **No anchoring — the first plausible reading is a candidate, not the verdict.** Before assigning a state's meaning, name the alternative states the same evidence is also consistent with, and record what would distinguish them (the `Distinguish-from:` field exists for exactly this). Verdict evidence must be a **discriminating test** — capable of separating the claimed state from its nearest neighbor — not merely consistent with the favorite reading. Avoid **search-space neglect**: an alternative never written down can never be ruled out, and Phase 2.5's WEAK verdict ("consistent with another explanation too") is this rule failing after the fact instead of being applied up front.
 
+## Heaven's Net — recover by class, not by symptom (canonical definition)
+
+Trigger phrase: the user saying **"heaven's net"** (any casing, any phrasing) invokes this principle. This section is the canonical definition; /auto, /prep, /spec, and /repair point here — a pointer never overrides the guardrails below.
+
+**The rule.** Never design recovery logic as "symptom X → do Y" pairs. Every handler keys to a FAILURE CLASS — the general kind of thing that went wrong — and each class gets ONE general recovery strategy built around the state the operation requires. A new symptom joins an existing class **via a new map entry**; it does not get a bespoke handler. The net is wide on the RECOVERY side only: recover toward the required state so any mapped symptom in the class lands safely. DETECTION stays evidence-mapped exactly as this skill demands — it fires only on mapped entries, never on resemblance or speculation.
+
+**The canonical classes (web automation; adapt the list per target type):**
+
+```
+C1 navigation   — wrong page / unexpected URL / redirect
+C2 auth/session — signed out, expired session, wrong account
+C3 element      — expected element missing, moved, or renamed
+C4 timing       — still loading, slow render, race with the page
+C5 network      — transport errors, timeouts, DNS, offline
+C6 resource     — rate limit, quota, soft block, daily cap
+C7 unknown      — anything unclassified (never guess-handled:
+                  capture, park, stop loud — the flight recorder)
+```
+
+**The recovery shape (same five moves, every class):**
+
+1. Diagnose the ACTUAL state (what page/state are we really in?)
+2. Classify — at runtime the class comes ONLY from the matched map entry's `Class:` field. `Class:` is assigned at MAP time, from evidence. A signal matching no entry is C7 by definition — never bucketed into a class because it *resembles* one (a ban page resembles signed-out; guessing C2 re-auths a banned account all night).
+3. Recover BY CLASS toward the state the operation requires. The class chain is a TEMPLATE parameterized by the matched entry's facts — its `Residue`, its resume-at-step, its measured timings — and before resuming it follows the canonical re-entry order: roll back the entry's residue → re-assert the precondition → invalidate downstream → resume.
+4. Verify the required state is actually restored — held to the same evidence bar as detection (an artifact or independent signal, never one re-read of the same render; "page settled" is not "right page"). Verify-fail → return to step 1 and re-diagnose/re-classify; a class change does not reset the job budget below.
+5. Bounded escalate; bottom rung always fail-loud.
+
+**Guardrails (the net has a frame):**
+
+- **Evidence only — strict, no exceptions.** Heaven's Net widens RECOVERY, never the evidence bar. Every classification, every recovery decision, and every "restored" verdict rests on seen/captured/proven signals — nothing is assumed, ever. A false signal acted on can ruin the entire system (one wrong "signed out" read = an account burned overnight), so an unproven signal is treated as NO signal: it goes to C7 (capture, park, stop loud), it never gets a class, and it never triggers a chain.
+- **Confidence tiers still gate, per entry.** Class membership never upgrades confidence: an entry runs its class chain only at `confirmed` / `confirmed-stochastic`; `seen once — unconfirmed` and `described — unseen` entries keep their conservative/provisional treatment regardless of class.
+- **Job-level recovery budget.** Class chains being individually bounded does not bound the job: cap total recovery invocations per work item (≤ N, then fail-loud), and cap consecutive park/wait rungs for the same entry (≤ K, then fail-loud). Persist both counters in the checkpoint file so a restart doesn't reset them.
+- **One chain per class still branches on entry facts.** C6's chain backs off per the matched entry's measured recovery; recovery beyond the run's horizon → park/abort — that is how E05 soft block and E06 daily cap share one chain without sharing one response. An entry-specific rung the evidence demands (e.g. a re-consent click on one C2 variant) lives INSIDE the class chain as a state-conditional step, not as a bespoke handler.
+
+**KISS bound (rule of three).** A tool with one or two failure modes needs no taxonomy — write the handlers plainly (the `Class:` field may still be recorded; no shared-chain machinery is owed). The refactor trigger is the third symptom-specific handler IN THE SAME CLASS, not the third handler overall. Legacy maps predating this section gain a `Class:` on next touch.
+
 ## Confidence tiers (what earns a real protocol)
 
 - **`confirmed`** — reproduced deliberately, evidence audited CONFIRMED. Gets a full protocol.
@@ -163,6 +199,7 @@ Record **realistic variations** — branches that are normal, not broken: cookie
 - Source: provoked 2026-06-12 | history | natural | described — unseen
 - Last-verified: 2026-06-12
 - Meaning: temporary rate block
+- Class: C6 resource (heaven's net — assigned at map time, from this entry's evidence)
 - Navigation axis: settled (survived re-check / stalled-checkpoint)
 - Semantic axis: recoverable — recovery measured at ~4 min via duration probe
 - State: session alive, quota NOT exhausted, job resumable at step 3
@@ -218,6 +255,8 @@ Reconcile: **WRONG** → mark `RETRACTED` (never delete). **WEAK** → more reco
 Written to `healing-spec.md`. **`confirmed` and `confirmed-stochastic` entries get real protocols.** `seen once — unconfirmed` and `UNDERCAPTURED` entries get conservative treatment (capture, park, stop loud). `described — unseen` entries may get a **provisional** protocol (below).
 
 **Opens with the outcome check** (from Phase 1a): the only way the tool may ever declare SUCCESS. Every other signal diagnoses failures.
+
+Protocols follow **Heaven's Net** (canonical section above): entries sharing a `Class:` share ONE class-level chain — written once as a template, parameterized by each entry's `Residue`, resume-at-step, and measured timings; entries reference it. A per-entry deviation must say why the class chain doesn't fit. All Heaven's Net guardrails apply (evidence-only, confidence tiers still gate, job-level budget).
 
 **Per protocol-eligible error:**
 

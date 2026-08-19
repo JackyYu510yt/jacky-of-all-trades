@@ -1628,11 +1628,11 @@ Before emitting DONE on a **judgment-based** goal, the report must have passed t
 
 Judge every step and the final verdict against the REAL operating envelope, not the demo: the real input size, the real run duration, unattended execution, messy/missing inputs, resource limits, and recovery after a partial failure. A green run on a small or clean sample is NOT DONE if the real job is bigger, longer, or dirtier — verify against the conditions the task will actually meet. This covers only conditions you can prove will occur; a safeguard for an imaginary case is still a P5 (KISS) violation, not practicality.
 
-Most of /auto's machinery already serves this — the self-derived verify sanity pass (P1), stage-mode's different-input re-run, disk-is-truth (#8), the escalation tree (heuristic #13), checkpointed cron state, and the Terminal Refuter's "holds on a different input with no Claude present" check. P9 is the name that ties them together and the bar the final report is judged against. (Unnumbered on purpose — the numbered list 1–7 continues into the Operational Heuristics' #8–13, so this anchor sits outside that run to avoid renumbering them.)
+Most of /auto's machinery already serves this — the self-derived verify sanity pass (P1), stage-mode's different-input re-run, disk-is-truth (#8), the escalation tree (heuristic #13), checkpointed cron state, and the Terminal Refuter's "holds on a different input with no Claude present" check. P9 is the name that ties them together and the bar the final report is judged against. (Unnumbered on purpose — the numbered list 1–7 continues into the Operational Heuristics' #8–14, so this anchor sits outside that run to avoid renumbering them.)
 
 ## Operational Heuristics — patterns from production runs
 
-The principles above are abstract. These six are the tactical patterns that make /auto trustworthy on long-running, real-world systems (pipelines, services, vendors). Born from real incidents.
+The principles above are abstract. These seven are the tactical patterns that make /auto trustworthy on long-running, real-world systems (pipelines, services, vendors). Born from real incidents.
 
 ### 8. Disk is source of truth when logs go silent
 
@@ -1705,6 +1705,10 @@ When something stops making forward progress:
 ```
 
 Never restart the farmer / vendor / database / host as a first move. That's the loudest hammer; reach for it last. Cheap actions can succeed silently and teach you about the failure mode for free.
+
+### 14. Heaven's Net — recovery you BUILD keys to failure classes, not symptoms
+
+Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Never "error string X → do Y": handlers key to a failure class (navigation / auth-session / element / timing / network / resource / unknown) and recover toward the state the operation requires — diagnose actual state → classify → recover by class → verify the invariant restored with evidence → bounded escalate, fail loud. Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work. STRICT evidence caveats, non-negotiable: a runtime class comes ONLY from a matched, evidence-backed map entry — a new symptom joins a class via a new map entry, never by resemblance (unmatched = unknown: capture, park, stop loud); confidence tiers still gate which entries may run a chain; and a job-level recovery budget bounds the whole item, not just each chain. Trigger phrase: the user saying "heaven's net" invokes this shape explicitly — read the canonical definition + guardrails in /error-recon ("Heaven's Net" section) before designing recovery; never run it from memory. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
 
 
 ## Auto Does NOT Waive
@@ -2186,4 +2190,4 @@ Guardian: armed (every N min, expires <date>) — next tick <~time>.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
 - Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
 - Visual checkpoints: screenshot major events + ~10-min intervals on long visual steps, READ every shot; two identical job-surface shots + a flat artifact probe = STALLED.
-- Operational heuristics #8-13: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree.
+- Operational heuristics #8-14: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree, heavens-net-class-recovery.
