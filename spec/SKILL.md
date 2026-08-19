@@ -151,7 +151,12 @@ time, plainly — then write the file:
    from its *known* failure modes with no human in the loop (the modes come
    from `/error-recon`), checkpoints progress so a restart resumes instead of
    starting over, never blocks on mid-run input, and surfaces failures by
-   count rather than hiding them. Sweep the known modes against the
+   count rather than hiding them. Spec the recovery per **Heaven's Net** —
+   one general strategy per failure CLASS (auth/session, timing, network,
+   resource, …), never one criterion per observed error string; a class and
+   its recovery rest only on evidence-mapped failure modes, never on
+   assumption (canonical definition + strict guardrails: /error-recon,
+   "Heaven's Net" section). Sweep the known modes against the
    10-category hostile-scenario seed (canonical RED-TEAM brief in
    `~/.claude/skills/audit/SKILL.md`: mid-op death, check-then-act race,
    half-done re-entry, flapping, two actors, boundaries, time windows,
