@@ -262,7 +262,10 @@ steps.
 
 The blueprint's `DONE-WHEN`s and `VERIFY-REQUIRES` are the verify checks — they
 were already vetted by /spec's quality bar (and /audit if it ran), so the
-self-derived verify sanity pass is not needed for blueprint-sourced steps.
+self-derived verify sanity pass is not needed for blueprint-sourced steps. But
+when the blueprint did NOT route through /audit, the Phase 0.5 pre-flight
+principles pass (see "Self-derived runbooks" there) still runs on it — the
+quality bar vets checkability, not principles.
 
 **Assumptions & Unknowns → early probes.** When the bound SPEC.md carries an
 `Assumptions & Unknowns` section (see /spec — one unproven belief + its
@@ -406,6 +409,7 @@ Status:
   Refuter:           n/a   (judgment-based goals: pending | clean | <n> BLOCKERs | round 1|2)
   RedTeam:           n/a   (fires on deliverable NATURE or ≥1 guardian tick: pending | clean | <n> BREAKS | round 1|2)
   Classified:        n/a   (build tasks: pending | clean | checklist-only)
+  Principles:        n/a   (code deliverables: pending @<ISO> | clean @<ISO> | unswept @<ISO> (<reason>) | <n> violations)
   Guardian:          unarmed | armed <cron-id>, every N min, expires <date> | stood-down (<reason>)
   Contract:          pinned <date> | pinned+asked
   Round:             0/3   (guardian re-attack rounds used)
@@ -414,7 +418,7 @@ Status:
   Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
 
-`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate).
+`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate). `Principles:` rides the same way for code deliverables — the principles-sweep (Goal-Guardian section) stamps it mid-run; only its appended violation STEPS gate DONE (via all-steps-verified), never the field itself.
 
 ### Per-step lifecycle
 
@@ -550,7 +554,7 @@ Steps must be **atomic and verifiable**. "Implement the feature" is the GOAL, no
 
 If a step's verify can't be expressed as an observable check, the step is not atomic enough — split it.
 
-**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. For EVERY self-derived check, record the answer as a named **false-pass trap** on its runbook step — one line, `false-pass: <what a passing check would look like while the goal is still unmet>` — the pre-registered "DISPROVES" half of the check (P11): naming the trap before any result exists is what turns the sanity question from rhetorical into checkable. At verify time, a result matching the trap's shape is FAIL, not PASS. This only fires on the bare path that lacks /prep's vetting.
+**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. The same sub-agent, in the same dispatch, also grades the PLAN against the principles-sweep's fixed 5-item checklist (Heaven's Net / evidence-only / re-entry hygiene / no silenced failures / KISS — see Principles-sweep under Goal-Guardian): a planned step that bakes in a symptom-keyed handler, an assumed signal, or a retry with no rollback gets revised before execution, exactly like a weak verify check. This pre-flight principles pass ALSO runs on a bound blueprint that did not route through /audit (the /spec quality bar vets checkability, not principles); plans from /prep (source 1) skip it — /prep's Phase 7 AUDITOR already graded the plan. For EVERY self-derived check, record the answer as a named **false-pass trap** on its runbook step — one line, `false-pass: <what a passing check would look like while the goal is still unmet>` — the pre-registered "DISPROVES" half of the check (P11): naming the trap before any result exists is what turns the sanity question from rhetorical into checkable. At verify time, a result matching the trap's shape is FAIL, not PASS. This only fires on the bare path that lacks /prep's vetting.
 
 **Freeze the self-derived Success line.** A Success line from /prep is frozen (line 137). A self-derived Success line gets the **same** freeze: once written to the runbook it is never re-derived or edited mid-run — only the steps beneath it change. This stops "done" from quietly redefining itself toward whatever was achieved after a compaction.
 
@@ -1916,6 +1920,8 @@ Run-start:     <ISO timestamp — the provenance anchor>
      Jobs:      <id/PID + artifact path + expected duration>
                 per live background job (registered at launch)
      Reviewer:  n/a | pending | <last verdict>
+     Principles: n/a | pending @<ISO> | clean @<ISO>
+                | unswept @<ISO> (<reason>) | <n> violations
      Turn-end rule: checkpoint = Status: PARTIAL (checkpoint);
                 STUCK only when user-blocked
 ./auto-runs/<slug>/APPROACHES.md     append-only approach history
@@ -1965,6 +1971,15 @@ A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in
    tick clears it). SECOND consecutive flat tick → blocker-review.
 7. PENDING STEPS — runbook has runnable steps → execute the next
    one normally (re-entry hygiene on redo).
+   Principles-sweep rider (step-7 ticks ONLY; never while Reviewer:
+   is pending): every 3rd tick (today's spend counter divisible by
+   3), if DELIVERABLE edits landed since the last sweep's ISO stamp
+   (log entries after the stamp showing Edit/Write/mutating Bash on
+   files OUTSIDE auto-runs/), dispatch the principles-sweep (below)
+   alongside normal execution. `Principles: pending @<ISO>` enforces
+   one sweep at a time — but a pending stamp older than one sweep
+   window (~3 ticks), or found on resume, is STALE: set
+   `unswept @<ISO> (stale)`, one log line, eligible to re-dispatch.
 8. DRY/PARKED/BLOCKED → increment Round FIRST (post-increment K>3
    → STUCK-user with the ledger; = 3 real re-attack rounds) →
    dispatch blocker-review → act on its verdict via the constraint
@@ -1981,7 +1996,7 @@ The Stop hook releases a turn only on DONE / STUCK / PARTIAL. So, in an armed se
 
 - The hook's stderr reflex ("do not return control until DONE or STUCK") is SATISFIED by checkpoint-then-stop — never escape via a false STUCK: a false STUCK reads as terminal and kills the guardian with the goal unmet (the worst failure this section defines). The runbook's `Turn-end rule` line carries this across compaction.
 - Esc-interrupt recovery: a turn killed before its flip-back costs exactly ONE hook-dragged turn (which arms + checkpoints), then frees. Designed recovery, not a bug.
-- The hook enforces `Refuter:` on DONE but not `RedTeam:` — model discipline + the runbook field carry that obligation.
+- The hook enforces `Refuter:` on DONE but not `RedTeam:` or `Principles:` — model discipline + the runbook fields carry those obligations.
 - Between ticks the runbook always reads PARTIAL, so a user who repurposes the session is never dragged — their turns release instantly.
 
 ### Blocker-review — the fresh-eyes subagent
@@ -1996,6 +2011,41 @@ Brief: *"You did not do this work. Decide: (a) FALSE-BLOCKER — the run can leg
 - REAL-machine → slow-heartbeat: re-arm at 30-60 min; `since` = FIRST seen, never reset by flaps; two clear probes apart before resuming; 24h unresolved → STUCK-user (a dead dependency is an incident, not a wait).
 - **A REAL-machine blocker with a known recovery path is NEVER a user decision** (incident 2026-08-16, gemini-fallback-live-023001: run parked itself on an "A/B?" menu where A was the protocol's own prescribed path). The run CONTINUES on the recovery path automatically. A bar-lowering shortcut ("accept the partial proof, skip ahead") may be OFFERED as a non-blocking aside in the checkpoint report — but the run keeps driving toward the frozen Success line without waiting for an answer. Parking a legal path to await permission is a menu-stall (violates HI #1 + Principle 5); only a genuine contract dead-end or user-only supply justifies waiting.
 - Subagents unavailable → same-context skeptic pass, explicitly marked as the weaker fallback.
+
+### Principles-sweep — the mid-run compliance check (fresh eyes)
+
+_(Added 2026-08-18 by user directive: the guardian should verify the principles are actually being FOLLOWED mid-run, not just that progress is happening. Survived one AUDITOR + RED-TEAM round; the bounds below are their fixes.)_
+
+Fires only on runs whose deliverable is code (build/repair chains — the driver sets `Principles: n/a` at runbook generation for no-code deliverables, flipping it to sweep-eligible on the first deliverable code edit), on the step-7 rider's schedule. Deliverable edits only: files under `auto-runs/` (runbook, PROGRESS, spend, logs, shots) are NEVER part of the trigger or the changed-set — the guardian does not sweep its own bookkeeping. Blocked/step-8 ticks are consciously unswept (blocker-review owns those); their edits are caught at the next step-7 window.
+
+Dispatch ONE fresh general-purpose subagent with a read-only probe license. Hand it: the deliverable files changed since the last sweep's ISO stamp (from log entries AFTER that stamp — the stamp, not a ~30-line tail, bounds the read), GOAL.md, and this fixed checklist — nothing else:
+
+```
+1. HEAVEN'S NET — recovery/error handling keys to evidence-mapped
+   failure classes, never "symptom string X → do Y"; unmatched or
+   assumed signals are captured, parked, fail loud — never
+   guess-classified (canonical: /error-recon, "Heaven's Net").
+2. EVIDENCE-ONLY — no success declared from labels/exit codes
+   alone; verdicts rest on verified output or independent signals;
+   nothing assumed.
+3. RE-ENTRY HYGIENE — every retry/resume rolls back residue →
+   re-asserts the precondition → invalidates downstream before redo.
+4. NO SILENCED FAILURES — no bare except/pass, no unbounded retry,
+   failures surfaced by count, flight-recorder capture on unknowns.
+5. KISS — no frameworks/abstractions the task didn't earn.
+```
+
+Brief: *"You did not write this code. For each checklist item return CLEAN or VIOLATION with file:line evidence read from disk. A VIOLATION is a concrete breach, not a style nitpick. Do not rubber-stamp."*
+
+**Verdict handling — bounded at every exit:**
+
+- **Mtime validation first.** Before acting on findings, the DRIVER checks them against current file mtimes: a finding citing a file that changed after the sweep read it is discarded with one log line (stale read, not evidence).
+- **Self-contained violation steps.** Each surviving VIOLATION appends as a fix-mode step whose text carries the checklist item + file:line + the quoted evidence + a verify checkable WITHOUT re-sweeping. A violation step is EXEMPT from constraint-compass check (a) — the five checklist items are standing quality constraints, not Success-line work — while (b) Never-do and (c) no-repeat still apply in full.
+- **Dedupe + cumulative cap.** A (checklist-item, file) pair a prior sweep already ruled on is never re-flagged (ruled pairs mirror to PROGRESS.md); max 5 sweep-appended steps per run — beyond the cap, findings go to the Notes' Open Questions as report-only. Sweeps must never become the reason a run can't end.
+- **Won't-fix exit.** A violation step that contradicts a recorded Design Decision, or that parks after honest attempts, may be closed **WAIVED** (intentional design / won't-fix — cite the evidence) by the driver or blocker-review; WAIVED counts as resolved for the all-steps gate and lands in Open Questions. A checklist misread must never drive a goal-met run to STUCK-user.
+- **The field never sticks at pending.** CLEAN → `Principles: clean @<ISO>`. A sweep with no evidence citations is UNRESOLVED → retry once at the next window; a second failure, an errored dispatch, or a never-returned result → `unswept @<ISO> (2 failures | error | stale)`, one log line, later windows may try again.
+- **At the Terminal Refuter Gate:** deliverable edits newer than the last sweep stamp → annotate the field `clean @<ISO>, unswept tail` and say so in the final report (the refuter-brief Heaven's Net line covers recovery code) — a stale `clean` must never read as full coverage. A `pending` at gate entry follows the staleness rule above: it never blocks DONE silently and never waits unbounded.
+- The sweep never pauses the tick's normal work and is never a user gate.
 
 ### Constraint compass — no winning by cheating
 
@@ -2074,7 +2124,7 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 - a **baseline "before" reference if one exists** (git HEAD, a pre-change snapshot, the prior output dir) — part of the yardstick, so the refuter can diff the deliverables against it and flag unexplained or out-of-scope changes; greenfield builds have no baseline, so don't fabricate one (added 2026-06-14),
 - the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks).
 
-Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13).
+Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13). When the deliverable contains recovery/error-handling code, add: *"Is any handler keyed to a symptom string instead of an evidence-mapped failure class, or does any path act on an assumed/unproven signal? (Heaven's Net — canonical in /error-recon.) Either is a BLOCKER."*
 
 ### RED-TEAM rider — unattended / stateful deliverables
 
