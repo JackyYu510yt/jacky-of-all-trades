@@ -19,7 +19,7 @@
 - [Pick-from-options as default](feedback_pick_from_options.md) — show 3-4 labeled variants and let user pick; don't ask abstractly
 - ["Push to git" implies setup permission](feedback_push_to_git_implies_setup.md) — "push to git" includes setting local user.email/user.name; don't gate on a separate ask
 - [Autonomous engine, optional startup gate](feedback_startup_gate_autonomous_engine.md) — engine runs blind, no input() mid-pipeline; startup gate is optional (some scripts auto-detect from inputs)
-- [Structural fix vs patch](feedback_structural_fix_vs_patch.md) — DONE only if next run, different input, no Claude in loop, doesn't hit same failure
+- [Structural fix vs patch](feedback_structural_fix_vs_patch.md) — DONE only if next run, different input, no Claude in loop, doesn't hit same failure; design-time: establish preconditions, don't filter for them — no band-aids unless explicitly asked (codified: /auto HI #14, /spec structural bar, /prep AUDITOR item 6)
 - [/auto has no phase gates](feedback_auto_no_phase_gates.md) — under /auto, skill phase boundaries are not confirmation gates; only DONE or STUCK ends the loop
 - [Function-author subagent](feedback_function_author_subagent.md) — /auto never one-shots load-bearing functions; dedicated author subagent on RISKY/core + escalation after 2 failed fixes (codified in /auto 2026-08-15)
 - [/auto Stop-hook enforcement](project_auto_stop_hook_enforcement.md) — ~/.claude/hooks/auto-stop-block.py blocks Stop while a runbook exists without Status DONE/STUCK; harness-level autonomy without /goal typing
