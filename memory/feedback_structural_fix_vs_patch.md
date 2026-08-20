@@ -1,9 +1,9 @@
 ---
 name: Structural fix vs patch — the next-run-without-Claude test
-description: A fix is structural only if the next run, on a different input, with no Claude in the loop, doesn't hit the same failure mode. Anything else is a patch. Design-time corollary — establish preconditions, don't filter for them; no band-aids unless the user explicitly asks.
+description: A fix is structural only if the next run, on a different input, with no Claude in the loop, doesn't hit the same failure mode. Anything else is a patch. Aim at the right fix from the start — structural strengthening by default; no band-aids unless the user explicitly asks.
 type: feedback
 originSessionId: 28253a76-4221-42b2-b184-e3b62434e2f4
-modified: 2026-08-20T14:30:43.309Z
+modified: 2026-08-20T15:40:35.735Z
 ---
 The user's operational definition of "DONE" for any repair:
 
@@ -24,7 +24,7 @@ A **structural fix** changes the system so the condition no longer exists. The s
 
 **Why:** The user runs long-horizon pipelines unattended. A patch ships a fix that depends on Claude (or a human) being present next time. The user's actual standard is: I authorize the run, I walk away, the script handles every recurrence of every known failure mode it has already seen.
 
-**Design-time corollary — establish, don't filter (added 2026-08-20, cohort incident):** The band-aid shape shows up *before* any failure, at design time: a mechanism needs a precondition (logged-in, warmed-up, non-empty, built) and the design **selects inputs that already satisfy it** instead of **establishing it** on whatever input arrives. That works exactly until the pre-qualified pool runs dry, then the same failure returns. Incident: the cohort keeper's "promote a spare that's already logged in" fix — user's verdict: band-aid; the structural version logs in + clean-slates ANY account as part of promotion, so every spare is promotable. User's explicit rule (2026-08-20): *"don't do band-aids unless specifically asked to. Do right fixes that structurally strengthen."* If the user does explicitly request a quick patch, ship it labeled `BAND-AID (user-requested)` with the structural version named beside it.
+**Design-time corollary — AIM at the right fix (added 2026-08-20, cohort incident):** The next-run test above grades a fix after the fact; the user's actual rule sets the AIM before building: *"don't do band-aids unless specifically asked to. Do right fixes that structurally strengthen"* (verbatim, 2026-08-20). The target of any fix is the version that removes the condition that produced the failure — chosen at design time, never "band-aid now, upgrade later," never a band-aid presented as the fix. A band-aid at design time looks like: a special case, a narrowed scope, a workaround routed around the broken part — or the filter shape: a mechanism needs a precondition and the design selects inputs that already satisfy it instead of establishing it on any input. Incident: the cohort keeper's "promote a spare that's already logged in" fix — user's verdict: band-aid (dies when no logged-in spare exists); the right fix logs in + clean-slates ANY account as part of promotion, so every spare is promotable. If the user does explicitly request a quick patch, ship it labeled `BAND-AID (user-requested)` with the structural version named beside it.
 
 **The smoke-test carve-out (the one allowed use of a patch):** A one-shot "make it work once" patch is legitimate *as scaffolding* — to prove a hypothesis, unblock a probe, or smoke-test the pipeline end-to-end (serves [[feedback_probe_dont_assume]]). It is never the deliverable. The moment the throwaway patch works, the job is NOT done — it has earned the evidence to go heal the structural cause. Patch to learn, then climb to the structural layer and fix it there; the patch comes out (or becomes the real fix) before DONE. Shipping the smoke-test patch *as* the repair is exactly the drift the next-run-without-Claude test catches. The end goal is a healthy tool that survives future runs — not a specific output a bypass produced this once.
 

@@ -574,13 +574,13 @@ did NOT write. Your job is to break it, not bless it. Evaluate:
    failure state it fails to distinguish (signed-out, empty output,
    stale cache) — a check that cannot say NO merely confirms the
    current assumption.
-6. Band-aid scan (establish, don't filter): does any mechanism meet a
-   precondition by SELECTING inputs that already satisfy it
-   (already-logged-in, already-warm, already-built) instead of
-   ESTABLISHING it on whatever it's given? For each hit: name the
-   exhaustion scenario (the pre-qualified pool runs dry — same failure
-   returns) and the structural version (the mechanism logs in / warms
-   up / rebuilds as part of its own operation). A band-aid survives
+6. Band-aid scan (aim at the right fix): is any mechanism a band-aid —
+   it neutralizes one instance of a failure while the condition that
+   produces it survives (a special case, a narrowed scope, a workaround
+   around the broken part, or filtering for inputs that already satisfy
+   a precondition instead of establishing it on any input)? For each
+   hit: name the scenario where the same failure returns, and the
+   structural version that removes the condition. A band-aid survives
    review only if the user explicitly requested a temporary patch.
 Return specific, actionable defects ranked by severity — not approval.
 For each: what's wrong, why it bites, and the concrete fix.

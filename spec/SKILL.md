@@ -208,12 +208,13 @@ Log empty):
      failures, checkpoints, no mid-run input, failures reported by count) — known
      failures swept against the 10-category RED-TEAM scenario seed (canonical
      brief in the /audit skill).
-     Structural bar (establish, don't filter): each criterion must hold via a
-     mechanism that ESTABLISHES its own preconditions on any input (logs in,
-     warms up, resets, rebuilds) — never one that filters for inputs already
-     satisfying them. A criterion met only while a pre-qualified pool lasts
-     ("promote an already-logged-in spare") is a band-aid, not success; band-aid
-     designs enter the spec only when the user explicitly asked, labeled
+     Structural bar (aim at the right fix): each criterion must hold via a
+     mechanism that removes the failure condition itself — a structural fix,
+     never a band-aid that neutralizes one instance while the producing
+     condition survives (special case, narrowed scope, or filtering for inputs
+     that already satisfy a precondition instead of establishing it on any
+     input, e.g. "promote an already-logged-in spare"). Band-aid designs enter
+     the spec only when the user explicitly asked, labeled
      BAND-AID (user-requested) with the structural version named beside it. -->
 - <...>
 
