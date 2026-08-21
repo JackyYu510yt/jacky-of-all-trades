@@ -31,6 +31,32 @@ Three doors in. Detect which from the invocation; if genuinely ambiguous, ask on
 
 Witnesses that disagree don't fight it out by rank — they trigger an output check, and the disagreement itself gets recorded in the map as evidence.
 
+## Hard Sources of Truth — the consensus bar (added 2026-08-20)
+
+**The rule.** Never trust any single system or signal 100%. Every verdict that drives an action (bench, cap, abort, SUCCESS, fleet-down) reaches CONSENSUS: two independent signals agree, and at least one is a HARD source of truth.
+
+**What counts as HARD** (cannot lie about what it is):
+
+- the artifact itself on disk (files, sizes, contents)
+- a ledger row that survives close-and-re-read
+- behavior you measured yourself (the duration probe)
+
+**What is always SOFT** (can lie, drift, or double-report):
+
+- messages, banners, labels, headers, exit codes
+- the system's own bookkeeping: counters, tallies, running totals
+
+**The carve-out.** Where no hard source CAN exist for a claim (a soft block leaves no artifact — the failure's whole nature is "nothing got made"), the map entry declares it explicitly and takes conservative handling — never a silent single-soft pass. This is Rule 3's single-signal exemption with teeth: the absence of a hard anchor is itself recorded evidence, not an unspoken default.
+
+**Counter integrity.** Derived state — counters, tallies, running totals — is SOFT even though the system wrote it. A counter may gate a verdict only with:
+
+(a) **ONE writer per fact** — exactly one code path records each event, and
+(b) **reconciliation vs the artifact** — count the files, not the tally, on a periodic cross-check.
+
+Mismatch → the counter is an UNKNOWN signal: capture, park, stop loud, bench nobody off it.
+
+**Worked example (incident 2026-08-20).** AI-Studio images were fed twice into the health tracker → accounts "confirmed" daily caps at ~13 real images instead of 25, and fleet-down verdicts tripped at half their designed evidence. Tally (soft) vs files on disk (hard) never reconciled — consensus would have caught it on day one.
+
 ## The Anti-Guessing Rules (always on)
 
 Born from real misreads (umbrella "FAILED/cooked" labels, a transitional URL treated as a verdict, hidden HTML contradicting the visible page, 498 ledger rows that were really 192 accounts). Hard rules, not suggestions:
