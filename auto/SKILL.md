@@ -419,7 +419,7 @@ Status:
   Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
 
-`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate). `Principles:` rides the same way for code deliverables — the principles-sweep (Goal-Guardian section) stamps it mid-run; only its appended violation STEPS gate DONE (via all-steps-verified), never the field itself.
+`Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate) — unless a FnReview `open` line or a fix-trigger `unreviewed` stamp forces the refuter, then `n/a → pending` (see FnReview). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate). `Principles:` rides the same way for code deliverables — the principles-sweep (Goal-Guardian section) stamps it mid-run; only its appended violation STEPS gate DONE (via all-steps-verified), never the field itself.
 
 ### Per-step lifecycle
 
@@ -461,7 +461,13 @@ Fix mode is the ONLY time /auto deviates from the runbook. When a step's verify 
    the next; NEVER edit on a disproved or untested cause (fast path
    exempt).
 3. Restore the precondition (Re-entry hygiene), then apply + re-run the step
-4. Verify pass → Mode → NORMAL, mark DONE, advance
+4. Verify pass → (if this fix mode was opened by a FnReview finding: log
+   `aim-test:` FIRST — a `no` = failed approach, stay ROTATING, no dispatch)
+   → Mode → NORMAL; if the step edited a def (fix mode IS FnReview's
+   fix-trigger): on a /prep-derived runbook where an AUDIT step follows, stay
+   suppressed — the review fires at AUDIT (never at a redone Implement/REAL);
+   otherwise step → VERIFIED (FnReview pending) — DONE only when the review
+   returns clean. No def edited → mark DONE, advance
 5. 5 fails       → Mode → NORMAL, step PARKED, advance to next
                    independent step (Park, don't halt)
 ```
@@ -568,7 +574,7 @@ Steps must be **atomic and verifiable**. "Implement the feature" is the GOAL, no
 
 If a step's verify can't be expressed as an observable check, the step is not atomic enough — split it.
 
-**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals, so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. The same sub-agent, in the same dispatch, also grades the PLAN against the principles-sweep's fixed 5-item checklist (Heaven's Net / evidence-only / re-entry hygiene / no silenced failures / KISS — see Principles-sweep under Goal-Guardian): a planned step that bakes in a symptom-keyed handler, an assumed signal, or a retry with no rollback gets revised before execution, exactly like a weak verify check. This pre-flight principles pass ALSO runs on a bound blueprint that did not route through /audit (the /spec quality bar vets checkability, not principles); plans from /prep (source 1) skip it — /prep's Phase 7 AUDITOR already graded the plan. For EVERY self-derived check, record the answer as a named **false-pass trap** on its runbook step — one line, `false-pass: <what a passing check would look like while the goal is still unmet>` — the pre-registered "DISPROVES" half of the check (P11): naming the trap before any result exists is what turns the sanity question from rhetorical into checkable. At verify time, a result matching the trap's shape is FAIL, not PASS. This only fires on the bare path that lacks /prep's vetting.
+**Self-derived runbooks (source 4) get a verify-check sanity pass.** When the runbook came from a /prep file (source 1), its verify checks were already vetted by /prep's auditor. When /auto wrote the checks itself from the user's one-liner, nothing vetted them — and the Terminal Refuter Gate is *skipped* for machine-checked goals (barring the FnReview carve-outs), so a weak check is the last line of defense and there's no net under it. Before executing a self-derived runbook, run one cheap sanity pass (a fresh sub-agent, no artifacts yet): hand it the Goal + Success line + the proposed verify checks and ask *"could any of these checks pass while the goal is still unmet?"* (the P1 test-at-scale failure — `import foo` that never calls `foo`, asserts a file exists but not its content, greps a string the script prints unconditionally). Any "yes" → tighten that check before running. The same sub-agent, in the same dispatch, also grades the PLAN against the principles-sweep's fixed 5-item checklist (Heaven's Net / evidence-only / re-entry hygiene / no silenced failures / KISS — see Principles-sweep under Goal-Guardian): a planned step that bakes in a symptom-keyed handler, an assumed signal, or a retry with no rollback gets revised before execution, exactly like a weak verify check. This pre-flight principles pass ALSO runs on a bound blueprint that did not route through /audit (the /spec quality bar vets checkability, not principles); plans from /prep (source 1) skip it — /prep's Phase 7 AUDITOR already graded the plan. For EVERY self-derived check, record the answer as a named **false-pass trap** on its runbook step — one line, `false-pass: <what a passing check would look like while the goal is still unmet>` — the pre-registered "DISPROVES" half of the check (P11): naming the trap before any result exists is what turns the sanity question from rhetorical into checkable. At verify time, a result matching the trap's shape is FAIL, not PASS. This only fires on the bare path that lacks /prep's vetting.
 
 **Freeze the self-derived Success line.** A Success line from /prep is frozen (line 137). A self-derived Success line gets the **same** freeze: once written to the runbook it is never re-derived or edited mid-run — only the steps beneath it change. This stops "done" from quietly redefining itself toward whatever was achieved after a compaction.
 
@@ -1224,7 +1230,7 @@ These never bend.
 
 4. **Never repeat a failed approach.** Each retry must differ from prior attempts in at least one concrete variable (different parameter, different prompt, different command flag, different input). If five distinct approaches have all failed, declare STUCK and stop. Don't burn budget on cosmetic variations. (A FnReview finding is a NEW failure signature: it resets the step's 5-approach budget for that review round — ≤2 rounds per guardian pass — and a fix that fails the driver's own HI #14 aim-test counts as a failed approach without a dispatch. See FnReview.)
 
-5. **Stop on DONE or STUCK-user, not on "looks good enough."** DONE means the actual success condition is met and verified against the pinned contract (circumstances + never-dos included). STUCK-user means the run is genuinely blocked on something only the user can supply — a step merely exhausting its 5 approaches gets PARKED and re-attacked by the guardian (up to 3 rounds), not declared terminal. A step PARKED by a round-2 FnReview finding (`open …`) is a DONE gate — the refuter must rule on it (BLOCKER or cited WAIVED) before DONE, even on a machine-checked goal.
+5. **Stop on DONE or STUCK-user, not on "looks good enough."** DONE means the actual success condition is met and verified against the pinned contract (circumstances + never-dos included). STUCK-user means the run is genuinely blocked on something only the user can supply — a step merely exhausting its 5 approaches gets PARKED and re-attacked by the guardian (up to 3 rounds), not declared terminal. A step PARKED by a round-2 FnReview finding (`open …`) is a DONE gate — the refuter must rule on it (BLOCKER or cited WAIVED) before DONE, even on a machine-checked goal; and a FnReview finding resets the step's 5-approach budget for that review round, gated by the driver's HI #14 aim-test (≤2 rounds per guardian pass — still bounded, still never "looks good enough").
 
 6. **Honest reporting.** If 24 of 269 things failed, the report says 24 failed. Not "245 succeeded" with the rest swept under. The user can decide what to do with partial success — Claude's job is to surface it accurately.
 
@@ -1412,10 +1418,12 @@ Tick fires → new TURN in this same session → /auto re-invoked by the pinned 
        - Bash with run_in_background=true for long ones
        - Monitor on the log to wait for completion signal
   7. Verify: run the step's verify check
-       Pass → if the step triggers a FnReview (AUTHOR function / fix-trigger /
-              AUDIT-step executor) → VERIFIED, dispatch the review; DONE only
-              when it returns clean (finding → BLOCKED on the producing step,
-              fix mode). Otherwise mark step DONE in runbook, append log line
+       Pass → if the step triggers a FnReview (AUTHOR function / fix-trigger;
+              on /prep runbooks suppressed at Implement/REAL — it fires at the
+              AUDIT step, where the review IS the verify and is dispatched at
+              step entry) → VERIFIED, dispatch the review; DONE only when it
+              returns clean (finding → BLOCKED on the producing step, fix mode).
+              Otherwise mark step DONE in runbook, append log line
        Fail → enter fix mode, /repair sub-loop, rotate up to 5x
   8. Update auto-runs/<slug>/RUNBOOK.md and auto-runs/<slug>/logs/run.log
   9. Write auto-runs/<slug>/PROGRESS.md with one-line "this tick did X" summary
@@ -1596,10 +1604,23 @@ Every load-bearing function — and every **function-level fix** — gets checke
     Arm-2 exclusions (KISS): defs whose run-start body is a STUB (pass / ... /
     raise NotImplementedError / docstring-only — completing a scaffold is
     building), and TEST defs (test_* / *_test — a RED rewrite is covered by its
-    own verify). NOT excluded: prep-listed functions — a planned rewrite IS a fix.
+    own verify), and SYMBOL RENAMES — a step whose diff is token-substitution
+    only (an identifier / function name replaced everywhere; no statement added,
+    removed, or reordered; AND the old token no longer resolves anywhere after
+    the step — the def/variable itself was renamed; a swap to a DIFFERENT
+    existing symbol is a retarget = rewrite, arm 2 fires) is a non-function
+    step even though callers' bodies change: it does not trigger arm 2; the
+    decision is made from the step's Edit old/new strings or the logged
+    sed/replace expression and recorded on the `Edit applied:` line (disk, not
+    memory); afterwards the driver re-baselines the run-start snapshot for the
+    touched files and carries affected `clean`/`WAIVED` stamps to the new hash
+    `(inherited)`, same as a renamed function's own line. NOT excluded:
+    prep-listed functions — a planned rewrite IS a fix.
 Never fires for: INLINE happy-path functions (the sweep covers them), steps that
-write no function, /auto's own bookkeeping. A Pattern-1 rename/config run
-dispatches zero reviews. Not gated by the guardian's Jobs: check.
+write no function (config, constants, data moves, symbol renames, runs of
+existing code), /auto's own bookkeeping. So a Pattern-1 rename/config run
+dispatches zero reviews — by the rename exclusion above, not by assertion. Not
+gated by the guardian's Jobs: check.
 ```
 
 The reviewer returns a verdict **per function**; the driver names the functions it edits on the `Edit applied: <file>:<fn>` log line at edit time and reads them back at dispatch (fallback: every def in touched files whose hash differs from its reference — the later of the run-start snapshot and its `clean` stamp — else all defs). A changed-set >5 functions that times out is retried as ≤5-function batches (one "retry"); a second timeout stamps only the unreturned batches `unreviewed`.
@@ -1680,7 +1701,7 @@ COMPLETENESS (COMPLETE or BAND-AID, with evidence):
 
 **State — on paper, compaction-proof.** Per-function review state rides on the runbook **Functions block** line. **Non-build runs** have no block today — the first step that writes or rewrites any def **creates it** (write-time checklist label; rewritten defs tagged `(fix)`); the write-time checklist runs on every new def on every run shape (the one-shot classification *reviewer* stays build-only; `Classified: n/a` on non-build runs). An AUTHOR label earned on a non-build run also triggers the function-author dispatch under the one-author bound, and **any author dispatch for a fix-trigger def carries the fix items** (failure signature, hypothesis list, APPROACHES.md) at write time, not only on escalation.
 
-**Run-start def snapshot.** Before the FIRST edit to any deliverable file in the run, record that file's per-def hashes (the hasher below, no other) in PROGRESS.md (`snapshot: <file> <fn> sha:<8> …`) — the reference for arm 2 and the fallback; a def absent from it is new code. PROGRESS.md already carries long-lived sections (baseline, mirrors); snapshot + FnReview ledger join them as named sections that every tick's PROGRESS write **section-merges, never overwrites**.
+**Run-start def snapshot.** Before the FIRST edit to any deliverable file in the run, record that file's per-def hashes (the hasher below, no other) in PROGRESS.md (create it if the run shape has none — every run has it under the Goal-Guardian rules) (`snapshot: <file> <fn> sha:<8> …`) — the reference for arm 2 and the fallback; a def absent from it is new code. PROGRESS.md already carries long-lived sections (baseline, mirrors); snapshot + FnReview ledger join them as named sections that every tick's PROGRESS write **section-merges, never overwrites**.
 
 **The hasher (one procedure, same result on every tick):** `.py` — slice the source lines EXPLICITLY from `min(d.lineno for d in node.decorator_list)` (or `node.lineno` with no decorators) through `node.end_lineno` of the `ast` FunctionDef/AsyncFunctionDef — NOT `ast.get_source_segment(node)`, which on Python ≥3.8 starts at the `def` line and silently drops decorators (verified 2026-08-22 on 3.11) — replace the **def-line name token only** with `_` (recursive self-calls unmasked — a recursive rename reads stale, accepted as conservative), normalise line endings, strip TRAILING whitespace only (never indentation — a dedent changes control flow), sha256 → first 8 hex. Non-Python deliverables: whole-file hash, file treated as ONE unit (coarser, never wrong; accepted residual: a neighbour's edit there does invalidate). Removing `@retry` or changing a default arg invalidates a stamp; a rename or a neighbour's edit does not. "Edited after the stamp" is decided from disk — file mtime as the cheap pre-check, hash difference as the verdict (HI #8) — never from this run's log (it cannot see a human's or another run's edits).
 
@@ -2029,7 +2050,7 @@ Halting the whole run for one stuck step is the worst version of pause-and-ask. 
 
 This is P3 example J applied: park and flag, never halt and ask.
 
-**The all-parked checkpoint (never freeze, never quit).** When no step is PENDING or IN PROGRESS — every remaining step is DONE or PARKED — the run is NOT terminal (Goal-Guardian rule, 2026-08-15):
+**The all-parked checkpoint (never freeze, never quit).** When no step is PENDING or IN PROGRESS — every remaining step is DONE or PARKED (a `VERIFIED (FnReview pending)` step is neither: the pending check dispatches its review first) — the run is NOT terminal (Goal-Guardian rule, 2026-08-15):
 
 ```
 - Success condition met (despite parked steps)  → refuter gate, then Status: DONE
@@ -2292,7 +2313,7 @@ Before /auto writes `Status: DONE`, one fresh agent tries to prove it is NOT don
 
 Only when "done" is a **judgment call**. If the runbook's success line is a deterministic machine check that already passed (`pytest` exits 0, checksum matches, file exists at expected size), **SKIP** the refuter — that verify check IS the independent oracle, and self-preference can't bias a green test. Fire it when success is judgment-shaped: "pipeline handles real input", "output looks right", "report is complete", "no regressions in adjacent features". **Before this rule is consulted, on every DONE path (inline end, guardian SUCCESS PROBE, the skip path): the FnReview pending check** — no step `VERIFIED (FnReview pending)`, no `FnReview: k pending / n in fix`; a carried review is dispatched and returned first. **Two FnReview carve-outs override the SKIP:** a Functions line reading `open …` (a round-2 VIOLATION/BAND-AID that parked) or a fix-trigger function stamped `unreviewed` forces the refuter even on a machine-checked goal — `Refuter: n/a → pending` (the RedTeam precedent, so the Stop-hook carrier holds). See FnReview "Interplay with the Terminal Refuter Gate".
 
-The **RED-TEAM rider** (below) has its own, independent firing rule: it fires on the deliverable's NATURE — unattended, long-running, stateful, or concurrent — even when the refuter is skipped. A green deterministic test proves the happy path ran once; it says nothing about credits dying mid-write, a flag flipping between check and act, or a half-written folder on re-entry. Machine-checked goal + unattended deliverable ⇒ refuter skipped, RED-TEAM still fires alone (the runbook `RedTeam:` field carries the obligation).
+The **RED-TEAM rider** (below) has its own, independent firing rule: it fires on the deliverable's NATURE — unattended, long-running, stateful, or concurrent — even when the refuter is skipped. A green deterministic test proves the happy path ran once; it says nothing about credits dying mid-write, a flag flipping between check and act, or a half-written folder on re-entry. Machine-checked goal + unattended deliverable ⇒ refuter skipped (barring the FnReview carve-outs), RED-TEAM still fires alone (the runbook `RedTeam:` field carries the obligation).
 
 ### Sequence (refute first, flip second)
 
