@@ -847,7 +847,7 @@ AUDIT    P4 checkpoint vs the END GOAL card. One sentence:
          completeness review" — pointer, not a copy.
 ```
 
-**SAFE function — Green + smoke check.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file. A SAFE function that was **fixed** — rewritten to clear a failed GREEN / REAL / AUDIT, or it rewrote a def that existed before this build — gets the FnReview too; fixes are where band-aids are born (/auto FnReview "fix-trigger"). Under /auto, every AUTHOR-labelled function is reviewed regardless of RISKY/SAFE (the /auto rule governs there).
+**SAFE function — Green + smoke check + FnReview.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file. Then the same FnReview as a RISKY function's AUDIT (Option B, 2026-08-22: every function is reviewed, not just the load-bearing ones — reviews for several functions fan out in parallel, so it costs wall-clock, not certainty); a SAFE function that was **fixed** — rewritten to clear a failed GREEN / REAL, or it rewrote a def that existed before this build — carries the fix packet too (/auto FnReview "fix-trigger").
 
 **P7 guards on every cycle (RISKY and SAFE alike).**
 
