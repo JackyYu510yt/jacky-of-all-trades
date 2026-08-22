@@ -118,54 +118,10 @@ The repair loop is then:
                        instance. If it does, the cause was locked
                        at the trigger — loop back to step 3 and
                        climb another layer.
- 9. Audit            → DONE / PARTIAL / STUCK verdict — EXECUTED BY
-                       FnReview (added 2026-08-22): a fresh-context
-                       reviewer, not the brain that wrote the fix,
-                       reads the changed function(s) from disk with
-                       the fix packet (failure signature, the step-2
-                       hypothesis list + step-3 Lock evidence,
-                       rejected approaches) and returns, per item
-                       with a file:line citation: the 5 principles
-                       (Heaven's Net / evidence-only / re-entry
-                       hygiene / no silenced failures / KISS) + the
-                       4 completeness tests — does the condition that
-                       produced the failure still exist (HI #16)?
-                       next run, different input, nobody watching
-                       (HI #17)? establish-vs-filter? does the fix
-                       target the CONFIRMED cause or route around the
-                       symptom (HI #18)? BAND-AID / VIOLATION → not
-                       DONE: loop back to step 2/3 as the finding
-                       warrants (a weak list → step 2; a wrong lock →
-                       step 3), finding = new evidence; bounded per
-                       /auto FnReview (fresh approach budget, ≤2 review
-                       rounds). Round 2 still BAND-AID → plain /repair
-                       ends PARTIAL with the finding under `Still off:`;
-                       under /auto the PRODUCING step (7, Integrate)
-                       carries PARKED, step 9 parks as its dependent,
-                       and the open finding is a DONE gate. Clean → the
-                       verdict stands. TIMING UNDER /auto is /auto's
-                       FnReview rule, never an extra dispatch: on a
-                       /prep-derived runbook the function's AUDIT step
-                       is the single executor (this step 9 does NOT
-                       dispatch separately — Mode B sub-loops included;
-                       if that AUDIT step is already DONE the rewrite
-                       re-opens it and the review fires there; a
-                       function with no AUDIT step gets the review at
-                       the writing step's verify); on a /repair-derived
-                       runbook (`/auto /repair`) step 9 IS the executor
-                       and the triggers are suppressed at steps 4–8
-                       (the step-4 standalone holds a copy of the
-                       unfixed def — standalone-harness defs are never
-                       reviewed). Plain /repair (no /auto): dispatch a
-                       fresh Agent subagent with the canonical brief;
-                       subagents unavailable → same-context skeptic
-                       pass, marked as the weaker fallback. Canonical
-                       mechanism, brief, bounds and stamps: /auto
-                       SKILL.md, "FnReview — per-function completeness
-                       review" — pointer, not a copy.
+ 9. Audit            → DONE / PARTIAL / STUCK verdict
 ```
 
-Every step is gated. If a step fails, loop back to the previous one — do not advance. The user only intervenes when a step refuses to clear after bounded effort (STUCK) or when a Hard Invariant trips. Step 9 is the one step the repairer does NOT grade itself — an independent reviewer does (self-preference bias bites hardest exactly when the fix is weakest).
+Every step is gated. If a step fails, loop back to the previous one — do not advance. The user only intervenes when a step refuses to clear after bounded effort (STUCK) or when a Hard Invariant trips.
 
 This is what makes repair runnable under `/auto`: the goal is checkable and every step has its own verify. The model can run the loop without pausing for guidance unless something genuinely blocks.
 
@@ -335,7 +291,6 @@ For a failure where the cause is genuinely obvious from the first read of the ev
 - Read the evidence.
 - Name the cause and the fix in one sentence each.
 - Verify with the smallest test that proves the fix (often a quick re-run of the failing case).
-- FnReview still fires if the fix changed a def body (a one-line fix inside a function is still a function-level fix — the reviewer answers "cause removed, or symptom hidden?" in seconds); a fix that touches no def (a constant, a config value, an import line) is exempt.
 - Report.
 
 Skip the standalone-repro phase ONLY when the fix is verifiably one line and verification is single-step. The first time you find yourself thinking "let me just try this" — you're past Quick. Drop to Standard.
@@ -462,10 +417,6 @@ PoC:                      <N passed / 0 failed>
 Actual usecase:           <prod spec in one sentence — N passed / 0 failed>
 Different-instance probe: <input/state used — same failure mode did
                             NOT fire — N passed / 0 failed>
-FnReview (step 9):        <clean sha:<8> @<ISO> [(same-context fallback)] |
-                            WAIVED (<citation>) | unreviewed (<reason>) —
-                            a BAND-AID/VIOLATION verdict means this
-                            report is not DONE>
 
 Verdict:                  SHIPPABLE
 ```
@@ -543,5 +494,4 @@ Hand back to user.
 - **One fix, one scope.** No refactoring while repairing. No silencing the failure.
 - **Lock the structural cause, not the proximate trigger.** Step 3 isn't satisfied until the climb-one-layer test ("if I fix this exact line, does the condition still exist?") returns NO. Keep climbing until it does.
 - **Discriminating tests, not confirming tests.** A probe must be able to say NO to the favorite hypothesis — the relevant alternatives investigated or explicitly ruled out before DONE.
-- **Step 9 is graded by someone else.** A fresh-context FnReview reads the fixed function(s) with the fix packet and rules principles + completeness (cause still exists? next run without Claude? establish-vs-filter? confirmed cause or routed around?); BAND-AID = not DONE, back to step 2/3. Canonical: /auto "FnReview".
 - **DONE / PARTIAL / STUCK.** Honest reports, every time.

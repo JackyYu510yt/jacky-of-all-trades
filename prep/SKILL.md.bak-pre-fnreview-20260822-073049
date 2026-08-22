@@ -813,41 +813,9 @@ AUDIT    P4 checkpoint vs the END GOAL card. One sentence:
          <next state>; here's the observable evidence."
          If the line doesn't draw to the goal, the function
          is drift — revert and rethink before moving on (P3).
-         EXECUTED BY FnReview — a fresh-context reviewer, not
-         the brain that wrote the function (added 2026-08-22):
-         it reads the function from disk and returns, per item
-         with a file:line citation, GOAL-TRACE (this sentence)
-         + the 5 principles (Heaven's Net / evidence-only /
-         re-entry hygiene / no silenced failures / KISS) +
-         the 4 completeness tests — does the condition that
-         produced the failure / the gap it closes still exist?
-         next run, different input, nobody watching? establish-
-         vs-filter? cause-lock (only when the function was
-         FIXED — otherwise a legal N/A)? The driver still
-         writes the AUDIT card itself (the P4 sentence, the
-         style-match line, Sibling notes) — FnReview's
-         CLEAN+COMPLETE is the condition that lets [A] check.
-         A VIOLATION / BAND-AID sends the function back to
-         GREEN (REAL + AUDIT re-run on the rewrite; bounded per
-         /auto FnReview — fresh approach budget, ≤2 review
-         rounds). Round 2 still failing → stop and surface the
-         finding to the user at the per-function "Does this
-         match what you pictured?" question (under /auto:
-         PARKED, open finding = DONE gate). Plain /prep (no
-         /auto): dispatch a fresh Agent subagent with the
-         canonical brief — same machinery as Phase 7's AUDITOR;
-         subagents unavailable → same-context skeptic pass,
-         marked as the weaker fallback. A finding
-         that would broaden the spec routes through the
-         spec-broadening stop below, and a recorded spec-card
-         decision is a valid WAIVED citation. Under /auto this
-         AUDIT step is the single FnReview executor — no extra
-         dispatch. Canonical mechanism, brief, bounds and
-         stamps: /auto SKILL.md, "FnReview — per-function
-         completeness review" — pointer, not a copy.
 ```
 
-**SAFE function — Green + smoke check.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file. A SAFE function that was **fixed** — rewritten to clear a failed GREEN / REAL / AUDIT, or it rewrote a def that existed before this build — gets the FnReview too; fixes are where band-aids are born (/auto FnReview "fix-trigger"). Under /auto, every AUTHOR-labelled function is reviewed regardless of RISKY/SAFE (the /auto rule governs there).
+**SAFE function — Green + smoke check.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file.
 
 **P7 guards on every cycle (RISKY and SAFE alike).**
 

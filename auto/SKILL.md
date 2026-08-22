@@ -1143,7 +1143,10 @@ Before generating the runbook, /auto MUST:
 
    The repair loop IS the runbook. /auto's job is to drive the loop
    without pausing for input — exactly the property /repair already
-   wants.
+   wants. /repair's step 9 (Audit) is executed by the FnReview (the
+   independent per-function completeness review) with the fix
+   packet; FnReview's triggers are suppressed at steps 4–8 so there
+   is exactly one dispatch per fixed function (see FnReview, "Timing").
 ```
 
 ### /auto on top of /prep + /repair
@@ -1589,12 +1592,14 @@ _(Added 2026-08-22 by user directive: "have the guardian occur per function comp
 
 Every load-bearing function — and every **function-level fix** — gets checked by a fresh pair of eyes **at the moment it completes**, before its step is DONE: (1) does it follow the principles (the sweep's 5 items), and (2) is it **COMPLETE** — a structural fix / whole function, not a band-aid (HI #14): after this code, does the condition that produced the failure still exist? Does it hold next run, different input, no Claude in the loop? Does it ESTABLISH its precondition on any input, or FILTER for inputs that already have it? A VIOLATION / BAND-AID stops the step from going DONE and re-enters fix mode on the step that wrote the code. The periodic principles-sweep stays as the catch-up net; this is per-function and immediate.
 
-**Trigger — one dispatch per step, at the step's verify PASS, when the step:**
+**Trigger — at the step's verify PASS, when the step wrote or rewrote ANY function (Option B, user decision 2026-08-22: "I'd rather be super sure than go back and fix stuff"):**
 
 ```
-(a) wrote or rewrote an AUTHOR-classed function (RISKY from /prep, promoted, or
-    checklist-YES at write time — the function-author label), OR
-(b) satisfies the FIX-TRIGGER, regardless of INLINE/AUTHOR label:
+(a) wrote or rewrote ANY function — AUTHOR or INLINE, happy path or not (the
+    former AUTHOR-only arm is retired; AUTHOR still matters for the author
+    sub-agent and for the AUDIT-step executor on /prep runbooks), OR
+(b) satisfies the FIX-TRIGGER — kept as its own arm because it changes the
+    PACKET (fix items + item 9) and the forced-refuter rule, not just "whether":
       fix-trigger := the step ran in fix mode (rotation, /repair sub-loop,
                      escalation re-dispatch)
                   OR the step REWROTE A DEF THAT EXISTED AT RUN START
@@ -1625,7 +1630,7 @@ gated by the guardian's Jobs: check.
 
 The reviewer returns a verdict **per function**; the driver names the functions it edits on the `Edit applied: <file>:<fn>` log line at edit time and reads them back at dispatch (fallback: every def in touched files whose hash differs from its reference — the later of the run-start snapshot and its `clean` stamp — else all defs). A changed-set >5 functions that times out is retried as ≤5-function batches (one "retry"); a second timeout stamps only the unreturned batches `unreviewed`.
 
-**Timing on /prep-derived runbooks — the FnReview IS the AUDIT step.** RISKY: `N+1 Implement → N+2 REAL → N+3 AUDIT`; SAFE-but-AUTHOR: `N+0 Implement → N+1 AUDIT`. The FnReview fires ONCE as the executor of that AUDIT step (after REAL — production-shaped evidence), and **both triggers are suppressed at every step preceding the function's AUDIT step** (Implement AND REAL), including after a fix-mode redo — the round-2 review fires at AUDIT again after REAL re-runs. The AUDIT step's own check ("traces to goal") is item 0 of the brief; the prep END GOAL / field-13 AUDIT card joins the packet. When the function met the fix-trigger on a preceding step, the AUDIT executor gets the fix packet and item 9 applies. SAFE-and-INLINE AUDIT steps stay driver-graded unless the function was fixed. Self-derived runbooks (no AUDIT step): the review attaches to the function-write step's verify.
+**Timing on /prep-derived runbooks — the FnReview IS the AUDIT step.** RISKY: `N+1 Implement → N+2 REAL → N+3 AUDIT`; SAFE-but-AUTHOR: `N+0 Implement → N+1 AUDIT`. The FnReview fires ONCE as the executor of that AUDIT step (after REAL — production-shaped evidence), and **both triggers are suppressed at every step preceding the function's AUDIT step** (Implement AND REAL), including after a fix-mode redo — the round-2 review fires at AUDIT again after REAL re-runs. The AUDIT step's own check ("traces to goal") is item 0 of the brief; the prep END GOAL / field-13 AUDIT card joins the packet. When the function met the fix-trigger on a preceding step, the AUDIT executor gets the fix packet and item 9 applies. SAFE-and-INLINE AUDIT steps stay driver-graded unless the function was fixed. **/repair-derived runbooks (`/auto /repair`, added 2026-08-22):** /repair's step 9 (Audit) IS the executor — `executor: audit-step`, item 0 graded against the Goal/Success line (no END GOAL card), dispatch log token `audit-step` — it runs with the fix packet (failure signature, step-2 hypothesis list + step-3 Lock evidence, rejected approaches), and both triggers are suppressed at steps 4–8 (Isolate through Step 2 — the step-4 standalone holds a copy of the NOT-yet-fixed def, so standalone-harness defs are exempt like test defs and never reviewed). A Mode-B /repair sub-loop inside a /prep step does NOT dispatch at its own step 9 — the function's AUDIT step stays the single executor; if that AUDIT step is already DONE, the rewrite re-opens it (→ PENDING on a real diff) and the review fires there; if the function has no AUDIT step at all (a Phase 9 integration step), the self-derived rule applies — the review attaches to the writing step's verify. Self-derived runbooks (no AUDIT step): the review attaches to the function-write step's verify.
 
 **Lifecycle — a step with a pending FnReview is not DONE.** New named state between IN PROGRESS and DONE, written on the step line:
 
@@ -1637,7 +1642,7 @@ PENDING     → PARKED (dependent of step N FnReview PARK)  (AUDIT + any consume
                                                           reason token `dependent:N`)
 ```
 
-When the VERIFIED step and the producing step differ (/prep runbooks), the **producing** step — the one whose `Edit applied: <file>:<fn>` line last wrote the function, never a fixed step number — carries BLOCKED/PARKED and the stamp; the AUDIT step goes → PENDING unconditionally (its verify IS the failed review), REAL/other consumers → PENDING on a real diff of the rewrite (HI #4). Never two BLOCKED steps for one finding. On a round-2 PARK the consumers park with it as dependents (no round 3, no re-run on the band-aid) and un-park together at guardian tick step 8 / refuter door 3.
+When the VERIFIED step and the producing step differ (/prep-derived runbooks: AUDIT vs Implement/REAL; /repair-derived: step 9 vs step 7 Integrate), the **producing** step — the one whose `Edit applied: <file>:<fn>` line last wrote the function, never a fixed step number — carries BLOCKED/PARKED and the stamp; the AUDIT step goes → PENDING unconditionally (its verify IS the failed review), REAL/other consumers → PENDING on a real diff of the rewrite (HI #4). Never two BLOCKED steps for one finding. On a round-2 PARK the consumers park with it as dependents (no round 3, no re-run on the band-aid) and un-park together at guardian tick step 8 / refuter door 3.
 
 **Resume / tick pickup of a VERIFIED step — no restore, no redo.** Check each function's current hash against the `sha:` on its `pending` stamp (the cheap intact-proof — not a re-run of a possibly long REAL verify): match → re-dispatch; differs → the step drops to IN PROGRESS and the normal door-2 restore + fix mode apply. Re-entry door 2 does NOT fire on an intact VERIFIED step. A dead-tick / Esc-killed pending is re-dispatched without consuming a round, at most twice (count = `FnReview dispatch:` lines with no `returned:` line); a pending carried without a dispatch (Pattern 3, window too short) is counted from `FnReview carried:` lines — after 2 carries the 3rd tick dispatches regardless of window with a tightened deadline; a timeout there stamps `unreviewed @<ISO> (carried ×2, timeout)` directly (skips retry-once — the tighter bound is the point). Third dead pickup → `unreviewed @<ISO> (dead-tick ×2)`. Bounded — never a wedge until the spend gate.
 
@@ -1694,7 +1699,7 @@ COMPLETENESS (COMPLETE or BAND-AID, with evidence):
 - **Fresh approach budget per review round + the aim-test gate.** `Approaches tried` resets for the re-opened step (5 per round). Before a re-opened step may re-enter VERIFIED / DONE, the driver runs the HI #14 aim-test on its fix and logs it — `aim-test: <condition> removed? yes — <how> | no` — a `no` (or an item-8 filter the driver can see itself) is a failed approach: rotation continues, no dispatch. Honest bound: **≤2 verify-passing, aim-test-passing attempts per step per guardian pass**, ≤5 approaches each. The aim-test is a cheap self-filter, not independence; the verify stays the oracle for "works", the FnReview for "complete".
 - **Bound: max 2 FnReview rounds per step per guardian re-attack round** (mirrors the refuter). Round-2 still VIOLATION/BAND-AID → the producing step is **PARKED**, stamp `open <finding> (round 2) → PARKED @<ISO>`; blocker-review / re-attack owns it (Round K/3). A guardian un-park + redo that passes verify is reviewed **again with a fresh 2-round allowance**; same after a refuter door-3 re-open. Finite: ≤6 review rounds per guardian pass × 4 passes = ≤24 per step, worst case; the ≤6-per-pass check is derived from `FnReview dispatch:` lines since the last Round increment.
 - **Open-finding DONE gate.** While any Functions line reads `open …`, `Status: DONE` is not written: the Terminal Refuter fires **even on a machine-checked goal** (the HI #11 override shape; `Refuter: n/a → pending` when forced — the RedTeam precedent — so the Stop-hook carrier holds), with the finding named. Forced brief adds: *"For each named open / unreviewed line return exactly BLOCKER or WAIVED(<citation>); a confirmed BAND-AID (HI #14 aim-test + items 6–9) is a BLOCKER even though the Success line is machine-green."* Silence/CONCERN/NOTE on a named line = UNRESOLVED → retry once → second UNRESOLVED falls to the refuter's same-context skeptic fallback, which must rule BLOCKER(<cited unmet item>) or WAIVED(<citation>) — never a BLOCKER without a named item, never a mute subagent turning a green goal into STUCK-user. Blocker-review's FALSE-BLOCKER is not a waiver — only a cited WAIVED closes an open finding.
-- **WAIVED exit.** A finding that contradicts a recorded Design Decision in notes.md, or a user-requested `BAND-AID (user-requested):`, is closed `WAIVED @<ISO> (<citation>)` by the driver, blocker-review, or the refuter; counts as resolved; lands in Open Questions. Waiving requires a citation — never "reviewer was wrong".
+- **WAIVED exit.** A finding that contradicts a recorded Design Decision in notes.md (or a recorded /prep spec-card decision), or a user-requested `BAND-AID (user-requested):`, is closed `WAIVED @<ISO> (<citation>)` by the driver, blocker-review, or the refuter; counts as resolved; lands in Open Questions. Waiving requires a citation — never "reviewer was wrong".
 - **Never a user gate.** Passes silently or re-enters fix mode within the bound; surfaces only in the log, the stamps, and the final report.
 
 **Evidence rules — leniency for a dead dispatch, never for a verdict.** UNRESOLVED = no citations, all findings hash-discarded, errored dispatch, or timeout (a legal N/A is NOT unresolved). Any UNRESOLVED → retry once (tightened brief; ≤5 batches on a big set) → second UNRESOLVED → `unreviewed @<ISO> (<reason>)`, one log line, step proceeds DONE — the FnReview is a second net, not the oracle (same leniency the classification reviewer has). The leniency NEVER extends to a cited VIOLATION/BAND-AID. An `unreviewed` stamp is not forgotten: the sweep still covers that function, the refuter is told, and on a **fix-trigger** function an `unreviewed` stamp forces the refuter even on a machine-checked goal — the user's headline case (a fix) always gets one independent look on every run shape. Honest residual: an `unreviewed` happy-path AUTHOR function on an inline machine-checked run gets no further look (status quo). Pattern 3: reviewer deadline SHORTER than the tick interval; the interval is sized **at runbook generation for author + review + sweep combined**; a dispatch that can't fit the remaining window stays `pending` and is carried (log `FnReview carried:`) — never straddles the tick.
@@ -1710,7 +1715,7 @@ Stamp vocabulary (closed; the round count lives on the stamp):
 ```
 review: n/a
 review: pending (round k) sha:<8>               ← in flight / carried; sha = hash at the instant the stamp
-                                                  is written (step verify PASS, or AUDIT-step entry on /prep)
+                                                  is written (step verify PASS; AUDIT-step entry on /prep; step-9 entry on /repair)
 review: clean sha:<8> @<ISO> [(item 9 n/a)]
 review: round k VIOLATION item n → fix mode     ← finding mapped, producing step BLOCKED
 review: open <finding> (round 2) → PARKED @<ISO> ← DONE gate until WAIVED/cleared
