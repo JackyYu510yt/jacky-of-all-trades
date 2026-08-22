@@ -5,10 +5,10 @@ metadata:
   node_type: memory
   type: project
   originSessionId: ee50695d-1afd-4f48-ab4c-9d39197ba184
-  modified: 2026-08-22T14:56:33.760Z
+  modified: 2026-08-22T15:00:51.754Z
 ---
 
-On 2026-08-22 /auto gained **FnReview** — an in-turn fresh-eyes reviewer dispatched when an AUTHOR function or any function-level fix passes its verify (5 principles + goal-trace + 4 "complete, not band-aid" items; bounded 2 rounds/step/guardian pass; content-hash stamps on the Functions block; open finding = DONE gate that forces the refuter even on machine-green goals). Canonical design: `C:\Users\Shadow\Desktop\Compiled Binaries\Skills\function-review-SPEC.md` (v8, approved after 1 AUDITOR + 1 RED-TEAM + 6 REFUTER rounds); wired into `~/.claude/skills/auto/SKILL.md` (backup `SKILL.md.bak-pre-fnreview-20260822-033619`). Runs: `auto-runs/function-review-spec-031538` (spec) + `auto-runs/fnreview-wire-041725` (wiring) in that folder.
+On 2026-08-22 /auto gained **FnReview** — an in-turn fresh-eyes reviewer dispatched when ANY function (Option B) or any function-level fix passes its verify — one reviewer per function, in parallel (5 principles + goal-trace + 4 "complete, not band-aid" items; bounded 2 rounds/step/guardian pass; content-hash stamps on the Functions block; open finding = DONE gate that forces the refuter even on machine-green goals). Canonical design: `C:\Users\Shadow\Desktop\Compiled Binaries\Skills\function-review-SPEC.md` (v8, approved after 1 AUDITOR + 1 RED-TEAM + 6 REFUTER rounds); wired into `~/.claude/skills/auto/SKILL.md` (backup `SKILL.md.bak-pre-fnreview-20260822-033619`). Runs: `auto-runs/function-review-spec-031538` (spec) + `auto-runs/fnreview-wire-041725` (wiring) in that folder.
 
 **Why:** user wanted "guardian per function complete + reviewer that checks Heaven's principles and that it's a complete function or fix"; a cron is a clock not a trigger (one-cron rule), so it became an in-turn dispatch.
 
