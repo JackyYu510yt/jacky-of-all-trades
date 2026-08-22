@@ -383,8 +383,8 @@ Success: <checkable bar — what makes the whole task DONE>
 Pattern: <1 synchronous | 2 background+monitor | 3 cron+monitor+shell>
 Mode:    NORMAL | DIAGNOSING | ROTATING
 
-Functions:  (build tasks only — labeled by the author checklist; see Function-author sub-agent)
-  <name>: AUTHOR | INLINE — <one-line reason naming the deciding checklist line>
+Functions:  (any run that writes/rewrites a def — labeled by the author checklist; see Function-author sub-agent + FnReview)
+  <name>: AUTHOR | INLINE — <one-line reason naming the deciding checklist line> | review: <FnReview stamp — see FnReview stamp vocabulary>
 
 Steps:
   1. [PENDING] <action one-liner>
@@ -410,6 +410,7 @@ Status:
   RedTeam:           n/a   (fires on deliverable NATURE or ≥1 guardian tick: pending | clean | <n> BREAKS | round 1|2)
   Classified:        n/a   (build tasks: pending | clean | checklist-only)
   Principles:        n/a   (code deliverables: pending @<ISO> | clean @<ISO> | unswept @<ISO> (<reason>) | <n> violations)
+  FnReview:          n/a   (function-writing runs: <k> pending | <n> in fix | clean | <n> open | <m> unreviewed — see FnReview)
   Guardian:          unarmed | armed <cron-id>, every N min, expires <date> | stood-down (<reason>)
   Contract:          pinned <date> | pinned+asked
   Round:             0/3   (guardian re-attack rounds used)
@@ -430,6 +431,14 @@ PENDING → IN PROGRESS → BLOCKED       (verify failed → fix mode)
 BLOCKED → IN PROGRESS → DONE          (rotation succeeded → NORMAL)
 BLOCKED → PARKED                      (5 approaches failed → continue
                                        on independent steps)
+
+FnReview steps (see FnReview — per-function completeness review):
+IN PROGRESS → VERIFIED (FnReview pending) → DONE   (review clean; a step with a
+                                                    pending FnReview is NOT DONE)
+VERIFIED    → BLOCKED                               (finding → fix mode on the
+                                                    PRODUCING step)
+BLOCKED     → PARKED (FnReview round 2 still open — finding quoted)
+PENDING     → PARKED (dependent of step N FnReview PARK)
 ```
 
 ### Fix mode — only entered on a verify failure
@@ -468,10 +477,13 @@ The re-entry points:
 ```
 1. Approach rotation   — a verify failed; a different approach on the same step
 2. Resume / cron tick  — a tick died; the next picks up a step left IN PROGRESS
+                         (a step left VERIFIED — FnReview pending — is NOT restored:
+                          hash matches its pending stamp → resume at the dispatch;
+                          hash differs → it drops to IN PROGRESS and this door applies)
 3. Refuter re-open     — a BLOCKER re-opens a step already marked DONE
-
-(No in-run "un-park" path exists: a PARKED step is retried only via a fresh
- user-initiated run, outside this automation — so it needs no restore here.)
+4. Guardian un-park    — tick step 8 re-attacks a PARKED step (Goal-Guardian)
+5. FnReview finding    — a VIOLATION / BAND-AID re-opens the PRODUCING step of a
+                         function whose verify passed (see FnReview)
 ```
 
 At door 3 the refuter names an unmet **Success-line item / failed verify**, not a step — so first **map that item to the step(s) that produced it**, then apply the restore below to each.
@@ -525,7 +537,9 @@ On resume, the runbook file is the source of truth:
 ```
 1. Read ./auto-runs/<slug>/runbook.txt (or ./auto-runs/<slug>/RUNBOOK.md)
 2. Find the first step that is not DONE and not PARKED
-3. Restore that step's precondition (Re-entry hygiene), then resume from it
+3. IN PROGRESS → restore that step's precondition (Re-entry hygiene), then resume from it
+   VERIFIED (FnReview pending) → no restore: hash-check vs the pending stamp, then
+   re-dispatch the FnReview (see FnReview "Resume / tick pickup")
 ```
 
 If no slug is supplied, /auto generates a fresh one and starts a new run — parallel chats and accidental re-invocations never collide on someone else's state.
@@ -707,10 +721,12 @@ One line per event, ≤120 chars:
 ```
 Step transition       STARTED, DONE, BLOCKED, PARKED
 Bash command          command + exit code + duration
-File edit/write       file path + lines changed
+File edit/write       file path + lines changed; `Edit applied: <file>:<fn>` names the
+                      function(s) touched (FnReview scoping reads these back)
 Mode transition       NORMAL → DIAGNOSING → ROTATING (or back)
 Approach choice       which N/5 + the reason
 Author dispatch       dispatch + return lines (function-author sub-agent)
+FnReview              dispatch / returned / carried lines + the `aim-test:` line (FnReview)
 Classification        Functions-block labels, reviewer promotions, mid-run appends
 Hypothesis list       DIAGNOSING: ranked falsifiable causes, or the explicit fast-path declaration
 Probe pre-reg         BEFORE the probe runs: variable / expected / CONFIRMS / DISPROVES
@@ -1094,6 +1110,13 @@ Before generating the runbook, /auto MUST:
      Step N+0:  Implement function                     verify: smoke check
      Step N+1:  AUDIT vs END GOAL card                 verify: traces to goal
 
+   The AUDIT step of every AUTHOR function (RISKY, or SAFE-but-AUTHOR) is
+   executed by the FnReview dispatch — an independent reviewer, not the
+   driver grading its own work — with "traces to goal" as item 0; both
+   FnReview triggers are suppressed at Implement and REAL so it fires once,
+   after REAL. SAFE-and-INLINE AUDIT steps stay driver-graded unless the
+   function was fixed (fix-trigger). See FnReview.
+
    Then Phase 9 integration steps from TESTING CONDITIONS card.
 
    Then BUILD STATUS card update + FINAL VERDICT (the terminal
@@ -1199,9 +1222,9 @@ These never bend.
 
 3. **Never advance on a bad result.** If a step's output doesn't satisfy the success condition, Claude does not pretend it did. The step is judged failed and a different approach is tried.
 
-4. **Never repeat a failed approach.** Each retry must differ from prior attempts in at least one concrete variable (different parameter, different prompt, different command flag, different input). If five distinct approaches have all failed, declare STUCK and stop. Don't burn budget on cosmetic variations.
+4. **Never repeat a failed approach.** Each retry must differ from prior attempts in at least one concrete variable (different parameter, different prompt, different command flag, different input). If five distinct approaches have all failed, declare STUCK and stop. Don't burn budget on cosmetic variations. (A FnReview finding is a NEW failure signature: it resets the step's 5-approach budget for that review round — ≤2 rounds per guardian pass — and a fix that fails the driver's own HI #14 aim-test counts as a failed approach without a dispatch. See FnReview.)
 
-5. **Stop on DONE or STUCK-user, not on "looks good enough."** DONE means the actual success condition is met and verified against the pinned contract (circumstances + never-dos included). STUCK-user means the run is genuinely blocked on something only the user can supply — a step merely exhausting its 5 approaches gets PARKED and re-attacked by the guardian (up to 3 rounds), not declared terminal.
+5. **Stop on DONE or STUCK-user, not on "looks good enough."** DONE means the actual success condition is met and verified against the pinned contract (circumstances + never-dos included). STUCK-user means the run is genuinely blocked on something only the user can supply — a step merely exhausting its 5 approaches gets PARKED and re-attacked by the guardian (up to 3 rounds), not declared terminal. A step PARKED by a round-2 FnReview finding (`open …`) is a DONE gate — the refuter must rule on it (BLOCKER or cited WAIVED) before DONE, even on a machine-checked goal.
 
 6. **Honest reporting.** If 24 of 269 things failed, the report says 24 failed. Not "245 succeeded" with the rest swept under. The user can decide what to do with partial success — Claude's job is to surface it accurately.
 
@@ -1220,13 +1243,13 @@ These never bend.
 
    Re-read scope: `./auto-runs/<slug>/runbook.txt` (state) OR `./auto-runs/<slug>/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), and the last ~30 lines of `./auto-runs/<slug>/log.txt` (recent history). If the files disagree with conversation memory, trust the files and acknowledge the file truth in the next text output.
 
-9. **No terminal DONE before the refuter clears (judgment-based goals).** When the Success line is a judgment call, the terminal `Status: DONE` / `FINAL VERDICT: DONE` line MUST NOT be written until the runbook's `Refuter:` field reads `clean`. The Stop hook releases on that `Status:` line, so writing DONE first would let the run stop before the refuter can re-open it. All-steps-PASS is necessary but NOT sufficient for DONE — the refuter gate is. Machine-checked goals are exempt (`Refuter: n/a`). See Terminal Refuter Gate.
+9. **No terminal DONE before the refuter clears (judgment-based goals).** When the Success line is a judgment call, the terminal `Status: DONE` / `FINAL VERDICT: DONE` line MUST NOT be written until the runbook's `Refuter:` field reads `clean`. The Stop hook releases on that `Status:` line, so writing DONE first would let the run stop before the refuter can re-open it. All-steps-PASS — and no FnReview pending / in fix (the universal pre-DONE pending check, evaluated on every DONE path before this exemption is consulted) — is necessary but NOT sufficient for DONE — the refuter gate is. Machine-checked goals are exempt (`Refuter: n/a`) **except** when a FnReview line reads `open …` or a fix-trigger function is `unreviewed`: then the refuter fires anyway and `Refuter:` flips `n/a → pending` (FnReview's open-finding DONE gate — the same override shape as #11). See Terminal Refuter Gate + FnReview.
 
 10. **Probe, don't assume — empirical evidence governs every claim.** Never act on what *seems* true — what an error means, whether a step worked, whether a dependency / credential / file is in the expected state. Get the evidence first: run the cheapest probe that turns the assumption into an observation (artifact check, exit code, a one-shot **smoke test**, a re-read of the actual file). When there's no cheap probe, write a **specialized check that exercises the real target condition** (P1 test-at-scale — not a config flag standing in for the real thing) and run it. A verdict from one happy outcome is a hypothesis; a verdict from an isolating check is evidence ("pin the fix, don't guess" — one experiment that isolates a single variable beats inference). This generalizes #3 (never advance on a bad result) and the artifact rule in Universal Principles: those say *don't trust a bad or absent signal* — this says *go manufacture the signal rather than assume one*. A one-shot patch used to *make the probe possible* (work-once-to-smoke-test) is fine as scaffolding — but it is never DONE; the deliverable is the structural heal that survives the next-run-without-Claude test (see /repair HI #17). Patch to learn, then fix the cause.
 
 11. **See it before you call it — a visual verify is not PASS until the shot is read.** When a verify/smoke step decides pass/fail on a visual surface (a browser, a GUI window, a rendered frame), its screenshot is captured *inside the test* at each state-change + assertion, and /auto MUST read the relevant shot (assertion + final + any failure shot) before recording PASS/FAIL. A passing exit code or a matched log string is necessary but NOT sufficient on a visual surface — a signed-out page prints a prompt box and exits 0 just like a signed-in one (the account-95 miss: a captured-but-unread shot plus a weak text assertion produced a confident wrong verdict). So a visual verify is treated as judgment-shaped: the Terminal Refuter Gate does NOT skip it (this overrides the machine-check exemption in #9 for that step), and a missing / black / unread assertion shot makes the verify INCONCLUSIVE → the step goes BLOCKED/PARKED, never PASS. The stall-detection fallback ("shot unavailable → artifact probes") is for watching long jobs, NOT for clearing a visual verify. See the "Smoke-test / verify capture" subsection under Visual Checkpoints.
 
-12. **Restore the precondition before any retry.** Never re-attempt a step on top of the prior attempt's residue. At every recovery door — approach rotation, resume / cron-tick pickup of an IN-PROGRESS step, and a refuter re-opening a DONE step — run the step's `rollback:`, re-assert its `pre-verify`, and invalidate any downstream step whose foundation actually changed (checksum differs), BEFORE re-running. Re-entry that skips this ships a stale foundation. See "Re-entry hygiene."
+12. **Restore the precondition before any retry.** Never re-attempt a step on top of the prior attempt's residue. At every recovery door — approach rotation, resume / cron-tick pickup of an IN-PROGRESS step, a refuter re-opening a DONE step, a guardian un-park, and a FnReview finding re-opening a producing step — run the step's `rollback:`, re-assert its `pre-verify`, and invalidate any downstream step whose foundation actually changed (checksum differs), BEFORE re-running. Re-entry that skips this ships a stale foundation. A step left `VERIFIED (FnReview pending)` is NOT an IN-PROGRESS pickup: its action already succeeded — hash-check it against its pending stamp and resume at the dispatch; only a hash mismatch or a finding opens the restore. See "Re-entry hygiene."
 
 13. **No premature convergence — probes must discriminate, alternatives must be ruled out.** (Always cite as "HI #13" — heuristic #13 is a different rule.) In fix mode and on any judgment-shaped verdict, do not prematurely converge on the current hypothesis. The pre-registered probe must be a **discriminating test** — its CONFIRMS / DISPROVES outcomes must separate the leading hypothesis from its ranked rivals, not merely confirm the current assumption (a probe both hypotheses would pass discriminates nothing). Avoid **search-space neglect** and **anchoring bias** by actively checking plausible alternatives: DONE is not written simply because the initial hypothesis appears correct — the conclusion must be supported by evidence with the relevant alternatives investigated or explicitly ruled out (the hypothesis list + probe log is that evidence). This sharpens HI #10: #10 says manufacture the signal; this says the signal must be able to say NO to the favorite.
 
@@ -1382,12 +1405,17 @@ Tick fires → new TURN in this same session → /auto re-invoked by the pinned 
         cap exhausted → STUCK-user with the ledger. PARTIAL is only
         ever a checkpoint; no VERDICT file is written at PARTIAL)
   6. Execute that step (if it was left IN PROGRESS by a dead tick, restore its
-     precondition first — Re-entry hygiene):
+     precondition first — Re-entry hygiene; if it was left VERIFIED (FnReview
+     pending) do NOT re-execute: hash-check vs the pending stamp and resume at
+     the FnReview dispatch):
        - Bash for direct commands
        - Bash with run_in_background=true for long ones
        - Monitor on the log to wait for completion signal
   7. Verify: run the step's verify check
-       Pass → mark step DONE in runbook, append log line
+       Pass → if the step triggers a FnReview (AUTHOR function / fix-trigger /
+              AUDIT-step executor) → VERIFIED, dispatch the review; DONE only
+              when it returns clean (finding → BLOCKED on the producing step,
+              fix mode). Otherwise mark step DONE in runbook, append log line
        Fail → enter fix mode, /repair sub-loop, rotate up to 5x
   8. Update auto-runs/<slug>/RUNBOOK.md and auto-runs/<slug>/logs/run.log
   9. Write auto-runs/<slug>/PROGRESS.md with one-line "this tick did X" summary
@@ -1408,7 +1436,7 @@ Slow steps (test suites, builds, multi-min API)       → 5–15 min
 Very slow steps (overnight ffmpeg renders)            → 15–30 min
 ```
 
-Don't tick faster than the work can finish — overlapping ticks just stack. If unsure, start at 10 min and adjust based on PROGRESS.md observation.
+Don't tick faster than the work can finish — overlapping ticks just stack. If unsure, start at 10 min and adjust based on PROGRESS.md observation. On build / fix runs size the interval at runbook generation for **author dispatch + FnReview dispatch + principles-sweep combined** — a dispatch must never straddle the tick that opened it; a FnReview that can't fit the remaining window is carried to the next tick (FnReview "carried" rule).
 
 ### Self-uninstall
 
@@ -1510,7 +1538,7 @@ A driver juggling the whole run (runbook, verifies, logs, monitors) one-shots fu
                     inside that sub-loop.
 ```
 
-INLINE-classed functions (path joins, small wrappers, arg parsing) are written inline — KISS (P5). Non-build tasks (fixes, renames, config tweaks) have no classification machinery at all.
+INLINE-classed functions (path joins, small wrappers, arg parsing) are written inline — KISS (P5). Non-build tasks (fixes, renames, config tweaks) have no one-shot classification *reviewer* — but the write-time checklist runs on every new def on EVERY run shape, and the first step that writes or rewrites any def creates the Functions block (an AUTHOR label earned on a non-build run triggers the author dispatch under the same one-author bound; `Classified:` stays `n/a`). See FnReview "State".
 
 **Classification table + one-shot review (runbook generation).** For build tasks, every function the plan names gets an explicit `AUTHOR` or `INLINE` label in the runbook's `Functions:` block, with a one-line reason that NAMES the deciding checklist line (`AUTHOR — disk I/O`, `INLINE — all four checklist lines NO`) — the call is re-checkable later, never just asserted. Then ONE cheap reviewer sub-agent — fresh context, handed ONLY the Goal + Success line and the labeled list with reasons, with a deadline (Pattern 3: shorter than the tick interval; timeout = returned nothing) — answers a single question: *"which INLINE function could wreck the user's outcome if written half-assed?"* Every VALID flag (validate names against the list you sent; unknown names are ignored + logged) is promoted UNCONDITIONALLY, and the promotion is written on paper: rewrite that function's `Functions:` line in place to `AUTHOR (promoted) — <reviewer reason>` BEFORE any step executes. If every function is already AUTHOR, skip the dispatch and set `Classified: clean` with a `no INLINE candidates` log line. Reviewer returns nothing → retry once; still nothing → set `Classified: checklist-only`, log it, proceed — this leniency is the reviewer's alone (it is a second net, not an oracle) and NEVER extends to verify verdicts, where a non-answer stays a failure. The review's state rides in the runbook Status block as `Classified:` (`pending` before dispatch → `clean` / `checklist-only` on completion) so it survives compaction like `Refuter:`; a resume finding `pending` re-runs the reviewer before executing steps.
 
@@ -1528,6 +1556,10 @@ INLINE-classed functions (path joins, small wrappers, arg parsing) are written i
 - The step's verify check (what the function must survive)
 - Escalation only: the failing version + both failure signatures — snapshot
   these into the packet BEFORE Re-entry hygiene's restore reverts/deletes them
+- Fix-trigger defs (any author dispatch, build or non-build runbook): the
+  failure signature, the P11 hypothesis list, and APPROACHES.md — at write
+  time, not only on escalation — so the author writes against the locked
+  cause (FnReview item 9 checks it)
 ```
 
 **Return contract.** The author returns ONE function + a ≤3-line note on what it optimized for — never edits to surrounding files; the driver is the only writer. One dispatch may cover one tightly-coupled unit (a mutually recursive pair, a function + its class) when splitting would hand the author half the logic. Before integrating, the driver READS the returned code for silent failure-swallowing (bare `except`, default-return-on-error) — a swallow that would let a shallow verify pass while hiding failure is a REJECTED return (one failed approach), not a pass. Then integrate and run the step's normal verify. Standard rules hold: the verify is the oracle (author confidence is not a pass), a non-answer/timeout is a failure (fan-out rule above), and fix mode on the result belongs to the driver, not the author.
@@ -1542,6 +1574,153 @@ INLINE-classed functions (path joins, small wrappers, arg parsing) are written i
 ```
 
 **KISS bounds (P5):** no panels, no variant tournaments; one function (or one tightly-coupled unit) per dispatch — a stage with 3 risky functions = 3 dispatches; no author dispatch below the trigger just to follow the rule.
+
+### FnReview — per-function completeness review (fresh eyes at completion)
+
+_(Added 2026-08-22 by user directive: "have the guardian occur per function complete and run a separate reviewer that sees if it passes Heaven's principles and is a complete function or fix." Design pinned in `function-review-SPEC.md` v8 (CWD of that session); survived 1 AUDITOR + 1 RED-TEAM + 6 REFUTER rounds. Mechanism note: a cron is a clock, not a trigger, and the Goal-Guardian rule is one cron per run — so this is an in-turn subagent dispatch, NOT a second cron. The word **FnReview** is used everywhere — "reviewer" alone already means the blocker-review and the classification reviewer.)_
+
+Every load-bearing function — and every **function-level fix** — gets checked by a fresh pair of eyes **at the moment it completes**, before its step is DONE: (1) does it follow the principles (the sweep's 5 items), and (2) is it **COMPLETE** — a structural fix / whole function, not a band-aid (HI #14): after this code, does the condition that produced the failure still exist? Does it hold next run, different input, no Claude in the loop? Does it ESTABLISH its precondition on any input, or FILTER for inputs that already have it? A VIOLATION / BAND-AID stops the step from going DONE and re-enters fix mode on the step that wrote the code. The periodic principles-sweep stays as the catch-up net; this is per-function and immediate.
+
+**Trigger — one dispatch per step, at the step's verify PASS, when the step:**
+
+```
+(a) wrote or rewrote an AUTHOR-classed function (RISKY from /prep, promoted, or
+    checklist-YES at write time — the function-author label), OR
+(b) satisfies the FIX-TRIGGER, regardless of INLINE/AUTHOR label:
+      fix-trigger := the step ran in fix mode (rotation, /repair sub-loop,
+                     escalation re-dispatch)
+                  OR the step REWROTE A DEF THAT EXISTED AT RUN START
+                     (its hash differs from the run-start def snapshot —
+                      structural, not verb-based: /auto /repair phases run
+                      in NORMAL mode, "add retries to upload()" is a rewrite)
+    Arm-2 exclusions (KISS): defs whose run-start body is a STUB (pass / ... /
+    raise NotImplementedError / docstring-only — completing a scaffold is
+    building), and TEST defs (test_* / *_test — a RED rewrite is covered by its
+    own verify). NOT excluded: prep-listed functions — a planned rewrite IS a fix.
+Never fires for: INLINE happy-path functions (the sweep covers them), steps that
+write no function, /auto's own bookkeeping. A Pattern-1 rename/config run
+dispatches zero reviews. Not gated by the guardian's Jobs: check.
+```
+
+The reviewer returns a verdict **per function**; the driver names the functions it edits on the `Edit applied: <file>:<fn>` log line at edit time and reads them back at dispatch (fallback: every def in touched files whose hash differs from its reference — the later of the run-start snapshot and its `clean` stamp — else all defs). A changed-set >5 functions that times out is retried as ≤5-function batches (one "retry"); a second timeout stamps only the unreturned batches `unreviewed`.
+
+**Timing on /prep-derived runbooks — the FnReview IS the AUDIT step.** RISKY: `N+1 Implement → N+2 REAL → N+3 AUDIT`; SAFE-but-AUTHOR: `N+0 Implement → N+1 AUDIT`. The FnReview fires ONCE as the executor of that AUDIT step (after REAL — production-shaped evidence), and **both triggers are suppressed at every step preceding the function's AUDIT step** (Implement AND REAL), including after a fix-mode redo — the round-2 review fires at AUDIT again after REAL re-runs. The AUDIT step's own check ("traces to goal") is item 0 of the brief; the prep END GOAL / field-13 AUDIT card joins the packet. When the function met the fix-trigger on a preceding step, the AUDIT executor gets the fix packet and item 9 applies. SAFE-and-INLINE AUDIT steps stay driver-graded unless the function was fixed. Self-derived runbooks (no AUDIT step): the review attaches to the function-write step's verify.
+
+**Lifecycle — a step with a pending FnReview is not DONE.** New named state between IN PROGRESS and DONE, written on the step line:
+
+```
+IN PROGRESS → VERIFIED (FnReview pending) → DONE        (review clean)
+VERIFIED    → BLOCKED                                    (finding → fix mode on the PRODUCING step)
+BLOCKED     → PARKED (FnReview round 2 still open — finding quoted)
+PENDING     → PARKED (dependent of step N FnReview PARK)  (AUDIT + any consumer still PENDING;
+                                                          reason token `dependent:N`)
+```
+
+When the VERIFIED step and the producing step differ (/prep runbooks), the **producing** step — the one whose `Edit applied: <file>:<fn>` line last wrote the function, never a fixed step number — carries BLOCKED/PARKED and the stamp; the AUDIT step goes → PENDING unconditionally (its verify IS the failed review), REAL/other consumers → PENDING on a real diff of the rewrite (HI #4). Never two BLOCKED steps for one finding. On a round-2 PARK the consumers park with it as dependents (no round 3, no re-run on the band-aid) and un-park together at guardian tick step 8 / refuter door 3.
+
+**Resume / tick pickup of a VERIFIED step — no restore, no redo.** Check each function's current hash against the `sha:` on its `pending` stamp (the cheap intact-proof — not a re-run of a possibly long REAL verify): match → re-dispatch; differs → the step drops to IN PROGRESS and the normal door-2 restore + fix mode apply. Re-entry door 2 does NOT fire on an intact VERIFIED step. A dead-tick / Esc-killed pending is re-dispatched without consuming a round, at most twice (count = `FnReview dispatch:` lines with no `returned:` line); a pending carried without a dispatch (Pattern 3, window too short) is counted from `FnReview carried:` lines — after 2 carries the 3rd tick dispatches regardless of window with a tightened deadline; a timeout there stamps `unreviewed @<ISO> (carried ×2, timeout)` directly (skips retry-once — the tighter bound is the point). Third dead pickup → `unreviewed @<ISO> (dead-tick ×2)`. Bounded — never a wedge until the spend gate.
+
+**The context packet.** Fresh general-purpose subagent, read-only probe license (Read/Glob/Grep; writes forbidden). Hand it: Goal + Success line (GOAL.md); each function's contract (name, inputs → outputs, callers); each function's CURRENT code on disk (file + the hasher's line range — the reviewer reads from disk, nothing pasted from memory) + the surrounding module; the step's verify check + PASS evidence; an explicit `executor: audit-step | step-verify` marker; AUDIT-executor only: the END GOAL card + field-13 AUDIT card; **fix-trigger only:** the failure signature, the P11 hypothesis list, and APPROACHES.md (from fix-mode log lines, or from /repair's Hypothesize/Lock steps on a NORMAL-mode repair step); **every packet with no failure signature carries the marker `no failure signature`** (all non-fix dispatches, and fix-trigger ones with none). It does NOT get the driver's opinion, the author's note, or conversation history.
+
+**The brief + fixed checklist:**
+
+```
+You did NOT write this code. You are the FnReview. Read each function from
+disk. For each function, for each item, return exactly one of CLEAN /
+VIOLATION (items 0-5) or COMPLETE / BAND-AID (items 6-9), each WITH
+file:line evidence — CLEAN and COMPLETE need a citation too (the line that
+satisfies the item). Item 9 may return N/A only when the packet says
+`no failure signature`; item 0 may return N/A only when executor is not
+audit-step. Use no other severity words. A VIOLATION is a concrete breach,
+not a style nitpick. Do not rubber-stamp.
+
+ 0. GOAL-TRACE (audit-step executor) — does this function advance the Goal /
+    Success line and the prep END GOAL card?
+PRINCIPLES (same 5 items as the principles-sweep):
+ 1. HEAVEN'S NET — RECOVERY keys to evidence-mapped failure classes, never
+    "symptom string X → do Y"; unmatched/assumed signals are captured, parked,
+    fail loud (canonical: /error-recon). Guardrails: DETECTION may match
+    mapped symptoms — it is the recovery that must be class-level; and ≤2
+    handlers need no taxonomy (rule of three). Do not flag either.
+ 2. EVIDENCE-ONLY — no success from labels/exit codes alone.
+ 3. RE-ENTRY HYGIENE — retry/resume rolls back residue → re-asserts the
+    precondition → invalidates downstream before redo.
+ 4. NO SILENCED FAILURES — no bare except/pass, no unbounded retry, failures
+    surfaced by count, flight-recorder capture on unknowns.
+ 5. KISS — no abstraction the task didn't earn.
+COMPLETENESS (COMPLETE or BAND-AID, with evidence):
+ 6. CONDITION TEST — name the condition that produced the failure / the gap
+    this function closes. After this code, does that condition STILL EXIST?
+    (yes → BAND-AID; name the surviving condition.)
+ 7. NEXT-RUN TEST — next run, different input, no Claude in the loop, nobody
+    watching: does it still work? Cite what in the code makes that true.
+ 8. ESTABLISH-vs-FILTER — if the function needs a precondition, does it
+    ESTABLISH it on any input, or FILTER for inputs that already have it?
+    (filter → BAND-AID.)
+ 9. CAUSE-LOCK (fix-trigger only) — does the fix target the CONFIRMED cause
+    from the hypothesis list, or route around the symptom? Was the leading
+    hypothesis confirmed by a discriminating probe, or merely not disproved?
+    (HI #13)
+```
+
+**Verdict handling — bounded at every exit:**
+
+- **Write first, act second.** The `FnReview returned:` log line is written the instant the verdict lands, before any action.
+- **Staleness validation.** A finding citing a function whose hash changed after the reviewer read it is discarded with one log line (hash, not file mtime — a neighbour's edit never discards a live finding). Every finding discarded → the dispatch is UNRESOLVED (not CLEAN), consumes one leniency slot, re-runs on current code.
+- **Vocabulary is closed.** Any cited item verdict that is not CLEAN/COMPLETE blocks ("CONCERN", "borderline" → VIOLATION/BAND-AID). An uncited item verdict is UNRESOLVED — except a **legal N/A**, which the DRIVER checks against the packet it sent (item 9 ↔ `no failure signature` marker; item 0 ↔ `executor: step-verify`); an N/A that fails the check is UNRESOLVED.
+- **Citation re-confirm.** The driver re-reads the cited line (±10). Quoted evidence present → the finding stands (a moved line is corrected in the log, not excused). Evidence absent from the function entirely → that item is UNRESOLVED (retry with "cite the exact line"). Leniency never clears a finding whose quoted evidence IS in the code.
+- **VIOLATION / BAND-AID → map to the producing step, then BLOCK it.** Fix mode opens with the finding as the failure signature (P11 list → discriminating probe → approach on the confirmed cause). The function-author escalation re-dispatch is available within the one-author bound. Re-entry hygiene runs first; AUDIT → PENDING unconditionally, REAL/consumers on a real diff.
+- **Fresh approach budget per review round + the aim-test gate.** `Approaches tried` resets for the re-opened step (5 per round). Before a re-opened step may re-enter VERIFIED / DONE, the driver runs the HI #14 aim-test on its fix and logs it — `aim-test: <condition> removed? yes — <how> | no` — a `no` (or an item-8 filter the driver can see itself) is a failed approach: rotation continues, no dispatch. Honest bound: **≤2 verify-passing, aim-test-passing attempts per step per guardian pass**, ≤5 approaches each. The aim-test is a cheap self-filter, not independence; the verify stays the oracle for "works", the FnReview for "complete".
+- **Bound: max 2 FnReview rounds per step per guardian re-attack round** (mirrors the refuter). Round-2 still VIOLATION/BAND-AID → the producing step is **PARKED**, stamp `open <finding> (round 2) → PARKED @<ISO>`; blocker-review / re-attack owns it (Round K/3). A guardian un-park + redo that passes verify is reviewed **again with a fresh 2-round allowance**; same after a refuter door-3 re-open. Finite: ≤6 review rounds per guardian pass × 4 passes = ≤24 per step, worst case; the ≤6-per-pass check is derived from `FnReview dispatch:` lines since the last Round increment.
+- **Open-finding DONE gate.** While any Functions line reads `open …`, `Status: DONE` is not written: the Terminal Refuter fires **even on a machine-checked goal** (the HI #11 override shape; `Refuter: n/a → pending` when forced — the RedTeam precedent — so the Stop-hook carrier holds), with the finding named. Forced brief adds: *"For each named open / unreviewed line return exactly BLOCKER or WAIVED(<citation>); a confirmed BAND-AID (HI #14 aim-test + items 6–9) is a BLOCKER even though the Success line is machine-green."* Silence/CONCERN/NOTE on a named line = UNRESOLVED → retry once → second UNRESOLVED falls to the refuter's same-context skeptic fallback, which must rule BLOCKER(<cited unmet item>) or WAIVED(<citation>) — never a BLOCKER without a named item, never a mute subagent turning a green goal into STUCK-user. Blocker-review's FALSE-BLOCKER is not a waiver — only a cited WAIVED closes an open finding.
+- **WAIVED exit.** A finding that contradicts a recorded Design Decision in notes.md, or a user-requested `BAND-AID (user-requested):`, is closed `WAIVED @<ISO> (<citation>)` by the driver, blocker-review, or the refuter; counts as resolved; lands in Open Questions. Waiving requires a citation — never "reviewer was wrong".
+- **Never a user gate.** Passes silently or re-enters fix mode within the bound; surfaces only in the log, the stamps, and the final report.
+
+**Evidence rules — leniency for a dead dispatch, never for a verdict.** UNRESOLVED = no citations, all findings hash-discarded, errored dispatch, or timeout (a legal N/A is NOT unresolved). Any UNRESOLVED → retry once (tightened brief; ≤5 batches on a big set) → second UNRESOLVED → `unreviewed @<ISO> (<reason>)`, one log line, step proceeds DONE — the FnReview is a second net, not the oracle (same leniency the classification reviewer has). The leniency NEVER extends to a cited VIOLATION/BAND-AID. An `unreviewed` stamp is not forgotten: the sweep still covers that function, the refuter is told, and on a **fix-trigger** function an `unreviewed` stamp forces the refuter even on a machine-checked goal — the user's headline case (a fix) always gets one independent look on every run shape. Honest residual: an `unreviewed` happy-path AUTHOR function on an inline machine-checked run gets no further look (status quo). Pattern 3: reviewer deadline SHORTER than the tick interval; the interval is sized **at runbook generation for author + review + sweep combined**; a dispatch that can't fit the remaining window stays `pending` and is carried (log `FnReview carried:`) — never straddles the tick.
+
+**State — on paper, compaction-proof.** Per-function review state rides on the runbook **Functions block** line. **Non-build runs** have no block today — the first step that writes or rewrites any def **creates it** (write-time checklist label; rewritten defs tagged `(fix)`); the write-time checklist runs on every new def on every run shape (the one-shot classification *reviewer* stays build-only; `Classified: n/a` on non-build runs). An AUTHOR label earned on a non-build run also triggers the function-author dispatch under the one-author bound, and **any author dispatch for a fix-trigger def carries the fix items** (failure signature, hypothesis list, APPROACHES.md) at write time, not only on escalation.
+
+**Run-start def snapshot.** Before the FIRST edit to any deliverable file in the run, record that file's per-def hashes (the hasher below, no other) in PROGRESS.md (`snapshot: <file> <fn> sha:<8> …`) — the reference for arm 2 and the fallback; a def absent from it is new code. PROGRESS.md already carries long-lived sections (baseline, mirrors); snapshot + FnReview ledger join them as named sections that every tick's PROGRESS write **section-merges, never overwrites**.
+
+**The hasher (one procedure, same result on every tick):** `.py` — slice the source lines EXPLICITLY from `min(d.lineno for d in node.decorator_list)` (or `node.lineno` with no decorators) through `node.end_lineno` of the `ast` FunctionDef/AsyncFunctionDef — NOT `ast.get_source_segment(node)`, which on Python ≥3.8 starts at the `def` line and silently drops decorators (verified 2026-08-22 on 3.11) — replace the **def-line name token only** with `_` (recursive self-calls unmasked — a recursive rename reads stale, accepted as conservative), normalise line endings, strip TRAILING whitespace only (never indentation — a dedent changes control flow), sha256 → first 8 hex. Non-Python deliverables: whole-file hash, file treated as ONE unit (coarser, never wrong; accepted residual: a neighbour's edit there does invalidate). Removing `@retry` or changing a default arg invalidates a stamp; a rename or a neighbour's edit does not. "Edited after the stamp" is decided from disk — file mtime as the cheap pre-check, hash difference as the verdict (HI #8) — never from this run's log (it cannot see a human's or another run's edits).
+
+Stamp vocabulary (closed; the round count lives on the stamp):
+
+```
+review: n/a
+review: pending (round k) sha:<8>               ← in flight / carried; sha = hash at the instant the stamp
+                                                  is written (step verify PASS, or AUDIT-step entry on /prep)
+review: clean sha:<8> @<ISO> [(item 9 n/a)]
+review: round k VIOLATION item n → fix mode     ← finding mapped, producing step BLOCKED
+review: open <finding> (round 2) → PARKED @<ISO> ← DONE gate until WAIVED/cleared
+review: unreviewed @<ISO> (<reason>)
+review: WAIVED sha:<8> @<ISO> (<citation>)
+
+Functions:
+  fetch_clip:    AUTHOR — disk I/O | review: clean sha:3f9a1c2e @2026-08-22T03:40Z
+  retry_upload:  AUTHOR — retries  | review: open BAND-AID item 8 (round 2) → PARKED @...
+  join_paths:    INLINE — all NO   | review: n/a
+  parse_flags:   INLINE (fix)      | review: clean sha:… @... (item 9 n/a)
+  fetch_video:   AUTHOR — renamed from fetch_clip @... | review: clean sha:… @... (inherited)
+```
+
+Status-block summary field: `FnReview: n/a | <k> pending | <n> in fix | clean | <n> open | <m> unreviewed`. A function rewritten after a `clean` stamp gets `pending` at its next verify PASS (review is per completion, not once per name); a renamed function carries its stamp (`renamed from X`, hash still matches); a function with no stamp is reported to the refuter like `unreviewed`. FnReview rulings live in their **own ledger keyed (item, file, function)** mirrored to PROGRESS.md — NOT in the sweep's (item, file) ledger (a file-keyed entry would blind the sweep for every other function in that file).
+
+Log lines (model-written, mirroring the author lines):
+
+```
+[ts] [Mode] [Step N] FnReview dispatch: <fn, fn, …> (trigger: author-classed|promoted|fix-mode|rewrite-existing|audit-step; round k)
+[ts] [Mode] [Step N] FnReview returned: <fn>: CLEAN+COMPLETE | VIOLATION item k file:line | BAND-AID item k <condition> → <DONE | fix mode on step M | PARKED | unreviewed>
+[ts] [Mode] [Step N] FnReview carried: <fn> (window too short; carry 1|2)
+```
+
+**Interplay with the principles-sweep.** The sweep is unchanged in cadence and becomes the catch-up net (INLINE happy-path functions, non-function edits, `unreviewed` functions). The DRIVER (which has the hasher — the sweep subagent does not) recomputes each stamped function's hash at dispatch and passes ONLY the still-valid ranges as `reviewed-clean ranges: <fn> L<a>–<b> @<ISO>` (the range IS the hasher's slice); the sweep does not flag inside those. Inside a tick the step-7 sweep rider dispatches AFTER the step's FnReview has returned and written its ledger entries — "alongside" reads as same-tick, sequenced. The sweep's 5-step cap is unchanged; FnReview-driven fix-mode re-entries do NOT count against it.
+
+**Interplay with the Terminal Refuter Gate — unchanged sequence, two forced-fire triggers, better informed.** (0) A **universal pre-DONE pending check** on EVERY DONE path (inline end-of-run, guardian SUCCESS PROBE in tick step 5, the machine-checked skip path) BEFORE "When it fires" / HI #9: no step in `[VERIFIED — FnReview pending]`, no `FnReview: k pending` or `n in fix`; if any holds, the carried review is dispatched and returned first. A finding at that check discards the "Met" verdict and falls to tick step 7 (fix mode on the producing step) — never step 8, so it never burns a guardian Round; an `in fix` carried from a prior tick routes the same way. PARKED steps are allowed (the all-parked checkpoint is untouched); an `open`-PARKED line is the forced refuter's INPUT. (i) An `open` finding or a fix-trigger `unreviewed` stamp forces the refuter even on a machine-checked goal. (ii) At gate entry the driver hands the refuter the Functions block and names every `open`, `unreviewed`, no-stamp, WAIVED line and every function whose current hash differs from its `clean` sha — "not independently reviewed, look there first". A stale `clean` must never read as coverage. Residual: on a machine-checked goal with nothing forcing the refuter, an out-of-run edit after a `clean` stamp is named to a refuter that never fires (status quo).
+
+**Re-entry hygiene — door 5.** A FnReview finding re-opens a step whose verify passed: the standard restore runs on the producing step (rollback → pre-verify → invalidate downstream on a real diff; AUDIT → PENDING unconditionally).
+
+**Cost + KISS bounds (P5):** one dispatch per step with triggered functions; ≤2 rounds per step per pass; a 10-AUTHOR-function build = ≥10 reviews (plus fix triggers and round-2s). No panels, no voting, no tournaments. No review for INLINE happy-path functions, non-function steps, or trivial runs. The checklist is the sweep's 5 items + goal-trace + 4 completeness items — not a new taxonomy. Sub-agents unavailable → same-context skeptic pass marked as the weaker fallback, exactly like the refuter's.
 
 
 ## Universal Principles (apply in both shapes)
@@ -1924,12 +2103,17 @@ Run-start:     <ISO timestamp — the provenance anchor>
      Reviewer:  n/a | pending | <last verdict>
      Principles: n/a | pending @<ISO> | clean @<ISO>
                 | unswept @<ISO> (<reason>) | <n> violations
+     FnReview:  n/a | <k> pending | <n> in fix | clean | <n> open
+                | <m> unreviewed   (per-function stamps live on the
+                Functions block lines — see FnReview)
      Turn-end rule: checkpoint = Status: PARTIAL (checkpoint);
                 STUCK only when user-blocked
 ./auto-runs/<slug>/APPROACHES.md     append-only approach history
 ./auto-runs/<slug>/PROGRESS.md       last-tick summary + deliverable
      artifact BASELINE (paths/sizes/mtimes at arming) + MIRRORS of
-     Round / cron-id / blocker-since (rebuild-proof)
+     Round / cron-id / blocker-since (rebuild-proof) + the FnReview
+     run-start def SNAPSHOT + (item, file, function) LEDGER — named
+     sections every tick SECTION-MERGES, never overwrites
 ./auto-runs/<slug>/spend-<YYYY-MM-DD>.txt  per-slug tick counter
 ```
 
@@ -1967,7 +2151,12 @@ A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in
 5. SUCCESS PROBE — validate vs the contract (type-aware floor +
    PROVENANCE: deliverable must postdate Run-start; the arming
    baseline corroborates, run-start decides; consult False-pass).
-   Met → Terminal Refuter Gate / RED-TEAM per their rules → DONE →
+   Met → [FnReview pending check: any step VERIFIED-pending, or
+   FnReview: k pending / n in fix → dispatch + return the carried
+   review FIRST; a finding discards "Met" and falls to step 7, never
+   step 8] → Terminal Refuter Gate / RED-TEAM per their rules
+   (an `open` FnReview line or a fix-trigger `unreviewed` stamp
+   forces the refuter even on a machine-checked goal) → DONE →
    CronDelete.
 6. SUSPECT — no own jobs, artifact flat → mark SUSPECT (any growth
    tick clears it). SECOND consecutive flat tick → blocker-review.
@@ -2020,13 +2209,16 @@ _(Added 2026-08-18 by user directive: the guardian should verify the principles 
 
 Fires only on runs whose deliverable is code (build/repair chains — the driver sets `Principles: n/a` at runbook generation for no-code deliverables, flipping it to sweep-eligible on the first deliverable code edit), on the step-7 rider's schedule. Deliverable edits only: files under `auto-runs/` (runbook, PROGRESS, spend, logs, shots) are NEVER part of the trigger or the changed-set — the guardian does not sweep its own bookkeeping. Blocked/step-8 ticks are consciously unswept (blocker-review owns those); their edits are caught at the next step-7 window.
 
-Dispatch ONE fresh general-purpose subagent with a read-only probe license. Hand it: the deliverable files changed since the last sweep's ISO stamp (from log entries AFTER that stamp — the stamp, not a ~30-line tail, bounds the read), GOAL.md, and this fixed checklist — nothing else:
+Dispatch ONE fresh general-purpose subagent with a read-only probe license. Hand it: the deliverable files changed since the last sweep's ISO stamp (from log entries AFTER that stamp — the stamp, not a ~30-line tail, bounds the read), GOAL.md, a `reviewed-clean ranges: <fn> L<a>–<b> @<ISO>, …` note (the DRIVER recomputes each FnReview-stamped function's hash and lists only the still-valid ranges — the sweep does not flag inside those; see FnReview), and this fixed checklist — nothing else. Inside a tick the rider dispatches AFTER the step's FnReview has returned and written its ledger — "alongside" means same tick, sequenced — so the two nets never double-flag one function:
 
 ```
-1. HEAVEN'S NET — recovery/error handling keys to evidence-mapped
+1. HEAVEN'S NET — RECOVERY/error handling keys to evidence-mapped
    failure classes, never "symptom string X → do Y"; unmatched or
    assumed signals are captured, parked, fail loud — never
    guess-classified (canonical: /error-recon, "Heaven's Net").
+   Guardrails: DETECTION may match mapped symptoms — it is the
+   recovery that must be class-level; ≤2 handlers need no taxonomy
+   (rule of three). Do not flag either.
 2. EVIDENCE-ONLY — no success declared from labels/exit codes
    alone; verdicts rest on verified output or independent signals;
    nothing assumed.
@@ -2043,7 +2235,7 @@ Brief: *"You did not write this code. For each checklist item return CLEAN or VI
 
 - **Mtime validation first.** Before acting on findings, the DRIVER checks them against current file mtimes: a finding citing a file that changed after the sweep read it is discarded with one log line (stale read, not evidence).
 - **Self-contained violation steps.** Each surviving VIOLATION appends as a fix-mode step whose text carries the checklist item + file:line + the quoted evidence + a verify checkable WITHOUT re-sweeping. A violation step is EXEMPT from constraint-compass check (a) — the five checklist items are standing quality constraints, not Success-line work — while (b) Never-do and (c) no-repeat still apply in full.
-- **Dedupe + cumulative cap.** A (checklist-item, file) pair a prior sweep already ruled on is never re-flagged (ruled pairs mirror to PROGRESS.md); max 5 sweep-appended steps per run — beyond the cap, findings go to the Notes' Open Questions as report-only. Sweeps must never become the reason a run can't end.
+- **Dedupe + cumulative cap.** A (checklist-item, file) pair a prior sweep already ruled on is never re-flagged (ruled pairs mirror to PROGRESS.md); max 5 sweep-appended steps per run — beyond the cap, findings go to the Notes' Open Questions as report-only. Sweeps must never become the reason a run can't end. FnReview rulings live in their OWN (item, file, function) ledger — never in this file-keyed one — and FnReview-driven fix-mode re-entries do NOT count against the 5-step cap.
 - **Won't-fix exit.** A violation step that contradicts a recorded Design Decision, or that parks after honest attempts, may be closed **WAIVED** (intentional design / won't-fix — cite the evidence) by the driver or blocker-review; WAIVED counts as resolved for the all-steps gate and lands in Open Questions. A checklist misread must never drive a goal-met run to STUCK-user.
 - **The field never sticks at pending.** CLEAN → `Principles: clean @<ISO>`. A sweep with no evidence citations is UNRESOLVED → retry once at the next window; a second failure, an errored dispatch, or a never-returned result → `unswept @<ISO> (2 failures | error | stale)`, one log line, later windows may try again.
 - **At the Terminal Refuter Gate:** deliverable edits newer than the last sweep stamp → annotate the field `clean @<ISO>, unswept tail` and say so in the final report (the refuter-brief Heaven's Net line covers recovery code) — a stale `clean` must never read as full coverage. A `pending` at gate entry follows the staleness rule above: it never blocks DONE silently and never waits unbounded.
@@ -2089,7 +2281,7 @@ The RED-TEAM rider fires on the deliverable's NATURE (unchanged rule) **or** whe
 - **No declaring DONE without evidence.** "I think it worked" is not done.
 - **No standing down before the goal.** The guardian cron is deleted ONLY on DONE, STUCK-user, or /auto stop. (The old "cron is for overnight jobs only" rule is retired 2026-08-15 by user directive — any run that pauses unfinished is armed; instant-finish runs never arm, so trivial tasks stay free.)
 - **No treating PARTIAL as an ending.** PARTIAL is a checkpoint the guardian pushes past — a report may say PARTIAL, the run doesn't end there.
-- **No burning past 5 failed approaches without declaring STUCK.** The whole point is bounded autonomy.
+- **No burning past 5 failed approaches without declaring STUCK.** The whole point is bounded autonomy. (A FnReview finding opens a fresh 5-approach budget for that review round — ≤2 rounds per guardian pass, ≤24 review rounds per step worst case; still bounded. See FnReview.)
 
 
 ## Terminal Refuter Gate — independent DONE check
@@ -2098,14 +2290,18 @@ Before /auto writes `Status: DONE`, one fresh agent tries to prove it is NOT don
 
 ### When it fires
 
-Only when "done" is a **judgment call**. If the runbook's success line is a deterministic machine check that already passed (`pytest` exits 0, checksum matches, file exists at expected size), **SKIP** the refuter — that verify check IS the independent oracle, and self-preference can't bias a green test. Fire it when success is judgment-shaped: "pipeline handles real input", "output looks right", "report is complete", "no regressions in adjacent features".
+Only when "done" is a **judgment call**. If the runbook's success line is a deterministic machine check that already passed (`pytest` exits 0, checksum matches, file exists at expected size), **SKIP** the refuter — that verify check IS the independent oracle, and self-preference can't bias a green test. Fire it when success is judgment-shaped: "pipeline handles real input", "output looks right", "report is complete", "no regressions in adjacent features". **Before this rule is consulted, on every DONE path (inline end, guardian SUCCESS PROBE, the skip path): the FnReview pending check** — no step `VERIFIED (FnReview pending)`, no `FnReview: k pending / n in fix`; a carried review is dispatched and returned first. **Two FnReview carve-outs override the SKIP:** a Functions line reading `open …` (a round-2 VIOLATION/BAND-AID that parked) or a fix-trigger function stamped `unreviewed` forces the refuter even on a machine-checked goal — `Refuter: n/a → pending` (the RedTeam precedent, so the Stop-hook carrier holds). See FnReview "Interplay with the Terminal Refuter Gate".
 
 The **RED-TEAM rider** (below) has its own, independent firing rule: it fires on the deliverable's NATURE — unattended, long-running, stateful, or concurrent — even when the refuter is skipped. A green deterministic test proves the happy path ran once; it says nothing about credits dying mid-write, a flag flipping between check and act, or a half-written folder on re-entry. Machine-checked goal + unattended deliverable ⇒ refuter skipped, RED-TEAM still fires alone (the runbook `RedTeam:` field carries the obligation).
 
 ### Sequence (refute first, flip second)
 
 ```
-1. All runbook steps verified PASS   (necessary, NOT sufficient for DONE)
+1. All runbook steps verified PASS   (necessary, NOT sufficient for DONE;
+   PARKED steps allowed per the all-parked checkpoint) AND no step in
+   VERIFIED (FnReview pending), no FnReview: k pending / n in fix —
+   dispatch any carried FnReview first (an `open` PARKED line is the
+   forced refuter's INPUT, not an entry block)
 2. → set runbook Refuter: pending (and RedTeam: pending when the rider
    applies), dispatch refuter + RED-TEAM in parallel   (Status still NOT DONE)
 3a. refuter clean AND RedTeam clean/n/a → set fields → write Status: DONE
@@ -2124,7 +2320,8 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 - the **frozen Success line + per-step verify checks** (the yardstick — nothing else),
 - the observable artifacts produced,
 - a **baseline "before" reference if one exists** (git HEAD, a pre-change snapshot, the prior output dir) — part of the yardstick, so the refuter can diff the deliverables against it and flag unexplained or out-of-scope changes; greenfield builds have no baseline, so don't fabricate one (added 2026-06-14),
-- the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks).
+- the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks),
+- the runbook **Functions block** (FnReview coverage hand-over): name explicitly every `open`, `unreviewed`, no-stamp and WAIVED line, and every function whose current hash differs from its `clean` stamp's sha — "these were not independently reviewed; look there first". A stale `clean` must never read as coverage. When the refuter was FORCED by an `open` line or a fix-trigger `unreviewed` stamp on a machine-checked goal, add: *"For each named open / unreviewed line return exactly BLOCKER or WAIVED(<citation>); a confirmed BAND-AID (HI #14 aim-test + FnReview items 6–9) is a BLOCKER even though the Success line is machine-green."* Silence / CONCERN / NOTE on a named line = UNRESOLVED → retry once → then the same-context skeptic fallback below must rule BLOCKER(<cited unmet item>) or WAIVED(<citation>) — never a BLOCKER without a named item.
 
 Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13). When the deliverable contains recovery/error-handling code, add: *"Is any handler keyed to a symptom string instead of an evidence-mapped failure class, or does any path act on an assumed/unproven signal? (Heaven's Net — canonical in /error-recon.) Either is a BLOCKER."*
 
@@ -2239,7 +2436,8 @@ Guardian: armed (every N min, expires <date>) — next tick <~time>.
 - Diagnose, rotate approaches, never advance on lies; parked steps get up to 3 guardian re-attack rounds via the fresh-eyes blocker-review subagent (citations required).
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH. PERFECT = all angles tested + refuter-clean + tests named; the only grade licensing zero-human-input runs.
-- On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it.
+- On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it — unless a FnReview line is `open` or a fix-trigger function is `unreviewed`, which force it.
+- FnReview: every AUTHOR function and every function-level fix (fix mode OR a rewritten pre-existing def) gets a fresh-eyes reviewer at its verify PASS — 5 principles + goal-trace + 4 "complete, not band-aid" items; a finding blocks the producing step and re-enters fix mode; ≤2 rounds per step per guardian pass; stamps on the Functions block (content-hash); a pending review is never DONE; an open finding is a DONE gate. In-turn dispatch, not a second cron.
 - Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
 - Visual checkpoints: screenshot major events + ~10-min intervals on long visual steps, READ every shot; two identical job-surface shots + a flat artifact probe = STALLED.
 - Operational heuristics #8-14: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree, heavens-net-class-recovery.
