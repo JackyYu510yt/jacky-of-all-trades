@@ -45,48 +45,16 @@ Every user-facing /spec report — the INIT completion message, the LOG
 confirmation, any "spec updated" summary — ends with this block:
 
 ```
-NET: <one sentence — where things stand RIGHT NOW: result gap first, then gains and changes>
-
-**━━ CURRENT STAGE ━━**
-
-BEFORE: <the state before this session's work — one plain sentence>
-
-NOW: <the state right now — what exists, what's verified, what's waiting>
-
-CHANGED: <what changed and WHY — the evidence or decision that moved it>
-
-NEXT: <the immediate milestone between current state and the goal — "none" if reached>
-
-MEANT TO: <what NEXT is supposed to achieve in the system + the specific problem it fixes>
-
-FEYNMAN: <NEXT re-explained to a smart 12-year-old, one everyday analogy, zero jargon — how it fits Heaven's Net AND the ultimate goal>
-
-**━━ ULTIMATE GOAL ━━**  (4 lenses, derived from the spec's Goal — frozen)
-
-Delivers: <the finished result that arrives with zero input from the user>
-
-Heals: <how failures recover or surface themselves, no human needed>
-
-Replaces: <whose job/attention the system deletes — nobody left in the loop>
-
-Guarantees: <what wrongness is structurally impossible>
-
-**━━ SUGGESTED ACTION ━━**
-
-PASTE THIS: <a self-contained prompt the user pastes verbatim as their next message — what / files / limits / corrected facts / what to show-or-ask before anything costly. "nothing — goal reached" if reached>
-
-→ TOWARD THE GOAL: <how it advances NEXT and which lens(es) it pushes — named>
-
-→ HEAVEN'S NET: <how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
-
-**━━ GRADE ━━**
-
+ULTIMATE GOAL (4 lenses, derived from the spec's Goal — frozen):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
+NEXT STEP: <the immediate milestone between current state and that goal>
+SUGGESTED ACTION: <ONE concrete move to take now — and how it advances the next step and the ultimate goal>
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
-
 RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
 ```
-
-One blank line between every field; labels fixed, explaining text plain-language (8/22/26).
 
 The compass is the anti-drift anchor: ULTIMATE GOAL is derived fresh PER
 SCENARIO from the spec's Goal section — the end-state of THIS project, not a
@@ -102,16 +70,9 @@ first-person from their seat, real actors and real stakes ("me", "the VA",
 "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong
 and quiet"), consequences stated — never abstract boilerplate. Once stated, the block is frozen — if a report's goal block ever differs
 from what the user actually asked, that IS the drift they want to catch, so
-never quietly reword it toward what was achieved. CURRENT STAGE (8/22/26): BEFORE /
-NOW / CHANGED (with WHY) / NEXT (the immediate milestone — replaced the old NEXT STEP
-line) / MEANT TO (what NEXT achieves + the problem it fixes) / FEYNMAN (NEXT to a smart
-12-year-old, one analogy, naming both the Heaven's Net fit and the goal fit). SUGGESTED
-ACTION: PASTE THIS is a self-contained prompt the user pastes verbatim (what / files /
-limits / corrected facts / what to show-or-ask before anything costly); → TOWARD THE
-GOAL names the lens(es) and how it advances NEXT — an action whose chain doesn't connect
-is drift and must not be suggested; → HEAVEN'S NET follows the canonical error-recon
-definition (class-keyed recovery, evidence-only, bounded, fail-loud — read it, don't
-paraphrase; "n/a" when no recovery logic). Goal fully reached → NEXT "none", PASTE THIS
+never quietly reword it toward what was achieved. SUGGESTED ACTION must trace to the NEXT
+STEP and the goal; an action whose chain doesn't connect is drift and must not
+be suggested. Goal fully reached → next step "none", suggested action
 "nothing — goal reached".
 
 Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed

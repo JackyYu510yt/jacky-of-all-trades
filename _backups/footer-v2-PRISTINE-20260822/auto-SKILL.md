@@ -1801,42 +1801,20 @@ Toward goal: <how this moves the goal forward, honestly>
 
 Failures:    <every failure surfaced, not buried>
 
-━━ CURRENT STAGE ━━
+Ultimate goal (4 lenses, derived from THIS run's scenario — frozen):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
 
-BEFORE:   <the state before this run's work — one plain sentence>
+Next step:        <the immediate milestone between current state and that
+                   goal — "none" if the goal is fully reached>
 
-NOW:      <the state right now — what exists, what's verified, what's still waiting>
-
-CHANGED:  <what changed and WHY — the evidence or decision that moved it>
-
-NEXT:     <the immediate milestone between here and the ultimate goal — "none" if fully reached>
-
-MEANT TO: <what NEXT is supposed to achieve in the system + the specific problem it fixes>
-
-FEYNMAN:  <NEXT re-explained to a smart 12-year-old, one everyday analogy, zero jargon — how it fits Heaven's Net AND the ultimate goal>
-
-━━ ULTIMATE GOAL (4 lenses, derived from THIS run's scenario — frozen) ━━
-
-Delivers:   <the finished result that arrives with zero input from the user>
-
-Heals:      <how failures recover or surface themselves, no human needed>
-
-Replaces:   <whose job/attention the system deletes — nobody left in the loop>
-
-Guarantees: <what wrongness is structurally impossible>
-
-━━ SUGGESTED ACTION ━━
-
-PASTE THIS: <a self-contained prompt the user can paste verbatim as their next message — what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if DONE>
-
-→ TOWARD THE GOAL: <how it advances NEXT and which lens(es) it pushes — named>
-
-→ HEAVEN'S NET: <how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
-
-━━ GRADE ━━
+Suggested action: <ONE concrete move to take now, and how it advances the
+                   next step AND the ultimate goal — "nothing — goal
+                   reached" if DONE>
 
 Confidence:  PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred vs assumed>
-
 Risk:        HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which parts are unproven>
 ```
 
@@ -1857,7 +1835,7 @@ external dependency dead >~2h is reported as an incident with a reroute, never a
 - **Hard cap:** any "waiting", "queued", "retrying", "should", "expected", or dependency on an external recovery anywhere in the report → Confidence cannot be HIGH. If the Status says DONE but a claim would need the cap, the STATUS is wrong — downgrade to PARTIAL; never inflate the rating to match the status.
 - A bare grade with no evidence clause is invalid. The dash and the justification are part of the line.
 
-**Goal-compass rules (anti-drift):** `Ultimate goal` is derived fresh PER RUN from the current scenario — the end-state of THIS objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated ("one bad item never costs the other 200") — never abstract boilerplate. Once stated the block is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the block against their original ask. `NEXT` (inside CURRENT STAGE — it replaced the old Next-step line, 8/22/26) is the immediate milestone between here and that goal; `MEANT TO` states what NEXT achieves + the problem it fixes; `FEYNMAN` re-explains NEXT to a smart 12-year-old with one analogy and must name both the Heaven's Net fit and the goal fit. `SUGGESTED ACTION` is ONE move, not a menu: `PASTE THIS` is a self-contained prompt the user pastes verbatim as their next message (what / files / limits / corrected facts / what to show-or-ask before anything costly); `→ TOWARD THE GOAL` names the lens(es) it pushes and how it advances NEXT — an action whose chain doesn't connect to the goal is drift and must not be suggested; `→ HEAVEN'S NET` follows the canonical definition in error-recon (class-keyed recovery toward required state, evidence-only detection, bounded, fail-loud — read it, don't paraphrase from memory; "n/a — no recovery logic in this step" when it doesn't apply). Layout: one blank line between every field; labels fixed, explaining text plain-language.
+**Goal-compass rules (anti-drift):** `Ultimate goal` is derived fresh PER RUN from the current scenario — the end-state of THIS objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated ("one bad item never costs the other 200") — never abstract boilerplate. Once stated the block is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the block against their original ask. `Next step` is the immediate milestone between here and that goal. `Suggested action` is ONE move, not a menu, and its line must state how it advances BOTH the next step and the ultimate goal — an action whose chain doesn't connect to the goal is drift and must not be suggested.
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
@@ -2422,18 +2400,9 @@ Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
 Coverage: <success checks passed, e.g. 7/7 = 100%>
-Current stage:
-  Before:   <state before this run>
-  Now:      <state right now — exists / verified / waiting>
-  Changed:  <what changed and WHY>
-  Next:     <"none" if fully reached, else the milestone remaining>
-  Meant to: <what Next achieves + the problem it fixes>
-  Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
-Suggested action:
-  Paste this:     <"nothing — goal reached", or a self-contained prompt: what / files / limits / facts / show-or-ask>
-  → Toward goal:  <advances Next + which lens(es)>
-  → Heaven's Net: <class-keyed, evidence-only, bounded, fail-loud — or n/a>
+Next step: <"none" if fully reached, else the milestone remaining>
+Suggested action: <"nothing — goal reached", or the one move + how it advances the goal>
 Confidence: PERFECT|HIGH|MEDIUM|LOW — <verified directly vs inferred; DONE with anything unverified is forbidden; PERFECT only with all angles tested + refuter-clean, tests named>
 Risk:       HIGH|MEDIUM|LOW — <what's exposed if this is wrong>
 Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -2451,18 +2420,9 @@ Ledger (for the missing part — the P11 facts/unknowns handoff):
   Unknowns:                <what is still unverified>
   Leading hypothesis:      <best guess why + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
-Current stage:
-  Before:   <state before this run>
-  Now:      <state right now — landed / verified / missing>
-  Changed:  <what changed and WHY>
-  Next:     <the immediate milestone between here and that goal>
-  Meant to: <what Next achieves + the problem it fixes>
-  Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
-Suggested action:
-  Paste this:     <self-contained prompt: what / files / limits / facts / show-or-ask before anything costly>
-  → Toward goal:  <advances Next + which lens(es)>
-  → Heaven's Net: <class-keyed, evidence-only, bounded, fail-loud — or n/a>
+Next step:     <the immediate milestone between here and that goal>
+Suggested action: <ONE concrete move + how it advances the next step and the goal>
 Confidence:  HIGH|MEDIUM|LOW — <verified vs inferred; the "Done" list must be all-verified or this drops; PERFECT is impossible on a PARTIAL>
 Risk:        HIGH|MEDIUM|LOW — <what the Missing part exposes; who/what gets hit if it stays missing>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -2482,18 +2442,9 @@ Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead
   Unknowns:                <what is still unverified>
   Leading hypothesis:      <best remaining guess + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
-Current stage:
-  Before:   <state before this run>
-  Now:      <state right now — what's proven, what's parked>
-  Changed:  <what changed and WHY>
-  Next:     <the milestone this STUCK is blocking>
-  Meant to: <what Next achieves + the problem it fixes>
-  Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
-Suggested action (hand back to user):
-  Paste this:     <self-contained prompt for the best unblocking step: what / files / limits / facts / show-or-ask>
-  → Toward goal:  <how it unblocks Next + which lens(es)>
-  → Heaven's Net: <class-keyed, evidence-only, bounded, fail-loud — or n/a>
+Next step:     <the milestone this STUCK is blocking>
+Suggested action (hand back to user): <best concrete next step + how it unblocks the path to the goal>
 Confidence:  HIGH|MEDIUM|LOW — <how solid the Facts list is; anything inferred drops it; PERFECT is impossible on a STUCK>
 Risk:        HIGH|MEDIUM|LOW — <what stays exposed while this sits stuck>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
