@@ -46,6 +46,23 @@ brief; pointers in /prep (Self-Healing Patterns), /spec (success criteria),
 /repair (HI #16). Also 8/23/26: multi-match rule (two entries, same class +
 chain-eligible → smallest-first ladder IS the discriminating test; else C7),
 and Phase 1b ceiling rule (15-min probe = default ceiling = lower bound, not a
-cap verdict; 30/60 rungs only if budget-approved). Related:
+cap verdict; 30/60 rungs only if budget-approved).
+
+**Three broad companions (added 2026-08-23, user wants DOMAIN-AGNOSTIC recovery
+principles, not pipeline-specific rules):** HOLD — restored means it holds;
+hold-window = max(measured recovery, rung used, 15-min floor); a re-fire on the
+same (entry, target) inside it is a RECURRENCE = failed recovery (continue the
+chain, counters persist, never reset on a verify-pass that didn't hold — the
+37×-in-3h incident was 37 "successes"); exit a degraded state on more evidence
+than entering; staggered pool re-entry. CHEAPEST-FIRST — a lighter
+discriminating probe runs before the consuming action, may only FAIL the gate;
+the first consuming success is the verdict (two-signal rule kept). GIVEN
+NUMBERS — environment-supplied magnitudes (retry-after, quota, ETA, reset
+boundary) are the FIRST rung, never overridden by a constant; guards for ≤0 /
+absent / hostile values; reset boundaries observed, never assumed from a clock.
+Codified: error-recon step 4 + new Hold guardrail + Proportion rule (1) + job
+budget; /auto sweep + FnReview sub-keys 1c/1d/1e (own ledger keys), heuristic
+#14, refuter brief; /prep one sentence; /spec success criterion "recovery
+HOLDS". Every batch went draft → independent refuter → fix → show → apply. Related:
 [[structural-fix-vs-patch]], [[evidence-first-error-handling]],
 [[kiss-first-optimization]].
