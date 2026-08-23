@@ -99,7 +99,7 @@ C7 unknown      — anything unclassified (never guess-handled:
 **The recovery shape (same five moves, every class):**
 
 1. Diagnose the ACTUAL state (what page/state are we really in?)
-2. Classify — at runtime the class comes ONLY from the matched map entry's `Class:` field. `Class:` is assigned at MAP time, from evidence. A signal matching no entry is C7 by definition — never bucketed into a class because it *resembles* one (a ban page resembles signed-out; guessing C2 re-auths a banned account all night).
+2. Classify — at runtime the class comes ONLY from the matched map entry's `Class:` field. `Class:` is assigned at MAP time, from evidence. A signal matching no entry is C7 by definition — never bucketed into a class because it *resembles* one (a ban page resembles signed-out; guessing C2 re-auths a banned account all night). A signal whose verdict signals satisfy TWO OR MORE entries is resolved only when all matched entries share one `Class:` and are all chain-eligible (`confirmed` / `confirmed-stochastic`); otherwise it is C7 (capture, park, stop loud). When they do share a class, the class is proven — only the SIZE is ambiguous, and the smallest-first ladder IS the discriminating test: start at the smallest matched entry's measured recovery (or the ladder's first rung if unmeasured), verify (step 4), escalate ≥×2 on verify-fail; the entry whose recovery the observed clearing matches is the one logged. Never the larger response first, never a bespoke "both" handler (Proportion: never jump to the largest response on an ambiguous signal). Log the multi-match so the next recon touch sharpens `Distinguish-from`.
 3. Recover BY CLASS toward the state the operation requires. The class chain is a TEMPLATE parameterized by the matched entry's facts — its `Residue`, its resume-at-step, its measured timings — and before resuming it follows the canonical re-entry order: roll back the entry's residue → re-assert the precondition → invalidate downstream → resume.
 4. Verify the required state is actually restored — held to the same evidence bar as detection (an artifact or independent signal, never one re-read of the same render; "page settled" is not "right page"). Verify-fail → return to step 1 and re-diagnose/re-classify; a class change does not reset the job budget below.
 5. Bounded escalate; bottom rung always fail-loud.
@@ -181,7 +181,7 @@ Run the happy path at least twice (budget permitting) and record, step by step:
 
 Record **realistic variations** — branches that are normal, not broken: cookie banner, already-logged-in skip, slow load, occasional popup. Each tagged: **"normal variation — handle by X, not an error."** Only variations actually seen or genuinely likely. No imaginary branches.
 
-**Budget re-confirm checkpoint:** now that one real run's cost is measured, convert the Phase 0 risk appetite into concrete spend units and confirm with the user: *"one run costs ~X (quota/time/resource) — your budget allows ~N runs and the duration ladder up to 15 min per block; still good?"* This is the point where blind denomination becomes informed.
+**Budget re-confirm checkpoint:** now that one real run's cost is measured, convert the Phase 0 risk appetite into concrete spend units and confirm with the user: *"one run costs ~X (quota/time/resource) — your budget allows ~N runs and the duration ladder up to 15 min per block (extended rungs of 30 / 60 min only if you approve them here); still good?"* This is the point where blind denomination becomes informed.
 
 `========================================`
 
@@ -190,7 +190,7 @@ Record **realistic variations** — branches that are normal, not broken: cookie
 - **One variable at a time** — every captured error must trace to a known cause.
 - **Space out provocations** — recon must never look like an attack on the target. Derive the spacing from Phase 1a's measured timings (don't fire faster than a normal run would).
 - **Reproduce safe errors once to confirm.** Costly errors stay `seen once — unconfirmed`. A failure seen repeatedly in history but not reproducible on demand is `confirmed-stochastic`, not unconfirmed — frequency is its evidence.
-- **Duration probing** for blocks: when a block appears, probe at growing intervals (1, 2, 5, 15 min). Measured recovery time is the evidence separating a soft block from a daily cap, and it sets the semantic axis of Rule 2. Budget-gated.
+- **Duration probing** for blocks: when a block appears, probe at growing intervals (1, 2, 5, 15 min). Measured recovery time is the evidence separating a soft block from a daily cap, and it sets the semantic axis of Rule 2. Budget-gated. The top rung is the DEFAULT CEILING, not a verdict: a block that survives the 15-min probe is recorded as `recovery > 15 min (lower bound, n=<count>)` — unmeasured for Proportion purposes — never as "permanent" or "daily cap" by default. Extended rungs (30 / 60 min) run only if the budget re-confirm approved them; otherwise mark the entry so production episodes (logged per the Proportion guardrail) supply the real measurement on the next recon touch.
 - **Capture at every state change**, not just at the end — one snapshot can miss the moment. "State change" = URL change, DOM-mutation settle, network-idle, or a new line on stdout — whichever the target type makes observable.
 
 **Capture playbook per target type — every capture gets all that apply:**
@@ -231,7 +231,7 @@ Record **realistic variations** — branches that are normal, not broken: cookie
 - Semantic axis: recoverable — recovery measured at ~4 min via duration probe (n=2, block observed lifting; a probe that hit its ceiling is a lower bound, not a measurement)
 - State: session alive, quota NOT exhausted, job resumable at step 3
 - Residue: partial side effects this failure can leave (half-written output at step 4, uncommitted ledger row) that a rollback must undo before resume — (none / list)
-- Distinguish-from: E06 daily cap — cap survives the 15-min probe, soft block does not
+- Distinguish-from: E06 daily cap — a distinct verdict signal, or recovery observed at the reset boundary (history / production episode); surviving any probe rung is a lower bound, not a cap verdict (Phase 1b ceiling rule)
 - Scope: per-member (one account/worker) | pool-wide (all members at once) | n/a (single resource) — how established (a second member probed clean / also failing)
 - Ledger semantics (if evidence is a log): append-only? rows≠items? unique key? concurrent writers?
 - Confidence: confirmed | confirmed-stochastic (~1 in N) | seen once — unconfirmed | described — unseen

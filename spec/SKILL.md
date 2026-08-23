@@ -201,8 +201,11 @@ time, plainly — then write the file:
    one general strategy per failure CLASS (auth/session, timing, network,
    resource, …), never one criterion per observed error string; a class and
    its recovery rest only on evidence-mapped failure modes, never on
-   assumption (canonical definition + strict guardrails: /error-recon,
-   "Heaven's Net" section). Sweep the known modes against the
+   assumption; and each capacity-resting recovery (cooldown / bench /
+   pool pull) is sized in PROPORTION — from an observed measurement or a
+   bounded smallest-first ladder, never a guessed constant, under- and
+   over-sizing both failing the criterion (canonical definition + strict
+   guardrails incl. Proportion: /error-recon, "Heaven's Net" section). Sweep the known modes against the
    10-category hostile-scenario seed (canonical RED-TEAM brief in
    `~/.claude/skills/audit/SKILL.md`: mid-op death, check-then-act race,
    half-done re-entry, flapping, two actors, boundaries, time windows,

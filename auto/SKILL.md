@@ -1679,9 +1679,12 @@ PRINCIPLES (same 5 items as the principles-sweep):
     smallest-first ladder; a guessed constant or wrong scope is a
     VIOLATION in either direction (90 s rest for a ~24-min throttle;
     rest-till-midnight on a string that may mean a 60 s limit; N members
-    retired for a pool-wide blip). Bounded growing backoff IS the ladder
-    — do not flag it. Item 1 returns two verdicts, keyed `1` (class) and
-    `1b` (proportion); a size finding filed as `1` is re-keyed `1b`.
+    retired for a pool-wide blip). A signal mapped to two entries of
+    different size that jumps to the larger (or a bespoke 'both' handler)
+    instead of a smallest-first ladder is the same VIOLATION. Bounded
+    growing backoff IS the ladder — do not flag it. Item 1 returns two
+    verdicts, keyed `1` (class) and `1b` (proportion); a size finding
+    filed as `1` is re-keyed `1b`.
  2. EVIDENCE-ONLY — no success from labels/exit codes alone.
  3. RE-ENTRY HYGIENE — retry/resume rolls back residue → re-asserts the
     precondition → invalidates downstream before redo.
@@ -2291,9 +2294,12 @@ Dispatch ONE fresh general-purpose subagent with a read-only probe license. Hand
    smallest-first ladder; a guessed constant or wrong scope is a
    VIOLATION in either direction (90 s rest for a ~24-min throttle;
    rest-till-midnight on a string that may mean a 60 s limit; N members
-   retired for a pool-wide blip). Bounded growing backoff IS the ladder
-   — do not flag it. Item 1 returns two verdicts, keyed `1` (class) and
-   `1b` (proportion); a size finding filed as `1` is re-keyed `1b`.
+   retired for a pool-wide blip). A signal mapped to two entries of
+   different size that jumps to the larger (or a bespoke 'both' handler)
+   instead of a smallest-first ladder is the same VIOLATION. Bounded
+   growing backoff IS the ladder — do not flag it. Item 1 returns two
+   verdicts, keyed `1` (class) and `1b` (proportion); a size finding
+   filed as `1` is re-keyed `1b`.
 2. EVIDENCE-ONLY — no success declared from labels/exit codes
    alone; verdicts rest on verified output or independent signals;
    nothing assumed.

@@ -42,6 +42,10 @@ field); applies only to responses that rest/retire capacity or pull a pool —
 growing backoff IS the ladder. Codified: error-recon Heaven's Net guardrail +
 `Scope:` template field + Phase 3 chain rule; /auto heuristic #14, sweep +
 FnReview item `1b` (own ledger key), HI #14 (under-size = band-aid), refuter
-brief. NOT yet in /prep /spec /repair. Related:
+brief; pointers in /prep (Self-Healing Patterns), /spec (success criteria),
+/repair (HI #16). Also 8/23/26: multi-match rule (two entries, same class +
+chain-eligible → smallest-first ladder IS the discriminating test; else C7),
+and Phase 1b ceiling rule (15-min probe = default ceiling = lower bound, not a
+cap verdict; 30/60 rungs only if budget-approved). Related:
 [[structural-fix-vs-patch]], [[evidence-first-error-handling]],
 [[kiss-first-optimization]].
