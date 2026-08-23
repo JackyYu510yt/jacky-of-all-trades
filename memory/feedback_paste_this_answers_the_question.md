@@ -17,4 +17,4 @@ Same turn, the two arrow lines were also called out: "→ TOWARD THE GOAL: Moves
 - Before writing PASTE THIS, name the question this turn was answering. If it was a *which-one* question, PASTE THIS = the pick + one-line reason. If it was a *do-it* request, PASTE THIS = the next work prompt (existing rule).
 - Still one move, not a menu — the pick IS the one move.
 - Pairs with [[pick-from-options]] (show variants, user picks) and [[leaning-toward-not-authorization]] (a pick is the user's explicit authorization; don't pre-write the work as if already chosen).
-- Canonical footer lives in [[confidence-risk-footer]]; wired into /explain SKILL.md (template lines ~105–109 + SUGGESTED ACTION rules ~138–142) on 8/22/26. /auto, /prep, /spec arrow wording still v2 — spread on next touch.
+- Canonical footer lives in [[confidence-risk-footer]]; wired 8/22/26 into /explain (template + rules), /auto (contract template, compass rule, 3 inline DONE/PARTIAL/STUCK templates — STUCK variant: 'recommended pick + why' when the block is a user decision), /prep (card + compass rule), /spec (block + paragraph). Backups: ~/.claude/skills/_backups/footer-v3-20260822/.
