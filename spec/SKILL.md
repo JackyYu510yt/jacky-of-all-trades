@@ -194,8 +194,9 @@ time, plainly — then write the file:
    also pin the **failure path**, not just the happy path — most failures
    happen there, so a spec that grades only the happy path grades the wrong
    thing. Add self-healing criteria, each empirically checkable: recovers
-   from its *known* failure modes with no human in the loop (the modes come
-   from `/error-recon`), checkpoints progress so a restart resumes instead of
+   from its *known* failure modes with no human in the loop AND the recovery
+   HOLDS — no recurrence inside the hold-window (the modes come from
+   `/error-recon`), checkpoints progress so a restart resumes instead of
    starting over, never blocks on mid-run input, and surfaces failures by
    count rather than hiding them. Spec the recovery per **Heaven's Net** —
    one general strategy per failure CLASS (auth/session, timing, network,

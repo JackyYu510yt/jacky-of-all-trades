@@ -1682,9 +1682,23 @@ PRINCIPLES (same 5 items as the principles-sweep):
     retired for a pool-wide blip). A signal mapped to two entries of
     different size that jumps to the larger (or a bespoke 'both' handler)
     instead of a smallest-first ladder is the same VIOLATION. Bounded
-    growing backoff IS the ladder — do not flag it. Item 1 returns two
-    verdicts, keyed `1` (class) and `1b` (proportion); a size finding
-    filed as `1` is re-keyed `1b`.
+    growing backoff IS the ladder — do not flag it.
+    1c. HOLD — a capacity-resting recovery counts only if it HOLDS for the
+    hold-window (max of measured recovery / rung used / 15-min floor); cite
+    (a) the compare of a re-fire against the stored last-recovery time for
+    the same (entry, target) and (b) the counter line — a counter reset on
+    verify-pass is the VIOLATION; exit a degraded state on more evidence
+    than entering it; pool re-entry staggered.
+    1d. CHEAP-FIRST — a lighter discriminating probe runs before the
+    consuming action; VIOLATION only when such a probe is already present
+    in the code (health/status read) or named in the map entry — else NOTE.
+    1e. GIVEN NUMBERS — an environment-supplied magnitude (retry-after,
+    quota, ETA, reset boundary) is the first rung, never overridden by a
+    constant; a reset boundary is a VIOLATION unless it cites its
+    measurement source (map entry / comment).
+    Item 1 returns verdicts keyed `1` (class), `1b` (proportion), `1c`
+    (hold), `1d` (cheap-first), `1e` (given numbers); a finding filed
+    under the wrong key is re-keyed by the DRIVER at mtime validation.
  2. EVIDENCE-ONLY — no success from labels/exit codes alone.
  3. RE-ENTRY HYGIENE — retry/resume rolls back residue → re-asserts the
     precondition → invalidates downstream before redo.
@@ -1958,7 +1972,7 @@ Never restart the farmer / vendor / database / host as a first move. That's the 
 
 ### 14. Heaven's Net — recovery you BUILD keys to failure classes, not symptoms
 
-Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Never "error string X → do Y": handlers key to a failure class (navigation / auth-session / element / timing / network / resource / unknown) and recover toward the state the operation requires — diagnose actual state → classify → recover by class → verify the invariant restored with evidence → bounded escalate, fail loud. Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work. STRICT evidence caveats, non-negotiable: a runtime class comes ONLY from a matched, evidence-backed map entry — a new symptom joins a class via a new map entry, never by resemblance (unmatched = unknown: capture, park, stop loud); confidence tiers still gate which entries may run a chain; and a job-level recovery budget bounds the whole item, not just each chain. Proportion (a guardrail in that same canonical section): the SIZE of a recovery that rests/retires capacity or pulls a pool — cooldown, bench length, share of a pool — comes from an observed recovery measurement or a bounded ≥×2 smallest-first ladder, never a constant picked by feel; under-sized (hammer) and over-sized (retire healthy) are equal failures. Trigger phrase: the user saying "heaven's net" invokes this shape explicitly — read the canonical definition + guardrails in /error-recon ("Heaven's Net" section) before designing recovery; never run it from memory. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
+Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Never "error string X → do Y": handlers key to a failure class (navigation / auth-session / element / timing / network / resource / unknown) and recover toward the state the operation requires — diagnose actual state → classify → recover by class → verify the invariant restored with evidence → bounded escalate, fail loud. Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work. STRICT evidence caveats, non-negotiable: a runtime class comes ONLY from a matched, evidence-backed map entry — a new symptom joins a class via a new map entry, never by resemblance (unmatched = unknown: capture, park, stop loud); confidence tiers still gate which entries may run a chain; and a job-level recovery budget bounds the whole item, not just each chain. Proportion (a guardrail in that same canonical section): the SIZE of a recovery that rests/retires capacity or pulls a pool — cooldown, bench length, share of a pool — comes from an observed recovery measurement or a bounded ≥×2 smallest-first ladder, never a constant picked by feel; under-sized (hammer) and over-sized (retire healthy) are equal failures. Three companions in the same section: restored must HOLD (a recurrence inside the hold-window — floored at the 15-min probe ceiling — is a failed recovery, not a fresh success; counters continue); verify cheapest-first (a lighter probe may only fail the gate; the first consuming success is the verdict — heuristic #13 applied to built recovery); and environment-given numbers (retry-after, quota, ETA, reset boundary) are the first rung, never overridden by a constant. Trigger phrase: the user saying "heaven's net" invokes this shape explicitly — read the canonical definition + guardrails in /error-recon ("Heaven's Net" section) before designing recovery; never run it from memory. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
 
 
 ## Auto Does NOT Waive
@@ -2297,9 +2311,23 @@ Dispatch ONE fresh general-purpose subagent with a read-only probe license. Hand
    retired for a pool-wide blip). A signal mapped to two entries of
    different size that jumps to the larger (or a bespoke 'both' handler)
    instead of a smallest-first ladder is the same VIOLATION. Bounded
-   growing backoff IS the ladder — do not flag it. Item 1 returns two
-   verdicts, keyed `1` (class) and `1b` (proportion); a size finding
-   filed as `1` is re-keyed `1b`.
+   growing backoff IS the ladder — do not flag it.
+   1c. HOLD — a capacity-resting recovery counts only if it HOLDS for the
+   hold-window (max of measured recovery / rung used / 15-min floor); cite
+   (a) the compare of a re-fire against the stored last-recovery time for
+   the same (entry, target) and (b) the counter line — a counter reset on
+   verify-pass is the VIOLATION; exit a degraded state on more evidence
+   than entering it; pool re-entry staggered.
+   1d. CHEAP-FIRST — a lighter discriminating probe runs before the
+   consuming action; VIOLATION only when such a probe is already present
+   in the code (health/status read) or named in the map entry — else NOTE.
+   1e. GIVEN NUMBERS — an environment-supplied magnitude (retry-after,
+   quota, ETA, reset boundary) is the first rung, never overridden by a
+   constant; a reset boundary is a VIOLATION unless it cites its
+   measurement source (map entry / comment).
+   Item 1 returns verdicts keyed `1` (class), `1b` (proportion), `1c`
+   (hold), `1d` (cheap-first), `1e` (given numbers); a finding filed
+   under the wrong key is re-keyed by the DRIVER at mtime validation.
 2. EVIDENCE-ONLY — no success declared from labels/exit codes
    alone; verdicts rest on verified output or independent signals;
    nothing assumed.
@@ -2404,7 +2432,7 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 - the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks),
 - the runbook **Functions block** (FnReview coverage hand-over): name explicitly every `open`, `unreviewed`, no-stamp and WAIVED line, and every function whose current hash differs from its `clean` stamp's sha — "these were not independently reviewed; look there first". A stale `clean` must never read as coverage. When the refuter was FORCED by an `open` line or a fix-trigger `unreviewed` stamp on a machine-checked goal, add: *"For each named open / unreviewed line return exactly BLOCKER or WAIVED(<citation>); a confirmed BAND-AID (HI #14 aim-test + FnReview items 6–9) is a BLOCKER even though the Success line is machine-green."* Silence / CONCERN / NOTE on a named line = UNRESOLVED → retry once → then the same-context skeptic fallback below must rule BLOCKER(<cited unmet item>) or WAIVED(<citation>) — never a BLOCKER without a named item.
 
-Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13). When the deliverable contains recovery/error-handling code, add: *"Is any handler keyed to a symptom string instead of an evidence-mapped failure class, does any path act on an assumed/unproven signal, or is any capacity-resting recovery SIZED (cooldown / bench / scope) from a guessed constant instead of an observed measurement or a bounded smallest-first ladder? (Heaven's Net — canonical in /error-recon.) Any of these is a BLOCKER."*
+Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13). When the deliverable contains recovery/error-handling code, add: *"Is any handler keyed to a symptom string instead of an evidence-mapped failure class, does any path act on an assumed/unproven signal, or is any capacity-resting recovery SIZED (cooldown / bench / scope) from a guessed constant instead of an observed measurement or a bounded smallest-first ladder? Does any recovery declare success on a verify that didn't HOLD (same recovery re-firing inside the hold-window with counters reset), skip a lighter probe that exists, or override an environment-given magnitude with a constant? (Heaven's Net — canonical in /error-recon.) Any of these is a BLOCKER."*
 
 ### RED-TEAM rider — unattended / stateful deliverables
 
