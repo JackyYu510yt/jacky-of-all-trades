@@ -102,11 +102,11 @@ Guarantees: <what wrongness is structurally impossible>
 
 **━━ SUGGESTED ACTION ━━**
 
-PASTE THIS: <the answer to THIS TURN'S question, as a self-contained prompt the user pastes verbatim as their next message. If the turn ended on a pick (Choice 1 vs 2, Option A/B): the pick itself in the user's voice + one line of why — "Go with Choice 2 — <why>". If the turn was a do-it request: the next work prompt — what to do, on which files/paths, the limits (paper-only / no prod touch / budget), which corrected facts to use, and what to show or ask before anything costly. "nothing — goal reached" if the goal is fully reached.>
+PASTE THIS: <a self-contained prompt the user can paste verbatim as their next message — what to do, on which files/paths, the limits (paper-only / no prod touch / budget), which corrected facts to use, and what to show or ask before anything costly. "nothing — goal reached" if the goal is fully reached.>
 
-→ TOWARD THE GOAL: <a chain, not a tag: "this move → gets us <concrete thing> → which is what <lens> needs because <why>" — spelled out in plain words for each lens it pushes, and what the rejected option would have cost instead, so the direction is visible>
+→ TOWARD THE GOAL: <how this action advances NEXT, and which ultimate-goal lens(es) it pushes — name them>
 
-→ HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) the SEEN evidence the pick stands on (files read, diffs, logs — never "should"), (2) what the other option(s) were ruled out on — same evidence, not vibes, (3) how we'd know fast if the pick is wrong + the bounded fallback (nothing burned, can still switch); anything unchecked is NAMED, not hidden. On a WORK STEP that touches recovery logic: how it leaves a STRONGER system — recovery keyed to failure class (not symptom), detection evidence-only, tries bounded, bottom rung fail-loud. "n/a — no recovery logic in this step" ONLY for a work step with no recovery logic — never on a pick.>
+→ HEAVEN'S NET: <how it leaves a STRONGER system — recovery keyed to failure class (not symptom), detection evidence-only, tries bounded, bottom rung fail-loud. "n/a — no recovery logic in this step" when it genuinely doesn't apply.>
 
 **━━ GRADE ━━**
 
@@ -135,13 +135,11 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 **SUGGESTED ACTION rules:**
 
-- PASTE THIS answers THIS TURN'S question (user-confirmed 8/22/26). Before writing it, name the question the turn was answering. A *which-one* question (pick A/B, choose a variant) → PASTE THIS is the pick itself, in the user's voice, plus one line of why ("Go with Choice 2 — fix the lanes in the live folder, re-sync the factory after"). The work-prompt for the step AFTER the pick belongs to the next turn, once they've chosen — writing it now skips their question and reads as drift. A *do-it* request → PASTE THIS is the complete work prompt: stands alone with no chat context — what to do, on which files/paths, the limits, which corrected facts to use, and what to show or ask before anything costly. Either way: one move, not a menu (the pick IS the one move).
+- PASTE THIS is a complete prompt the user copies verbatim into their next message. It must stand alone with no chat context: what to do, on which files/paths, the limits, which corrected facts to use, and what to show or ask before anything costly. One move, not a menu.
 
-- → TOWARD THE GOAL is a CHAIN, not a tag (user-confirmed 8/22/26 — "Moves NEXT; pushes Delivers and Heals" is a label, not a reason). Spell out, in plain words: this move → gets us <concrete thing> → which is what <lens> needs because <why> — for each lens it pushes. Name what the rejected option would have cost ("Choice 1 would spend today moving folders and ship zero images") so the direction is visible. An action whose chain doesn't connect to the goal is drift; don't suggest it.
+- → TOWARD THE GOAL names which lens(es) the action pushes and how it advances NEXT. An action whose chain doesn't connect to the goal is drift; don't suggest it.
 
-- → HEAVEN'S NET answers "why can we proceed with confidence?" (user-confirmed 8/22/26). Two shapes:
-  - **On a PICK** (the turn ended on a decision): three parts, always — (1) the SEEN evidence the pick stands on (files read, diffs run, logs, backups found — never "should"/"probably"); (2) what the other option(s) were ruled out on, using the same evidence, not vibes; (3) how we'd know fast if the pick is wrong, and the bounded fallback (nothing deleted, nothing burned, the other option still open). Anything NOT checked is named, not glossed ("what I didn't check: who edited at 20:21"). This is the Heaven's Net frame applied to a decision: evidence-only, alternatives ruled out rather than assumed away, bounded, fail-loud. "n/a" is NEVER valid on a pick.
-  - **On a WORK STEP**: follows the canonical definition in `~/.claude/skills/error-recon/SKILL.md` ("Heaven's Net" section) — recover by failure CLASS toward the required state, detection evidence-only (unmatched = unknown → capture, park, stop loud), bounded tries, fail-loud bottom rung. If the action touches recovery logic, READ that section before writing the line — never paraphrase it from memory. When the work step genuinely has no recovery logic, write "n/a — no recovery logic in this step", never skip the line.
+- → HEAVEN'S NET follows the canonical definition in `~/.claude/skills/error-recon/SKILL.md` ("Heaven's Net" section) — recover by failure CLASS toward the required state, detection evidence-only (unmatched = unknown → capture, park, stop loud), bounded tries, fail-loud bottom rung. If the action touches recovery logic, READ that section before writing the line — never paraphrase it from memory. When the step has no recovery logic, write "n/a — no recovery logic in this step", never skip the line.
 
 **The compass rules (anti-drift):**
 
