@@ -28,6 +28,20 @@ entries run a chain; a job-level recovery budget (persisted to the checkpoint
 file) bounds the whole item. KISS: taxonomy earned at the 3rd handler in the
 same class, not before. Codified 2026-08-18 across /error-recon (canonical),
 /auto (heuristic #14), /prep (Self-Healing Patterns + field 9), /spec (success
-criteria), /repair (HI #16), + global CLAUDE.md trigger rule. Related:
+criteria), /repair (HI #16), + global CLAUDE.md trigger rule.
+
+**Proportion guardrail (added 2026-08-23, from two live incidents):** confirming
+the signal is half the rule; the other half is REACT IN PROPORTION. Under-sized
+(90 s rest for a ~24-min-median throttle → account hammered 37×) and over-sized
+(rest-till-midnight on a string that can mean a 60 s limit → healthy accounts
+benched) are equal violations. Size from an OBSERVED recovery measurement (block
+actually lifted, n recorded; a probe that hit its 15-min ceiling is a lower
+bound, not a measurement); unmeasured → smallest-first ≥×2 ladder, verify,
+escalate bounded; scope matches evidence (per-member vs pool-wide `Scope:`
+field); applies only to responses that rest/retire capacity or pull a pool —
+growing backoff IS the ladder. Codified: error-recon Heaven's Net guardrail +
+`Scope:` template field + Phase 3 chain rule; /auto heuristic #14, sweep +
+FnReview item `1b` (own ledger key), HI #14 (under-size = band-aid), refuter
+brief. NOT yet in /prep /spec /repair. Related:
 [[structural-fix-vs-patch]], [[evidence-first-error-handling]],
 [[kiss-first-optimization]].
