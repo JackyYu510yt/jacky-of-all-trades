@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: feedback
   originSessionId: 037b7014-3a8e-4834-bdf6-3d32b83f0778
-  modified: 2026-08-24T17:40:38.125Z
+  modified: 2026-08-24T17:49:24.039Z
 ---
 
 2026-08-24 user directive: the scaled soak harness (`Testing\Jacky Rush\scale_soak.py`, from the
@@ -24,7 +24,8 @@ simulator against a real measured slice inside a FROZEN gate before believing it
 its scope + a live-confirmation debt) + 7 mechanical laws + the SMOKE→INJECT→SCALE→VALIDITY→
 EXPERIMENT ladder (reference names them H1/H2/H3/S0/S1+). Riders cite it from /repair (principle 10
 Step-2), /spec (Success-criteria scale-proof bar), /prep (Phase 9 — planned in Phase 6, built in
-Phase 8, Phase 9 runs injections only). Survived 1 AUDITOR + 1 RED-TEAM round (2 blockers, 7 BREAKS
+Phase 8, Phase 9 runs injections only), and /error-recon (Relationship section: the failure map is
+the INJECT rung's injection catalogue; soak-discovered classes flow back as map findings). Survived 1 AUDITOR + 1 RED-TEAM round (2 blockers, 7 BREAKS
 integrated: tripwire negative control, prod-untouched [CHK], frozen validity band, calibration
 recency, DROP is terminal — no seed re-rolls, live contradiction outranks blind-spot soak PASS,
 soak-substitute owes a named live follow-up). Related: [[heavens-net]] (INJECT rung consumes the

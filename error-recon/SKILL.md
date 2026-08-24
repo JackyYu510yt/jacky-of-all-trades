@@ -334,6 +334,7 @@ Protocols follow **Heaven's Net** (canonical section above): entries sharing a `
 - **`prep`** — the map + healing-spec feed /prep's per-function design: confirmed entries become field-9 (Failure modes table) and field-12 (rollback, via the `Residue` field) content, and the safe-to-provoke set plus the `described — unseen` modes become /prep's field-6 TESTING-CONDITIONS injection list. /prep designs the healing; `error-recon` supplies the evidence it heals against.
 - **`audit`** — gates the build step that follows this skill.
 - **`auto`** — under `/auto`, phase gates collapse; only DONE or STUCK ends the run. The budget is the exception — it must be pre-supplied, never invented.
+- **`auto` → Scale-Soak Verification (added 2026-08-24)** — the map is the injection catalogue for the soak ladder's INJECT rung: each confirmed class is injected at the stubbed leaf and the REAL handler's reaction asserted at scale — the at-scale proof of Phase 3's healing spec once it's built. A class a soak run discovers that isn't in the map comes back HERE as a finding (append, never an improvised handler); a class the map can't evidence is never injected — it rides the harness's scope card as unmodeled.
 - **`optimize`** — tune the tool after it's correct and self-healing.
 
 ## TL;DR
