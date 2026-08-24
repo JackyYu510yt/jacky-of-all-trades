@@ -270,6 +270,8 @@ Examples:
 
 A fix is not shippable while Step 2 is red, regardless of Step 1.
 
+**Scale-soak rider (canonical: /auto "Scale-Soak Verification", added 2026-08-24).** When the fix lives in fleet / pipeline routing, budgeting, or recovery logic and "production" is the only real condition — but a live run is days away, expensive, or unsafe — Step 2's test spec is the scale-soak ladder: real decision logic + stubbed leaf + negative-control-proven tripwire, H2 proving the real handler reacts to each injected failure class, and — when prod calibration data exists — the fix verified as an A/B (fix-ON vs fix-OFF, identical prod-calibrated injection, ensemble means): the different-instance probe at scale. ADMISSIBILITY FIRST: map the failure signature against the harness's scope card — a fix whose effect sits in the harness's declared blind spot (e.g. time-based effects in a clockless harness) cannot be verified there; Step 2 then needs live measurement, and an unmeasurable A/B is never read as DROP. NO CALIBRATION DATA: an H1+H2 ladder still proves the handlers react, but confers no prod-grade claim — Step 2 then closes on live measurement or the Graduated ramp. "Should hold in prod" with neither soak evidence nor live measurement keeps Step 2 red; a soak-closed fix carries a named live-confirmation follow-up.
+
 ### 11. Report honestly
 
 The final report names the cause, the evidence that proved it, the exact fix applied, and the verification results — both PoC and actual-usecase. If anything regressed during integration, the report says so. Half-fixes get labeled PARTIAL, not DONE.

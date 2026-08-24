@@ -265,7 +265,16 @@ Log empty):
      that already satisfy a precondition instead of establishing it on any
      input, e.g. "promote an already-logged-in spare"). Band-aid designs enter
      the spec only when the user explicitly asked, labeled
-     BAND-AID (user-requested) with the structural version named beside it. -->
+     BAND-AID (user-requested) with the structural version named beside it.
+     Scale-proof bar (fleet/pipeline fixes): a criterion claiming production
+     behavior ("holds at scale", "fixed in production") names its evidence —
+     a scale-soak run (canonical ladder in /auto "Scale-Soak Verification":
+     real logic, stubbed leaf, negative-control-proven tripwire,
+     machine-checked [CHK] reconciliation, frozen prod-calibrated validity
+     gate) or a live prod measurement. Neither named = a blank HARD field.
+     Soak evidence carries its scope card (what the harness cannot measure)
+     and, when it substitutes for live measurement, the named
+     live-confirmation follow-up ("confirm on next prod day: <metric>"). -->
 - <...>
 
 ## Assumptions & Unknowns (skip when the task has no real unknowns)

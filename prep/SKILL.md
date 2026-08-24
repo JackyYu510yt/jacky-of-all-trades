@@ -952,6 +952,8 @@ Pull each item from the TESTING CONDITIONS card and run it:
 
 **No standalone Step 1 PoC layer.** It's been folded into Phase 8's per-function REAL step. The historical Step 1 / Step 2 split existed for skills that don't have a per-function build cycle — `prep` does, so Phase 9 is integration-only.
 
+**Scale-soak escalation (canonical: /auto "Scale-Soak Verification", added 2026-08-24).** When the deliverable is fleet / pipeline-class and the TESTING CONDITIONS card names a scale or failure mix that a live run can't safely or affordably host (fleet-wide waves, per-account budgets, hundreds of concurrent workers), the scale-soak harness is a PLANNED COMPONENT, not a Phase 9 invention: Phase 6 lists it in the plan like any other deliverable, Phase 8 builds it through the normal per-function cycle (real decision logic, stubbed produce-leaf, negative-control-proven tripwire, the H1→H2→H3→S0 ladder), and Phase 9 — which stays integration-only — RUNS the card's pre-registered failure injections INSIDE it (same expected/confirms/disproves discipline) and puts its `[CHK]` reconciliation block on the verdict card as HARD evidence, scope card attached.
+
 **Verdict block — formatted as a P4 card (see Final Report below).**
 
 A prototype is not shippable while any MUST-hold or end-state check is red, regardless of how many SHOULD-hold items pass.
