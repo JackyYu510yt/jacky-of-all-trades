@@ -266,7 +266,7 @@ Log empty):
      input, e.g. "promote an already-logged-in spare"). Band-aid designs enter
      the spec only when the user explicitly asked, labeled
      BAND-AID (user-requested) with the structural version named beside it.
-     Scale-proof bar (fleet/pipeline fixes): a criterion claiming production
+     Scale-proof bar (production-scale fixes): a criterion claiming production
      behavior ("holds at scale", "fixed in production") names its evidence —
      a scale-soak run (canonical ladder in /auto "Scale-Soak Verification":
      real logic, stubbed leaf, negative-control-proven tripwire,
