@@ -2447,7 +2447,7 @@ Brief: *"You did not write this code. For each checklist item return CLEAN or VI
 
 ### Constraint compass — no winning by cheating
 
-Before ANY derived, reviewer-proposed, or un-parked step executes: (a) it traces to the frozen Success line; (b) it violates ZERO Never-do lines; (c) it differs from every APPROACHES.md entry. Any failure → step REJECTED (logged with the broken constraint; the rejection consumes an approach slot so cosmetic variants can't loop). Every remaining path violates a constraint → **STUCK-user with the tradeoff spelled out**: "goal reachable only by breaking <constraint> — your call." The purpose is never traded away silently.
+Before ANY derived, reviewer-proposed, or un-parked step executes: (a) it traces to the frozen Success line; (b) it violates ZERO Never-do lines; (c) it differs from every APPROACHES.md entry. Any failure → step REJECTED (logged with the broken constraint; the rejection consumes an approach slot so cosmetic variants can't loop — EXCEPT a Navigator NEXT rejection, which is logged only and consumes no slot: that budget counts the run's own attempts, not a reviewer's proposals; tick step 4.6). Every remaining path violates a constraint → **STUCK-user with the tradeoff spelled out**: "goal reachable only by breaking <constraint> — your call." The purpose is never traded away silently.
 
 ### Terminals + kill switch
 
