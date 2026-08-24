@@ -364,7 +364,7 @@ On a terminal verdict (DONE / STUCK-user / STUCK (stopped by user)), /auto delet
 
 ### Contract + Guardian (universal)
 
-Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `APPROACHES.md` + `PROGRESS.md` for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
+Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `APPROACHES.md` + `PROGRESS.md` + `DIGEST.md` (the compact area — see Universal state files) for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
 
 ### Runbook file location
 
@@ -416,6 +416,7 @@ Status:
   Round:             0/3   (guardian re-attack rounds used)
   Jobs:              []    (live background jobs: id/PID + artifact path + expected duration)
   Reviewer:          n/a | pending | <last verdict>
+  Navigator:         n/a | <verdict> @<ISO> — <one-line reasoning> (mirrored to PROGRESS.md)
   Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
 
@@ -1356,6 +1357,10 @@ auto-runs/<slug>/RUNBOOK.md    Step list + current state + mode
 auto-runs/<slug>/PROGRESS.md   Last-tick summary (what fired this tick,
                           what's next). Helps the next tick orient.
 
+auto-runs/<slug>/DIGEST.md     The compact area — bounded running brief
+                          (context, never evidence). See Universal
+                          state files under Goal-Guardian (canonical).
+
 auto-runs/<slug>/APPROACHES.md Append-only retry log — every approach
                           tried for every step, with the reason it
                           failed.
@@ -1407,6 +1412,10 @@ Tick fires → new TURN in this same session → /auto re-invoked by the pinned 
       AND the heuristic #8 artifact probe shows no growth → treat the
       step as STALLED (heuristic #13). Background jobs with no window:
       frame-grab the output artifact instead of the desktop.
+  4d. NAVIGATOR — per Goal-Guardian tick step 4.6 (canonical):
+      dispatch the analysis subagent, write DIGEST.md + the
+      Navigator: field; an approved NEXT-ACTION substitutes for the
+      step picked at 5-6 and runs as that one action.
   5. Pick first non-DONE / non-PARKED step from runbook
        (if none and success unmet → NOT a terminus: increment Round,
         dispatch the blocker-review subagent, act on its verdict via
@@ -1452,7 +1461,7 @@ Slow steps (test suites, builds, multi-min API)       → 5–15 min
 Very slow steps (overnight ffmpeg renders)            → 15–30 min
 ```
 
-Don't tick faster than the work can finish — overlapping ticks just stack. If unsure, start at 10 min and adjust based on PROGRESS.md observation. On build / fix runs size the interval at runbook generation for **author dispatch + FnReview dispatch + principles-sweep combined** — a dispatch must never straddle the tick that opened it; a FnReview that can't fit the remaining window is carried to the next tick (FnReview "carried" rule).
+Don't tick faster than the work can finish — overlapping ticks just stack. If unsure, start at 10 min and adjust based on PROGRESS.md observation. On build / fix runs size the interval at runbook generation for **author dispatch + FnReview dispatch + principles-sweep + Navigator dispatch combined** — a dispatch must never straddle the tick that opened it; a FnReview that can't fit the remaining window is carried to the next tick (FnReview "carried" rule).
 
 ### Self-uninstall
 
@@ -1733,7 +1742,7 @@ COMPLETENESS (COMPLETE or BAND-AID, with evidence):
 - **WAIVED exit.** A finding that contradicts a recorded Design Decision in notes.md (or a recorded /prep spec-card decision), or a user-requested `BAND-AID (user-requested):`, is closed `WAIVED @<ISO> (<citation>)` by the driver, blocker-review, or the refuter; counts as resolved; lands in Open Questions. Waiving requires a citation — never "reviewer was wrong".
 - **Never a user gate.** Passes silently or re-enters fix mode within the bound; surfaces only in the log, the stamps, and the final report.
 
-**Evidence rules — leniency for a dead dispatch, never for a verdict.** UNRESOLVED = no citations, all findings hash-discarded, errored dispatch, or timeout (a legal N/A is NOT unresolved). Any UNRESOLVED → retry once per UNRESOLVED function (tightened brief; returned sibling verdicts stand) → second UNRESOLVED → that function is `unreviewed @<ISO> (<reason>)`, one log line, and the step proceeds DONE once every function is clean / unreviewed / WAIVED — the FnReview is a second net, not the oracle (same leniency the classification reviewer has). The leniency NEVER extends to a cited VIOLATION/BAND-AID. An `unreviewed` stamp is not forgotten: the sweep still covers that function, the refuter is told, and on a **fix-trigger** function an `unreviewed` stamp forces the refuter even on a machine-checked goal — the user's headline case (a fix) always gets one independent look on every run shape. Honest residual: an `unreviewed` happy-path function on an inline machine-checked run gets no further look (status quo). Pattern 3: reviewer deadline SHORTER than the tick interval; the interval is sized **at runbook generation for author + review + sweep combined**; a dispatch that can't fit the remaining window stays `pending` and is carried (log `FnReview carried:`) — never straddles the tick.
+**Evidence rules — leniency for a dead dispatch, never for a verdict.** UNRESOLVED = no citations, all findings hash-discarded, errored dispatch, or timeout (a legal N/A is NOT unresolved). Any UNRESOLVED → retry once per UNRESOLVED function (tightened brief; returned sibling verdicts stand) → second UNRESOLVED → that function is `unreviewed @<ISO> (<reason>)`, one log line, and the step proceeds DONE once every function is clean / unreviewed / WAIVED — the FnReview is a second net, not the oracle (same leniency the classification reviewer has). The leniency NEVER extends to a cited VIOLATION/BAND-AID. An `unreviewed` stamp is not forgotten: the sweep still covers that function, the refuter is told, and on a **fix-trigger** function an `unreviewed` stamp forces the refuter even on a machine-checked goal — the user's headline case (a fix) always gets one independent look on every run shape. Honest residual: an `unreviewed` happy-path function on an inline machine-checked run gets no further look (status quo). Pattern 3: reviewer deadline SHORTER than the tick interval; the interval is sized **at runbook generation for author + review + sweep + Navigator combined**; a dispatch that can't fit the remaining window stays `pending` and is carried (log `FnReview carried:`) — never straddles the tick.
 
 **State — on paper, compaction-proof.** Per-function review state rides on the runbook **Functions block** line. **Non-build runs** have no block today — the first step that writes or rewrites any def **creates it** (write-time checklist label; rewritten defs tagged `(fix)`); the write-time checklist runs on every new def on every run shape (the one-shot classification *reviewer* stays build-only; `Classified: n/a` on non-build runs). An AUTHOR label earned on a non-build run also triggers the function-author dispatch under the one-author bound, and **any author dispatch for a fix-trigger def carries the fix items** (failure signature, hypothesis list, APPROACHES.md) at write time, not only on escalation.
 
@@ -2180,6 +2189,7 @@ Run-start:     <ISO timestamp — the provenance anchor>
      Jobs:      <id/PID + artifact path + expected duration>
                 per live background job (registered at launch)
      Reviewer:  n/a | pending | <last verdict>
+     Navigator: n/a | <verdict> @<ISO> — <one-line reasoning>
      Principles: n/a | pending @<ISO> | clean @<ISO>
                 | unswept @<ISO> (<reason>) | <n> violations
      FnReview:  n/a | <k> pending | <n> in fix | clean | <n> open
@@ -2190,9 +2200,20 @@ Run-start:     <ISO timestamp — the provenance anchor>
 ./auto-runs/<slug>/APPROACHES.md     append-only approach history
 ./auto-runs/<slug>/PROGRESS.md       last-tick summary + deliverable
      artifact BASELINE (paths/sizes/mtimes at arming) + MIRRORS of
-     Round / cron-id / blocker-since (rebuild-proof) + the FnReview
+     Round / cron-id / blocker-since / last Navigator verdict
+     (rebuild-proof) + the FnReview
      run-start def SNAPSHOT + (item, file, function) LEDGER — named
      sections every tick SECTION-MERGES, never overwrites
+./auto-runs/<slug>/DIGEST.md         the compact area — a bounded one-page
+     running brief (target ≤ ~25 lines, HARD CAP 40 — over the cap the
+     driver prunes oldest/least-significant lines before writing):
+     SIGNIFICANT FINDINGS / NEW IMPLEMENTATIONS / ERRORS SEEN /
+     TRAJECTORY. The DRIVER rewrites it every tick from the Navigator's
+     DIGEST-DELTA (atomic temp+rename); pruned for significance, never
+     append-only — log.txt and APPROACHES.md stay the complete records.
+     DIGEST is CONTEXT, never EVIDENCE (tick step 4.6). Corrupt or
+     missing → recreate an empty skeleton, one log line (it is a brief,
+     never a contract — nothing stands down over it).
 ./auto-runs/<slug>/spend-<YYYY-MM-DD>.txt  per-slug tick counter
 ```
 
@@ -2208,7 +2229,7 @@ A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in
    exit. Two consecutive counter WRITE failures → STUCK-user (disk
    trouble is a real blocker). Resets at date rollover.
 2. RE-READ + LIVENESS — GOAL.md + runbook + log tail (~30) +
-   PROGRESS.md (HI #8; files beat memory). Guardian liveness /
+   PROGRESS.md + DIGEST.md (HI #8; files beat memory). Guardian liveness /
    near-expiry rotation (above). Corrupt GOAL.md → stand down +
    STUCK-user naming the corruption (never improvise a contract).
    Corrupt runbook → rebuild steps from GOAL.md + log tail; Round /
@@ -2227,6 +2248,78 @@ A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in
      alive + flat → the ~2× stall clock governs (visual checkpoint
        on visual steps); only an expired clock escalates (kill/
        drain per heuristic #13). Task-alive OUTRANKS artifact-flat.
+4.6 NAVIGATOR — every tick (analyze-then-recommend; added 2026-08-24
+   by user directive). SKIPPED (one log line) while Reviewer: reads
+   pending — the stuck ruling in flight owns the analysis; a pending
+   with no returned verdict after one full tick interval is a
+   timed-out dispatch (blocker-review's UNRESOLVED path). Otherwise
+   dispatch ONE fresh general-purpose subagent with a read-only
+   probe license and: GOAL.md, runbook, APPROACHES.md, PROGRESS.md,
+   DIGEST.md, log tail (~50), and the deliverable/artifact paths.
+   DIGEST is CONTEXT, never EVIDENCE: every claim below must cite
+   primary disk sources (log lines, artifacts, runbook state); a
+   digest claim contradicted by disk is corrected in this tick's
+   DIGEST-DELTA, never propagated. The Navigator returns four parts:
+     HAPPENED      what the evidence says just occurred — citations
+                   from disk, never the run's testimony
+     VERDICT       GOAL-MET | CONTINUE (wait) | NEXT-ACTION |
+                   STALL-SUSPECT | BLOCKED-machine | BLOCKED-user
+     NEXT          the ONE most logical action toward the frozen
+                   Success line
+     DIGEST-DELTA  the updated compact-area content
+   Driver: write DIGEST.md + the runbook Navigator: field (mirrored
+   to PROGRESS.md) FIRST — a failed write is one log line, never a
+   wedge — then route the verdict. 4.6 EXECUTES NOTHING; the ladder
+   below stays the only executor, so its gates and riders (success
+   probe, FnReview, principles-sweep, Round) can be neither starved
+   nor doubled:
+     GOAL-MET      decides nothing by itself — step 5's machine
+                   probes + the Terminal Refuter rule as written.
+     CONTINUE (wait) / STALL-SUSPECT — advisory input to steps 4/6's
+                   own clocks and conditions; never a bypass of them.
+     BLOCKED-machine / BLOCKED-user — advisory: recorded in the
+                   Navigator: field + digest. Step 8 enters ONLY on
+                   its own condition (no runnable step); a Navigator
+                   verdict NEVER increments Round.
+     NEXT-ACTION   validated by the constraint compass, then handed
+                   to step 7 as the tick's ONE action — the pick
+                   SUBSTITUTES for "the next pending step" and runs
+                   AS step 7, so step-7's riders (FnReview,
+                   principles-sweep, re-entry hygiene) bind
+                   unchanged and the owning step's rollback/doors
+                   own any residue. BEFORE it runs, the driver books
+                   it: append to APPROACHES.md (action + tick;
+                   outcome APPENDED as a follow-up line after verify
+                   — append-only preserved) and, when it deviates
+                   from the runbook's next pending step, a
+                   Deviations entry in notes.md — booked before
+                   execution so a mid-action death leaves recorded
+                   intent and the compass no-repeat check sees it
+                   next tick. A NEXT targeting a PARKED step is
+                   never executed at step 7 and never forces step-8
+                   entry — un-parking remains exclusively step 8's
+                   business, entered only on step 8's own condition
+                   (Round++, stuck packet, 4th re-entry door live
+                   there). A NEXT with no pending step to substitute
+                   for (all steps DONE/PARKED) is advisory only —
+                   dropped with one log line; step 8 runs on its own
+                   condition. A compass REJECTION is logged (one
+                   line) and the plain ladder runs — rejections
+                   NEVER consume the executing step's 5-approach
+                   budget (that budget counts the run's own
+                   attempts, not a reviewer's proposals; see the
+                   compass carve-out).
+   Bounds + degradation (the guardian never DEPENDS on the
+   Navigator): a verdict with no citations = UNRESOLVED → retry
+   once (tightened brief) → this tick runs the plain ladder (steps
+   5–9 as written). Deadline SHORTER than the tick interval (same
+   rule as FnReview dispatches); a dead or late dispatch = one log
+   line + plain ladder, never a wedge. The spend gate (~30
+   ticks/day) is the cost cap — no new counter. Jobs alive (step
+   4): the Navigator still fires for analysis + digest, but step
+   4's no-success-probe / no-reviewer-execution rule binds whatever
+   it recommends. Subagents unavailable → same-context skeptic
+   pass, explicitly marked as the weaker fallback.
 5. SUCCESS PROBE — validate vs the contract (type-aware floor +
    PROVENANCE: deliverable must postdate Run-start; the arming
    baseline corroborates, run-start decides; consult False-pass).
@@ -2273,7 +2366,9 @@ The Stop hook releases a turn only on DONE / STUCK / PARTIAL. So, in an armed se
 - The hook enforces `Refuter:` on DONE but not `RedTeam:` or `Principles:` — model discipline + the runbook fields carry those obligations.
 - Between ticks the runbook always reads PARTIAL, so a user who repurposes the session is never dragged — their turns release instantly.
 
-### Blocker-review — the fresh-eyes subagent
+### Navigator / blocker-review — the fresh-eyes subagent
+
+The Navigator (tick step 4.6) and the blocker-review are ONE subagent shape at two intensities: every tick gets the analyze-then-recommend dispatch; when a tick reaches steps 6/8 the same shape is re-dispatched carrying the STUCK PACKET below — that stuck-context dispatch keeps the name **blocker-review**, so every existing cross-reference here and in /prep, /spec, /repair, /error-recon still resolves. Round counting (3-round cap → STUCK-user), `Reviewer: pending` serialization, and the un-park doors are unchanged. The two intensities intentionally DIFFER in packet and rules — apply each context's own: the blocker-review keeps its leaner packet (log tail ~30, NO DIGEST — its independence from the run's distilled testimony is the point), its own verdict vocabulary (FALSE-BLOCKER / REAL-machine / REAL-user / GOAL-MET), and its own UNRESOLVED rule (retry once → REAL-user "reviewer could not rule"); the every-tick Navigator (step 4.6) uses its four-part return and falls back to the plain ladder instead.
 
 Dispatched by tick steps 6/8 (one at a time — `Reviewer: pending` in the runbook enforces it across turns). Hand ONE fresh general-purpose subagent: the contract (GOAL.md), runbook, APPROACHES.md, log tail (~30), the claimed blocker/stall, the deliverable/artifact paths, and an explicit **read-only probe license** (Read/Glob/ffprobe-class commands; writes forbidden) — it grades evidence from disk, not the run's testimony.
 
@@ -2557,8 +2652,9 @@ Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/
 ### Any report on a non-terminal run
 Add one line so the user always knows who owns the goal:
 ```
-Guardian: armed (every N min, expires <date>) — next tick <~time>.
-          Stop anytime: /auto stop slug=<slug>
+Guardian:  armed (every N min, expires <date>) — next tick <~time>.
+Navigator: n/a (no tick yet) | <verdict> — <one-line why>   (last tick's analysis)
+           Stop anytime: /auto stop slug=<slug>
 ```
 
 
@@ -2570,6 +2666,7 @@ Guardian: armed (every N min, expires <date>) — next tick <~time>.
 - The goal is a pinned CONTRACT (success + circumstances + never-do, frozen in GOAL.md); no step may win by cheating it; PARTIAL is a checkpoint, never an ending.
 - Every non-terminal turn ends with Status: PARTIAL (checkpoint); ticks flip it active and back. Only DONE (validated + provenance-checked) or STUCK-user ends a run; /auto stop slug=<x> is the kill switch.
 - Diagnose, rotate approaches, never advance on lies; parked steps get up to 3 guardian re-attack rounds via the fresh-eyes blocker-review subagent (citations required).
+- Navigator (2026-08-24): every guardian tick hands the contract + DIGEST.md (a bounded one-page compact brief of significant findings / implementations / errors / trajectory — context, never evidence) + log tail to a fresh subagent that analyzes what just happened and recommends the ONE next move; the driver compass-checks it, books it to APPROACHES.md, and executes it AS step 7, surfacing the reasoning in every checkpoint report. No citations or a dead dispatch → that tick falls back to the plain ladder. Blocker-review is this same shape carrying the stuck packet (leaner, digest-free).
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH. PERFECT = all angles tested + refuter-clean + tests named; the only grade licensing zero-human-input runs.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it — unless a FnReview line is `open` or a fix-trigger function is `unreviewed`, which force it.
