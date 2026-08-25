@@ -1083,6 +1083,32 @@ printf 'change: FINDING: %s\nwhy: suspected — %s\ncontext: %s\nbefore: %s\naft
 
 No `SPEC.md` in the project → skip promotion silently (the findings still live in `notes.md`). One `spec_tool.py log` call per keeper finding.
 
+### Commit on DONE (user rule, 2026-08-25 — no limbo at the finish line)
+
+When the run reaches its full end state — terminal `Status: DONE` (including a
+Goal-Guardian close on DONE) — and the run's work touched files inside a git
+repository, **commit that work as part of the terminal step**, in the same
+breath as the final report. A run is not "fully complete" with its applied
+changes sitting uncommitted (same principle as the standing
+commit-on-apply rule: spec'd OR committed, never limbo).
+
+Rules:
+- **Named `git add` of exactly the files this run created/modified** — never
+  `git add -A`/`git add .`: parallel chats share these folders, and a blanket
+  add commits another lane's in-flight work.
+- One commit per repo touched; message = one-line run summary + what landed
+  (the AUTO REPORT headline is a good base). Re-check `git status` after.
+- **Commit only, never push** — pushing stays user-triggered ("push it")
+  per the existing push etiquette.
+- DONE only. STUCK / PARTIAL / paused runs do NOT auto-commit (partial work
+  stays visibly uncommitted as a signal); the guardian commits when it later
+  closes on DONE.
+- Work outside any git repo → skip silently, but name the uncommitted
+  locations in the final report ("outside any repo: <paths>").
+- Ordering: after the Terminal Refuter Gate clears and after SPEC promotion,
+  as part of the final report step (the commit is itself an edit-free action —
+  it cannot re-trip spec-guard).
+
 ### Relationship to the other artifacts
 
 ```
@@ -2097,7 +2123,7 @@ Do NOT surface for:
 - Choosing a retry parameter
 - Deciding whether to add error handling
 - Deciding whether the next step should be A or B when both achieve the goal
-- "Should I commit this?" → if the user said /auto on a task that ends with a commit, yes
+- "Should I commit this?" → at DONE, always, for repo-resident work (Commit on DONE section — named adds, never push)
 
 
 ### Common stalling patterns — recognize and break out
