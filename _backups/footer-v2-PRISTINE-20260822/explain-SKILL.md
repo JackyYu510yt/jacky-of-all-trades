@@ -71,77 +71,19 @@ One visual-break mechanism per block, not two stacked.
 
 ### Goal compass + confidence/risk footer — the closing block, every time
 
-Every explain response ends with this footer. It opens with the NET line, then four sections, with ONE BLANK LINE between every field (no two fields on adjacent lines — that's the wall the user asked to kill):
+Every explain response ends with this block (after the NET line if one is used):
 
 ```
-NET: <one sentence — where things stand RIGHT NOW after this turn: result gap first, then gains and changes. Not a forecast.>
-
-**━━ CURRENT STAGE ━━**
-
-BEFORE: <the state before this turn's work — one plain sentence>
-
-NOW: <the state right now — what exists, what's verified, what's still waiting>
-
-CHANGED: <what changed and WHY — the evidence or decision that moved it>
-
-NEXT: <the immediate milestone between here and the ultimate goal — "none" if fully reached>
-
-MEANT TO: <two parts: (1) what NEXT is supposed to achieve in the system, (2) the specific problem it's supposed to fix>
-
-FEYNMAN: <re-explain NEXT to a smart 12-year-old with ONE everyday analogy, zero jargon — how it fits Heaven's Net (sort failures into a few bins, one fix per bin, only bin what you can SEE, a mystery goes in the "don't know — ring the bell" bin) and how it fits the ultimate goal>
-
-**━━ ULTIMATE GOAL ━━**
-
-Delivers: <the finished result that arrives with zero input from the user>
-
-Heals: <how failures recover or surface themselves, no human needed>
-
-Replaces: <whose job/attention the system deletes — nobody left in the loop>
-
-Guarantees: <what wrongness is structurally impossible>
-
-**━━ SUGGESTED ACTION ━━**
-
-PASTE THIS: <the answer to THIS TURN'S question, as a self-contained prompt the user pastes verbatim as their next message. If the turn ended on a pick (Choice 1 vs 2, Option A/B): the pick itself in the user's voice + one line of why — "Go with Choice 2 — <why>". If the turn was a do-it request: the next work prompt — what to do, on which files/paths, the limits (paper-only / no prod touch / budget), which corrected facts to use, and what to show or ask before anything costly. "nothing — goal reached" if the goal is fully reached.>
-
-→ TOWARD THE GOAL: <a chain, not a tag: "this move → gets us <concrete thing> → which is what <lens> needs because <why>" — spelled out in plain words for each lens it pushes, and what the rejected option would have cost instead, so the direction is visible>
-
-→ HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) the SEEN evidence the pick stands on (files read, diffs, logs — never "should"), (2) what the other option(s) were ruled out on — same evidence, not vibes, (3) how we'd know fast if the pick is wrong + the bounded fallback (nothing burned, can still switch); anything unchecked is NAMED, not hidden. On a WORK STEP that touches recovery logic: how it leaves a STRONGER system — recovery keyed to failure class (not symptom), detection evidence-only, tries bounded, bottom rung fail-loud. "n/a — no recovery logic in this step" ONLY for a work step with no recovery logic — never on a pick.>
-
-**━━ GRADE ━━**
-
+ULTIMATE GOAL (4 lenses — or "none active — standalone question"):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
+NEXT STEP: <the immediate milestone between here and that goal — or "none">
+SUGGESTED ACTION: <ONE concrete move to take now — and how it pushes the next step and the ultimate goal forward>
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
-
 RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and which parts are still unproven>
 ```
-
-**Layout rules (user-confirmed 8/22/26):**
-
-- One blank line between EVERY field, every time. Section headers are bold with `━━`. NET is the first line of the footer.
-
-- Labels stay exactly as above (BEFORE / NOW / CHANGED / NEXT / MEANT TO / FEYNMAN; Delivers / Heals / Replaces / Guarantees; PASTE THIS / → TOWARD THE GOAL / → HEAVEN'S NET; CONFIDENCE / RISK). The explaining text under each label is plain language — one everyday sentence, no jargon, no shorthand codes.
-
-- Standalone question with no active project → CURRENT STAGE and ULTIMATE GOAL may read "none active — standalone question", PASTE THIS reads "nothing — standalone question".
-
-**CURRENT STAGE rules:**
-
-- BEFORE / NOW / CHANGED are facts from this turn, stated plainly. CHANGED always carries the WHY (the evidence or decision).
-
-- NEXT replaces the old NEXT STEP line — it is the immediate milestone between here and the ultimate goal.
-
-- MEANT TO is two parts, always: what NEXT is supposed to achieve in the system, and the specific problem it's supposed to fix.
-
-- FEYNMAN uses the Feynman technique: re-explain NEXT to a smart 12-year-old with ONE everyday analogy and zero jargon, and it MUST name both fits — how NEXT fits Heaven's Net and how it fits the ultimate goal. It is the *understand it* version; the arrows under SUGGESTED ACTION are the *check it* version — both stay.
-
-**SUGGESTED ACTION rules:**
-
-- PASTE THIS answers THIS TURN'S question (user-confirmed 8/22/26). Before writing it, name the question the turn was answering. A *which-one* question (pick A/B, choose a variant) → PASTE THIS is the pick itself, in the user's voice, plus one line of why ("Go with Choice 2 — fix the lanes in the live folder, re-sync the factory after"). The work-prompt for the step AFTER the pick belongs to the next turn, once they've chosen — writing it now skips their question and reads as drift. A *do-it* request → PASTE THIS is the complete work prompt: stands alone with no chat context — what to do, on which files/paths, the limits, which corrected facts to use, and what to show or ask before anything costly. Either way: one move, not a menu (the pick IS the one move).
-
-- → TOWARD THE GOAL is a CHAIN, not a tag (user-confirmed 8/22/26 — "Moves NEXT; pushes Delivers and Heals" is a label, not a reason). Spell out, in plain words: this move → gets us <concrete thing> → which is what <lens> needs because <why> — for each lens it pushes. Name what the rejected option would have cost ("Choice 1 would spend today moving folders and ship zero images") so the direction is visible. An action whose chain doesn't connect to the goal is drift; don't suggest it.
-
-- → HEAVEN'S NET answers "why can we proceed with confidence?" (user-confirmed 8/22/26). Two shapes:
-  - **On a PICK** (the turn ended on a decision): three parts, always — (1) the SEEN evidence the pick stands on (files read, diffs run, logs, backups found — never "should"/"probably"); (2) what the other option(s) were ruled out on, using the same evidence, not vibes; (3) how we'd know fast if the pick is wrong, and the bounded fallback (nothing deleted, nothing burned, the other option still open). Anything NOT checked is named, not glossed ("what I didn't check: who edited at 20:21"). This is the Heaven's Net frame applied to a decision: evidence-only, alternatives ruled out rather than assumed away, bounded, fail-loud. "n/a" is NEVER valid on a pick.
-  - **On a WORK STEP**: follows the canonical definition in `~/.claude/skills/error-recon/SKILL.md` ("Heaven's Net" section) — recover by failure CLASS toward the required state, detection evidence-only (unmatched = unknown → capture, park, stop loud), bounded tries, fail-loud bottom rung. If the action touches recovery logic, READ that section before writing the line — never paraphrase it from memory. When the work step genuinely has no recovery logic, write "n/a — no recovery logic in this step", never skip the line.
 
 **The compass rules (anti-drift):**
 
@@ -149,7 +91,9 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 - Once stated for a scenario, the line is FROZEN — never quietly reworded toward whatever was achieved. If this line ever drifts from what the user wanted, that's exactly what they'll call out.
 
-- Goal fully reached → NEXT: "none", PASTE THIS: "nothing — goal reached".
+- SUGGESTED ACTION is one move, not a menu — and its line must say how it advances BOTH the next step and the ultimate goal. An action that doesn't connect to the goal is drift; don't suggest it.
+
+- Goal fully reached → NEXT STEP: "none", SUGGESTED ACTION: "nothing — goal reached".
 
 The scale is about **verification, not vibes**:
 
@@ -301,4 +245,4 @@ The session does not end until you've verified the user has **demonstrated** und
 
 - Right gear: quick unless the user explicitly asked to be taught or quizzed.
 
-- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → SUGGESTED ACTION (PASTE THIS + → TOWARD THE GOAL + → HEAVEN'S NET) → GRADE — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
+- Ends with the CONFIDENCE + RISK footer, each grade followed by its evidence — and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.

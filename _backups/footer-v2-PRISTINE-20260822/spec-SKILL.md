@@ -45,48 +45,16 @@ Every user-facing /spec report — the INIT completion message, the LOG
 confirmation, any "spec updated" summary — ends with this block:
 
 ```
-NET: <one sentence — where things stand RIGHT NOW: result gap first, then gains and changes>
-
-**━━ CURRENT STAGE ━━**
-
-BEFORE: <the state before this session's work — one plain sentence>
-
-NOW: <the state right now — what exists, what's verified, what's waiting>
-
-CHANGED: <what changed and WHY — the evidence or decision that moved it>
-
-NEXT: <the immediate milestone between current state and the goal — "none" if reached>
-
-MEANT TO: <what NEXT is supposed to achieve in the system + the specific problem it fixes>
-
-FEYNMAN: <NEXT re-explained to a smart 12-year-old, one everyday analogy, zero jargon — how it fits Heaven's Net AND the ultimate goal>
-
-**━━ ULTIMATE GOAL ━━**  (4 lenses, derived from the spec's Goal — frozen)
-
-Delivers: <the finished result that arrives with zero input from the user>
-
-Heals: <how failures recover or surface themselves, no human needed>
-
-Replaces: <whose job/attention the system deletes — nobody left in the loop>
-
-Guarantees: <what wrongness is structurally impossible>
-
-**━━ SUGGESTED ACTION ━━**
-
-PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next message. Turn ended on a PICK → the pick in the user's voice + one line of why ("Go with Choice 2 — <why>"); the work-prompt waits for the next turn. Turn was a DO-IT request → the work prompt: what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if reached>
-
-→ TOWARD THE GOAL: <a CHAIN, not a tag: "this move → gets us <concrete thing> → which is what <lens> needs because <why>", per lens pushed + what the rejected option would have cost>
-
-→ HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) SEEN evidence the pick stands on, (2) what the other options were ruled out on (same evidence), (3) how we'd know fast if wrong + bounded fallback; unchecked things NAMED — never "n/a" on a pick. On a WORK STEP: how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
-
-**━━ GRADE ━━**
-
+ULTIMATE GOAL (4 lenses, derived from the spec's Goal — frozen):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
+NEXT STEP: <the immediate milestone between current state and that goal>
+SUGGESTED ACTION: <ONE concrete move to take now — and how it advances the next step and the ultimate goal>
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
-
 RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
 ```
-
-One blank line between every field; labels fixed, explaining text plain-language (8/22/26).
 
 The compass is the anti-drift anchor: ULTIMATE GOAL is derived fresh PER
 SCENARIO from the spec's Goal section — the end-state of THIS project, not a
@@ -102,23 +70,9 @@ first-person from their seat, real actors and real stakes ("me", "the VA",
 "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong
 and quiet"), consequences stated — never abstract boilerplate. Once stated, the block is frozen — if a report's goal block ever differs
 from what the user actually asked, that IS the drift they want to catch, so
-never quietly reword it toward what was achieved. CURRENT STAGE (8/22/26): BEFORE /
-NOW / CHANGED (with WHY) / NEXT (the immediate milestone — replaced the old NEXT STEP
-line) / MEANT TO (what NEXT achieves + the problem it fixes) / FEYNMAN (NEXT to a smart
-12-year-old, one analogy, naming both the Heaven's Net fit and the goal fit). SUGGESTED
-ACTION (v3 8/22/26): PASTE THIS answers THIS TURN'S question — on a pick it IS the pick
-in the user's voice + one line of why (the after-pick work prompt waits for the next
-turn); on a do-it request it is the complete standalone work prompt (what / files /
-limits / corrected facts / what to show-or-ask before anything costly). → TOWARD THE
-GOAL is a chain in plain words, never a bare lens tag: this move → gets us <concrete
-thing> → which is what <lens> needs because <why>, plus what the rejected option would
-have cost — an action whose chain doesn't connect is drift and must not be suggested.
-→ HEAVEN'S NET answers "why can we proceed with confidence?": on a pick = the SEEN
-evidence the pick stands on + what ruled the other options out (same evidence) + how
-we'd know fast if wrong and the bounded fallback, unchecked items named, never "n/a";
-on a work step it follows the canonical error-recon definition (class-keyed recovery,
-evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work
-step has no recovery logic). Goal fully reached → NEXT "none", PASTE THIS
+never quietly reword it toward what was achieved. SUGGESTED ACTION must trace to the NEXT
+STEP and the goal; an action whose chain doesn't connect is drift and must not
+be suggested. Goal fully reached → next step "none", suggested action
 "nothing — goal reached".
 
 Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed
@@ -194,19 +148,15 @@ time, plainly — then write the file:
    also pin the **failure path**, not just the happy path — most failures
    happen there, so a spec that grades only the happy path grades the wrong
    thing. Add self-healing criteria, each empirically checkable: recovers
-   from its *known* failure modes with no human in the loop AND the recovery
-   HOLDS — no recurrence inside the hold-window (the modes come from
-   `/error-recon`), checkpoints progress so a restart resumes instead of
+   from its *known* failure modes with no human in the loop (the modes come
+   from `/error-recon`), checkpoints progress so a restart resumes instead of
    starting over, never blocks on mid-run input, and surfaces failures by
    count rather than hiding them. Spec the recovery per **Heaven's Net** —
    one general strategy per failure CLASS (auth/session, timing, network,
    resource, …), never one criterion per observed error string; a class and
    its recovery rest only on evidence-mapped failure modes, never on
-   assumption; and each capacity-resting recovery (cooldown / bench /
-   pool pull) is sized in PROPORTION — from an observed measurement or a
-   bounded smallest-first ladder, never a guessed constant, under- and
-   over-sizing both failing the criterion (canonical definition + strict
-   guardrails incl. Proportion: /error-recon, "Heaven's Net" section). Sweep the known modes against the
+   assumption (canonical definition + strict guardrails: /error-recon,
+   "Heaven's Net" section). Sweep the known modes against the
    10-category hostile-scenario seed (canonical RED-TEAM brief in
    `~/.claude/skills/audit/SKILL.md`: mid-op death, check-then-act race,
    half-done re-entry, flapping, two actors, boundaries, time windows,

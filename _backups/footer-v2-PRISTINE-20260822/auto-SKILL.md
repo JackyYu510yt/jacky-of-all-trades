@@ -364,7 +364,7 @@ On a terminal verdict (DONE / STUCK-user / STUCK (stopped by user)), /auto delet
 
 ### Contract + Guardian (universal)
 
-Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `APPROACHES.md` + `PROGRESS.md` + `DIGEST.md` (the compact area — see Universal state files) for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
+Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `APPROACHES.md` + `PROGRESS.md` for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
 
 ### Runbook file location
 
@@ -416,7 +416,6 @@ Status:
   Round:             0/3   (guardian re-attack rounds used)
   Jobs:              []    (live background jobs: id/PID + artifact path + expected duration)
   Reviewer:          n/a | pending | <last verdict>
-  Navigator:         n/a | <verdict> @<ISO> — <one-line reasoning> (mirrored to PROGRESS.md)
   Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
 
@@ -1263,7 +1262,7 @@ These never bend.
 
 13. **No premature convergence — probes must discriminate, alternatives must be ruled out.** (Always cite as "HI #13" — heuristic #13 is a different rule.) In fix mode and on any judgment-shaped verdict, do not prematurely converge on the current hypothesis. The pre-registered probe must be a **discriminating test** — its CONFIRMS / DISPROVES outcomes must separate the leading hypothesis from its ranked rivals, not merely confirm the current assumption (a probe both hypotheses would pass discriminates nothing). Avoid **search-space neglect** and **anchoring bias** by actively checking plausible alternatives: DONE is not written simply because the initial hypothesis appears correct — the conclusion must be supported by evidence with the relevant alternatives investigated or explicitly ruled out (the hypothesis list + probe log is that evidence). This sharpens HI #10: #10 says manufacture the signal; this says the signal must be able to say NO to the favorite.
 
-14. **Aim at the right fix — structural by default, band-aids only on explicit request.** When choosing WHAT fix to build, the target is the fix that **structurally strengthens the system** — the one that removes the condition that produced the failure. That aim is set at design time: never build the band-aid first planning to upgrade later, and never present a band-aid as the fix. A band-aid is any fix that neutralizes *this instance* (this input, this account, this state) while the producing condition survives — a special case, a narrowed scope, a workaround routed around the broken part. The aim test, before building: *"after my fix, does the condition that produced this failure still exist?"* — YES → band-aid; climb a layer and re-aim. One common band-aid shape worth naming: a mechanism needs a precondition and the fix **filters** for inputs that already satisfy it instead of **establishing** it on any input (cohort incident 2026-08-20: "promote an already-logged-in spare" — band-aid, dies when no logged-in spare exists; right fix: log in + clean-slate ANY account as part of promotion). A second band-aid shape: a recovery UNDER-sized by a guessed constant (a 90 s rest for a throttle measured at ~24 min) — the aim-test can read "condition removed? yes" only if the constant is trusted, so check its source: an observed measurement or a bounded smallest-first ladder (Heaven's Net Proportion guardrail, canonical in /error-recon). Over-sizing is not a band-aid but is the same guardrail's other violation. The only sanctioned band-aid is the work-once-to-smoke-test scaffold in #10, and it is never the deliverable. If the user explicitly requests a quick/temporary patch, ship it labeled `BAND-AID (user-requested):` with the structural version named beside it so the debt is visible. **No clash with Graduated Scale-Up:** the ramp and this rule turn different dials — **scale-up shrinks SCOPE, never STRUCTURE.** Rung 1 (smoke) runs the REAL mechanism on one input; a band-aid is a *different, weaker* mechanism, not a smaller one, and scale doesn't cure it (rung 1 of the cohort fix = run the real login+clean-slate promotion on ONE account — correct; "promote an already-logged-in spare" stays a band-aid even run on 100 accounts). Litmus at rung 1: *"is this a small version of the right mechanism, or a different mechanism that only handles the easy case?"* Full sequence: scaffold to probe (#10) → build the right fix → prove it small → scale it up — band-aids only ever live in the scaffold step, and they die there.
+14. **Aim at the right fix — structural by default, band-aids only on explicit request.** When choosing WHAT fix to build, the target is the fix that **structurally strengthens the system** — the one that removes the condition that produced the failure. That aim is set at design time: never build the band-aid first planning to upgrade later, and never present a band-aid as the fix. A band-aid is any fix that neutralizes *this instance* (this input, this account, this state) while the producing condition survives — a special case, a narrowed scope, a workaround routed around the broken part. The aim test, before building: *"after my fix, does the condition that produced this failure still exist?"* — YES → band-aid; climb a layer and re-aim. One common band-aid shape worth naming: a mechanism needs a precondition and the fix **filters** for inputs that already satisfy it instead of **establishing** it on any input (cohort incident 2026-08-20: "promote an already-logged-in spare" — band-aid, dies when no logged-in spare exists; right fix: log in + clean-slate ANY account as part of promotion). The only sanctioned band-aid is the work-once-to-smoke-test scaffold in #10, and it is never the deliverable. If the user explicitly requests a quick/temporary patch, ship it labeled `BAND-AID (user-requested):` with the structural version named beside it so the debt is visible. **No clash with Graduated Scale-Up:** the ramp and this rule turn different dials — **scale-up shrinks SCOPE, never STRUCTURE.** Rung 1 (smoke) runs the REAL mechanism on one input; a band-aid is a *different, weaker* mechanism, not a smaller one, and scale doesn't cure it (rung 1 of the cohort fix = run the real login+clean-slate promotion on ONE account — correct; "promote an already-logged-in spare" stays a band-aid even run on 100 accounts). Litmus at rung 1: *"is this a small version of the right mechanism, or a different mechanism that only handles the easy case?"* Full sequence: scaffold to probe (#10) → build the right fix → prove it small → scale it up — band-aids only ever live in the scaffold step, and they die there.
 
 
 ## Pre-Action One-Liner Format
@@ -1357,10 +1356,6 @@ auto-runs/<slug>/RUNBOOK.md    Step list + current state + mode
 auto-runs/<slug>/PROGRESS.md   Last-tick summary (what fired this tick,
                           what's next). Helps the next tick orient.
 
-auto-runs/<slug>/DIGEST.md     The compact area — bounded running brief
-                          (context, never evidence). See Universal
-                          state files under Goal-Guardian (canonical).
-
 auto-runs/<slug>/APPROACHES.md Append-only retry log — every approach
                           tried for every step, with the reason it
                           failed.
@@ -1412,10 +1407,6 @@ Tick fires → new TURN in this same session → /auto re-invoked by the pinned 
       AND the heuristic #8 artifact probe shows no growth → treat the
       step as STALLED (heuristic #13). Background jobs with no window:
       frame-grab the output artifact instead of the desktop.
-  4d. NAVIGATOR — per Goal-Guardian tick step 4.6 (canonical):
-      dispatch the analysis subagent, write DIGEST.md + the
-      Navigator: field; an approved NEXT-ACTION substitutes for the
-      step picked at 5-6 and runs as that one action.
   5. Pick first non-DONE / non-PARKED step from runbook
        (if none and success unmet → NOT a terminus: increment Round,
         dispatch the blocker-review subagent, act on its verdict via
@@ -1461,7 +1452,7 @@ Slow steps (test suites, builds, multi-min API)       → 5–15 min
 Very slow steps (overnight ffmpeg renders)            → 15–30 min
 ```
 
-Don't tick faster than the work can finish — overlapping ticks just stack. If unsure, start at 10 min and adjust based on PROGRESS.md observation. On build / fix runs size the interval at runbook generation for **author dispatch + FnReview dispatch + principles-sweep + Navigator dispatch combined** — a dispatch must never straddle the tick that opened it; a FnReview that can't fit the remaining window is carried to the next tick (FnReview "carried" rule).
+Don't tick faster than the work can finish — overlapping ticks just stack. If unsure, start at 10 min and adjust based on PROGRESS.md observation. On build / fix runs size the interval at runbook generation for **author dispatch + FnReview dispatch + principles-sweep combined** — a dispatch must never straddle the tick that opened it; a FnReview that can't fit the remaining window is carried to the next tick (FnReview "carried" rule).
 
 ### Self-uninstall
 
@@ -1682,32 +1673,6 @@ PRINCIPLES (same 5 items as the principles-sweep):
     fail loud (canonical: /error-recon). Guardrails: DETECTION may match
     mapped symptoms — it is the recovery that must be class-level; and ≤2
     handlers need no taxonomy (rule of three). Do not flag either.
-    1b. PROPORTION (same canonical section) — a recovery that rests/retires
-    capacity or pulls a pool sizes its cooldown / bench / share from an
-    OBSERVED recovery measurement (cite where) or a bounded ≥×2
-    smallest-first ladder; a guessed constant or wrong scope is a
-    VIOLATION in either direction (90 s rest for a ~24-min throttle;
-    rest-till-midnight on a string that may mean a 60 s limit; N members
-    retired for a pool-wide blip). A signal mapped to two entries of
-    different size that jumps to the larger (or a bespoke 'both' handler)
-    instead of a smallest-first ladder is the same VIOLATION. Bounded
-    growing backoff IS the ladder — do not flag it.
-    1c. HOLD — a capacity-resting recovery counts only if it HOLDS for the
-    hold-window (max of measured recovery / rung used / 15-min floor); cite
-    (a) the compare of a re-fire against the stored last-recovery time for
-    the same (entry, target) and (b) the counter line — a counter reset on
-    verify-pass is the VIOLATION; exit a degraded state on more evidence
-    than entering it; pool re-entry staggered.
-    1d. CHEAP-FIRST — a lighter discriminating probe runs before the
-    consuming action; VIOLATION only when such a probe is already present
-    in the code (health/status read) or named in the map entry — else NOTE.
-    1e. GIVEN NUMBERS — an environment-supplied magnitude (retry-after,
-    quota, ETA, reset boundary) is the first rung, never overridden by a
-    constant; a reset boundary is a VIOLATION unless it cites its
-    measurement source (map entry / comment).
-    Item 1 returns verdicts keyed `1` (class), `1b` (proportion), `1c`
-    (hold), `1d` (cheap-first), `1e` (given numbers); a finding filed
-    under the wrong key is re-keyed by the DRIVER at mtime validation.
  2. EVIDENCE-ONLY — no success from labels/exit codes alone.
  3. RE-ENTRY HYGIENE — retry/resume rolls back residue → re-asserts the
     precondition → invalidates downstream before redo.
@@ -1742,7 +1707,7 @@ COMPLETENESS (COMPLETE or BAND-AID, with evidence):
 - **WAIVED exit.** A finding that contradicts a recorded Design Decision in notes.md (or a recorded /prep spec-card decision), or a user-requested `BAND-AID (user-requested):`, is closed `WAIVED @<ISO> (<citation>)` by the driver, blocker-review, or the refuter; counts as resolved; lands in Open Questions. Waiving requires a citation — never "reviewer was wrong".
 - **Never a user gate.** Passes silently or re-enters fix mode within the bound; surfaces only in the log, the stamps, and the final report.
 
-**Evidence rules — leniency for a dead dispatch, never for a verdict.** UNRESOLVED = no citations, all findings hash-discarded, errored dispatch, or timeout (a legal N/A is NOT unresolved). Any UNRESOLVED → retry once per UNRESOLVED function (tightened brief; returned sibling verdicts stand) → second UNRESOLVED → that function is `unreviewed @<ISO> (<reason>)`, one log line, and the step proceeds DONE once every function is clean / unreviewed / WAIVED — the FnReview is a second net, not the oracle (same leniency the classification reviewer has). The leniency NEVER extends to a cited VIOLATION/BAND-AID. An `unreviewed` stamp is not forgotten: the sweep still covers that function, the refuter is told, and on a **fix-trigger** function an `unreviewed` stamp forces the refuter even on a machine-checked goal — the user's headline case (a fix) always gets one independent look on every run shape. Honest residual: an `unreviewed` happy-path function on an inline machine-checked run gets no further look (status quo). Pattern 3: reviewer deadline SHORTER than the tick interval; the interval is sized **at runbook generation for author + review + sweep + Navigator combined**; a dispatch that can't fit the remaining window stays `pending` and is carried (log `FnReview carried:`) — never straddles the tick.
+**Evidence rules — leniency for a dead dispatch, never for a verdict.** UNRESOLVED = no citations, all findings hash-discarded, errored dispatch, or timeout (a legal N/A is NOT unresolved). Any UNRESOLVED → retry once per UNRESOLVED function (tightened brief; returned sibling verdicts stand) → second UNRESOLVED → that function is `unreviewed @<ISO> (<reason>)`, one log line, and the step proceeds DONE once every function is clean / unreviewed / WAIVED — the FnReview is a second net, not the oracle (same leniency the classification reviewer has). The leniency NEVER extends to a cited VIOLATION/BAND-AID. An `unreviewed` stamp is not forgotten: the sweep still covers that function, the refuter is told, and on a **fix-trigger** function an `unreviewed` stamp forces the refuter even on a machine-checked goal — the user's headline case (a fix) always gets one independent look on every run shape. Honest residual: an `unreviewed` happy-path function on an inline machine-checked run gets no further look (status quo). Pattern 3: reviewer deadline SHORTER than the tick interval; the interval is sized **at runbook generation for author + review + sweep combined**; a dispatch that can't fit the remaining window stays `pending` and is carried (log `FnReview carried:`) — never straddles the tick.
 
 **State — on paper, compaction-proof.** Per-function review state rides on the runbook **Functions block** line. **Non-build runs** have no block today — the first step that writes or rewrites any def **creates it** (write-time checklist label; rewritten defs tagged `(fix)`); the write-time checklist runs on every new def on every run shape (the one-shot classification *reviewer* stays build-only; `Classified: n/a` on non-build runs). An AUTHOR label earned on a non-build run also triggers the function-author dispatch under the one-author bound, and **any author dispatch for a fix-trigger def carries the fix items** (failure signature, hypothesis list, APPROACHES.md) at write time, not only on escalation.
 
@@ -1836,42 +1801,20 @@ Toward goal: <how this moves the goal forward, honestly>
 
 Failures:    <every failure surfaced, not buried>
 
-━━ CURRENT STAGE ━━
+Ultimate goal (4 lenses, derived from THIS run's scenario — frozen):
+  Delivers:   <the finished result that arrives with zero input from the user>
+  Heals:      <how failures recover or surface themselves, no human needed>
+  Replaces:   <whose job/attention the system deletes — nobody left in the loop>
+  Guarantees: <what wrongness is structurally impossible>
 
-BEFORE:   <the state before this run's work — one plain sentence>
+Next step:        <the immediate milestone between current state and that
+                   goal — "none" if the goal is fully reached>
 
-NOW:      <the state right now — what exists, what's verified, what's still waiting>
-
-CHANGED:  <what changed and WHY — the evidence or decision that moved it>
-
-NEXT:     <the immediate milestone between here and the ultimate goal — "none" if fully reached>
-
-MEANT TO: <what NEXT is supposed to achieve in the system + the specific problem it fixes>
-
-FEYNMAN:  <NEXT re-explained to a smart 12-year-old, one everyday analogy, zero jargon — how it fits Heaven's Net AND the ultimate goal>
-
-━━ ULTIMATE GOAL (4 lenses, derived from THIS run's scenario — frozen) ━━
-
-Delivers:   <the finished result that arrives with zero input from the user>
-
-Heals:      <how failures recover or surface themselves, no human needed>
-
-Replaces:   <whose job/attention the system deletes — nobody left in the loop>
-
-Guarantees: <what wrongness is structurally impossible>
-
-━━ SUGGESTED ACTION ━━
-
-PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next message. Turn ended on a PICK → the pick in the user's voice + one line of why ("Go with Choice 2 — <why>"); the work-prompt waits for the next turn. Turn was a DO-IT request → the work prompt: what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if DONE>
-
-→ TOWARD THE GOAL: <a CHAIN, not a tag: "this move → gets us <concrete thing> → which is what <lens> needs because <why>", per lens pushed + what the rejected option would have cost>
-
-→ HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) SEEN evidence the pick stands on, (2) what the other options were ruled out on (same evidence), (3) how we'd know fast if wrong + bounded fallback; unchecked things NAMED — never "n/a" on a pick. On a WORK STEP: how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
-
-━━ GRADE ━━
+Suggested action: <ONE concrete move to take now, and how it advances the
+                   next step AND the ultimate goal — "nothing — goal
+                   reached" if DONE>
 
 Confidence:  PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred vs assumed>
-
 Risk:        HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which parts are unproven>
 ```
 
@@ -1892,7 +1835,7 @@ external dependency dead >~2h is reported as an incident with a reroute, never a
 - **Hard cap:** any "waiting", "queued", "retrying", "should", "expected", or dependency on an external recovery anywhere in the report → Confidence cannot be HIGH. If the Status says DONE but a claim would need the cap, the STATUS is wrong — downgrade to PARTIAL; never inflate the rating to match the status.
 - A bare grade with no evidence clause is invalid. The dash and the justification are part of the line.
 
-**Goal-compass rules (anti-drift):** `Ultimate goal` is derived fresh PER RUN from the current scenario — the end-state of THIS objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated ("one bad item never costs the other 200") — never abstract boilerplate. Once stated the block is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the block against their original ask. `NEXT` (inside CURRENT STAGE — it replaced the old Next-step line, 8/22/26) is the immediate milestone between here and that goal; `MEANT TO` states what NEXT achieves + the problem it fixes; `FEYNMAN` re-explains NEXT to a smart 12-year-old with one analogy and must name both the Heaven's Net fit and the goal fit. `SUGGESTED ACTION` is ONE move, not a menu (v3 8/22/26): `PASTE THIS` answers THIS TURN'S question — on a pick it IS the pick in the user's voice + one line of why (the after-pick work prompt waits for the next turn; writing it now skips the question and reads as drift); on a do-it request it is the complete standalone work prompt (what / files / limits / corrected facts / what to show-or-ask before anything costly); `→ TOWARD THE GOAL` is a chain in plain words, never a bare lens tag — this move → gets us <concrete thing> → which is what <lens> needs because <why>, per lens pushed, plus what the rejected option would have cost — an action whose chain doesn't connect to the goal is drift and must not be suggested; `→ HEAVEN'S NET` answers "why can we proceed with confidence?": on a pick = (1) the SEEN evidence the pick stands on, (2) what the other options were ruled out on — same evidence, not vibes, (3) how we'd know fast if it's wrong + the bounded fallback, with anything unchecked NAMED, never "n/a"; on a work step it follows the canonical definition in error-recon (class-keyed recovery toward required state, evidence-only detection, bounded, fail-loud — read it, don't paraphrase from memory; "n/a — no recovery logic in this step" only when a work step has none). Layout: one blank line between every field; labels fixed, explaining text plain-language.
+**Goal-compass rules (anti-drift):** `Ultimate goal` is derived fresh PER RUN from the current scenario — the end-state of THIS objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated ("one bad item never costs the other 200") — never abstract boilerplate. Once stated the block is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the block against their original ask. `Next step` is the immediate milestone between here and that goal. `Suggested action` is ONE move, not a menu, and its line must state how it advances BOTH the next step and the ultimate goal — an action whose chain doesn't connect to the goal is drift and must not be suggested.
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
@@ -1981,7 +1924,7 @@ Never restart the farmer / vendor / database / host as a first move. That's the 
 
 ### 14. Heaven's Net — recovery you BUILD keys to failure classes, not symptoms
 
-Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Never "error string X → do Y": handlers key to a failure class (navigation / auth-session / element / timing / network / resource / unknown) and recover toward the state the operation requires — diagnose actual state → classify → recover by class → verify the invariant restored with evidence → bounded escalate, fail loud. Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work. STRICT evidence caveats, non-negotiable: a runtime class comes ONLY from a matched, evidence-backed map entry — a new symptom joins a class via a new map entry, never by resemblance (unmatched = unknown: capture, park, stop loud); confidence tiers still gate which entries may run a chain; and a job-level recovery budget bounds the whole item, not just each chain. Proportion (a guardrail in that same canonical section): the SIZE of a recovery that rests/retires capacity or pulls a pool — cooldown, bench length, share of a pool — comes from an observed recovery measurement or a bounded ≥×2 smallest-first ladder, never a constant picked by feel; under-sized (hammer) and over-sized (retire healthy) are equal failures. Three companions in the same section: restored must HOLD (a recurrence inside the hold-window — floored at the 15-min probe ceiling — is a failed recovery, not a fresh success; counters continue); verify cheapest-first (a lighter probe may only fail the gate; the first consuming success is the verdict — heuristic #13 applied to built recovery); and environment-given numbers (retry-after, quota, ETA, reset boundary) are the first rung, never overridden by a constant. Trigger phrase: the user saying "heaven's net" invokes this shape explicitly — read the canonical definition + guardrails in /error-recon ("Heaven's Net" section) before designing recovery; never run it from memory. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
+Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Never "error string X → do Y": handlers key to a failure class (navigation / auth-session / element / timing / network / resource / unknown) and recover toward the state the operation requires — diagnose actual state → classify → recover by class → verify the invariant restored with evidence → bounded escalate, fail loud. Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work. STRICT evidence caveats, non-negotiable: a runtime class comes ONLY from a matched, evidence-backed map entry — a new symptom joins a class via a new map entry, never by resemblance (unmatched = unknown: capture, park, stop loud); confidence tiers still gate which entries may run a chain; and a job-level recovery budget bounds the whole item, not just each chain. Trigger phrase: the user saying "heaven's net" invokes this shape explicitly — read the canonical definition + guardrails in /error-recon ("Heaven's Net" section) before designing recovery; never run it from memory. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
 
 
 ## Auto Does NOT Waive
@@ -2189,7 +2132,6 @@ Run-start:     <ISO timestamp — the provenance anchor>
      Jobs:      <id/PID + artifact path + expected duration>
                 per live background job (registered at launch)
      Reviewer:  n/a | pending | <last verdict>
-     Navigator: n/a | <verdict> @<ISO> — <one-line reasoning>
      Principles: n/a | pending @<ISO> | clean @<ISO>
                 | unswept @<ISO> (<reason>) | <n> violations
      FnReview:  n/a | <k> pending | <n> in fix | clean | <n> open
@@ -2200,20 +2142,9 @@ Run-start:     <ISO timestamp — the provenance anchor>
 ./auto-runs/<slug>/APPROACHES.md     append-only approach history
 ./auto-runs/<slug>/PROGRESS.md       last-tick summary + deliverable
      artifact BASELINE (paths/sizes/mtimes at arming) + MIRRORS of
-     Round / cron-id / blocker-since / last Navigator verdict
-     (rebuild-proof) + the FnReview
+     Round / cron-id / blocker-since (rebuild-proof) + the FnReview
      run-start def SNAPSHOT + (item, file, function) LEDGER — named
      sections every tick SECTION-MERGES, never overwrites
-./auto-runs/<slug>/DIGEST.md         the compact area — a bounded one-page
-     running brief (target ≤ ~25 lines, HARD CAP 40 — over the cap the
-     driver prunes oldest/least-significant lines before writing):
-     SIGNIFICANT FINDINGS / NEW IMPLEMENTATIONS / ERRORS SEEN /
-     TRAJECTORY. The DRIVER rewrites it every tick from the Navigator's
-     DIGEST-DELTA (atomic temp+rename); pruned for significance, never
-     append-only — log.txt and APPROACHES.md stay the complete records.
-     DIGEST is CONTEXT, never EVIDENCE (tick step 4.6). Corrupt or
-     missing → recreate an empty skeleton, one log line (it is a brief,
-     never a contract — nothing stands down over it).
 ./auto-runs/<slug>/spend-<YYYY-MM-DD>.txt  per-slug tick counter
 ```
 
@@ -2229,7 +2160,7 @@ A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in
    exit. Two consecutive counter WRITE failures → STUCK-user (disk
    trouble is a real blocker). Resets at date rollover.
 2. RE-READ + LIVENESS — GOAL.md + runbook + log tail (~30) +
-   PROGRESS.md + DIGEST.md (HI #8; files beat memory). Guardian liveness /
+   PROGRESS.md (HI #8; files beat memory). Guardian liveness /
    near-expiry rotation (above). Corrupt GOAL.md → stand down +
    STUCK-user naming the corruption (never improvise a contract).
    Corrupt runbook → rebuild steps from GOAL.md + log tail; Round /
@@ -2248,78 +2179,6 @@ A tick is a cron-fired turn in this same session. Its prompt re-invokes /auto in
      alive + flat → the ~2× stall clock governs (visual checkpoint
        on visual steps); only an expired clock escalates (kill/
        drain per heuristic #13). Task-alive OUTRANKS artifact-flat.
-4.6 NAVIGATOR — every tick (analyze-then-recommend; added 2026-08-24
-   by user directive). SKIPPED (one log line) while Reviewer: reads
-   pending — the stuck ruling in flight owns the analysis; a pending
-   with no returned verdict after one full tick interval is a
-   timed-out dispatch (blocker-review's UNRESOLVED path). Otherwise
-   dispatch ONE fresh general-purpose subagent with a read-only
-   probe license and: GOAL.md, runbook, APPROACHES.md, PROGRESS.md,
-   DIGEST.md, log tail (~50), and the deliverable/artifact paths.
-   DIGEST is CONTEXT, never EVIDENCE: every claim below must cite
-   primary disk sources (log lines, artifacts, runbook state); a
-   digest claim contradicted by disk is corrected in this tick's
-   DIGEST-DELTA, never propagated. The Navigator returns four parts:
-     HAPPENED      what the evidence says just occurred — citations
-                   from disk, never the run's testimony
-     VERDICT       GOAL-MET | CONTINUE (wait) | NEXT-ACTION |
-                   STALL-SUSPECT | BLOCKED-machine | BLOCKED-user
-     NEXT          the ONE most logical action toward the frozen
-                   Success line
-     DIGEST-DELTA  the updated compact-area content
-   Driver: write DIGEST.md + the runbook Navigator: field (mirrored
-   to PROGRESS.md) FIRST — a failed write is one log line, never a
-   wedge — then route the verdict. 4.6 EXECUTES NOTHING; the ladder
-   below stays the only executor, so its gates and riders (success
-   probe, FnReview, principles-sweep, Round) can be neither starved
-   nor doubled:
-     GOAL-MET      decides nothing by itself — step 5's machine
-                   probes + the Terminal Refuter rule as written.
-     CONTINUE (wait) / STALL-SUSPECT — advisory input to steps 4/6's
-                   own clocks and conditions; never a bypass of them.
-     BLOCKED-machine / BLOCKED-user — advisory: recorded in the
-                   Navigator: field + digest. Step 8 enters ONLY on
-                   its own condition (no runnable step); a Navigator
-                   verdict NEVER increments Round.
-     NEXT-ACTION   validated by the constraint compass, then handed
-                   to step 7 as the tick's ONE action — the pick
-                   SUBSTITUTES for "the next pending step" and runs
-                   AS step 7, so step-7's riders (FnReview,
-                   principles-sweep, re-entry hygiene) bind
-                   unchanged and the owning step's rollback/doors
-                   own any residue. BEFORE it runs, the driver books
-                   it: append to APPROACHES.md (action + tick;
-                   outcome APPENDED as a follow-up line after verify
-                   — append-only preserved) and, when it deviates
-                   from the runbook's next pending step, a
-                   Deviations entry in notes.md — booked before
-                   execution so a mid-action death leaves recorded
-                   intent and the compass no-repeat check sees it
-                   next tick. A NEXT targeting a PARKED step is
-                   never executed at step 7 and never forces step-8
-                   entry — un-parking remains exclusively step 8's
-                   business, entered only on step 8's own condition
-                   (Round++, stuck packet, 4th re-entry door live
-                   there). A NEXT with no pending step to substitute
-                   for (all steps DONE/PARKED) is advisory only —
-                   dropped with one log line; step 8 runs on its own
-                   condition. A compass REJECTION is logged (one
-                   line) and the plain ladder runs — rejections
-                   NEVER consume the executing step's 5-approach
-                   budget (that budget counts the run's own
-                   attempts, not a reviewer's proposals; see the
-                   compass carve-out).
-   Bounds + degradation (the guardian never DEPENDS on the
-   Navigator): a verdict with no citations = UNRESOLVED → retry
-   once (tightened brief) → this tick runs the plain ladder (steps
-   5–9 as written). Deadline SHORTER than the tick interval (same
-   rule as FnReview dispatches); a dead or late dispatch = one log
-   line + plain ladder, never a wedge. The spend gate (~30
-   ticks/day) is the cost cap — no new counter. Jobs alive (step
-   4): the Navigator still fires for analysis + digest, but step
-   4's no-success-probe / no-reviewer-execution rule binds whatever
-   it recommends. Subagents unavailable → same-context skeptic
-   pass, explicitly marked as the weaker fallback.
 5. SUCCESS PROBE — validate vs the contract (type-aware floor +
    PROVENANCE: deliverable must postdate Run-start; the arming
    baseline corroborates, run-start decides; consult False-pass).
@@ -2366,9 +2225,7 @@ The Stop hook releases a turn only on DONE / STUCK / PARTIAL. So, in an armed se
 - The hook enforces `Refuter:` on DONE but not `RedTeam:` or `Principles:` — model discipline + the runbook fields carry those obligations.
 - Between ticks the runbook always reads PARTIAL, so a user who repurposes the session is never dragged — their turns release instantly.
 
-### Navigator / blocker-review — the fresh-eyes subagent
-
-The Navigator (tick step 4.6) and the blocker-review are ONE subagent shape at two intensities: every tick gets the analyze-then-recommend dispatch; when a tick reaches steps 6/8 the same shape is re-dispatched carrying the STUCK PACKET below — that stuck-context dispatch keeps the name **blocker-review**, so every existing cross-reference here and in /prep, /spec, /repair, /error-recon still resolves. Round counting (3-round cap → STUCK-user), `Reviewer: pending` serialization, and the un-park doors are unchanged. The two intensities intentionally DIFFER in packet and rules — apply each context's own: the blocker-review keeps its leaner packet (log tail ~30, NO DIGEST — its independence from the run's distilled testimony is the point), its own verdict vocabulary (FALSE-BLOCKER / REAL-machine / REAL-user / GOAL-MET), and its own UNRESOLVED rule (retry once → REAL-user "reviewer could not rule"); the every-tick Navigator (step 4.6) uses its four-part return and falls back to the plain ladder instead.
+### Blocker-review — the fresh-eyes subagent
 
 Dispatched by tick steps 6/8 (one at a time — `Reviewer: pending` in the runbook enforces it across turns). Hand ONE fresh general-purpose subagent: the contract (GOAL.md), runbook, APPROACHES.md, log tail (~30), the claimed blocker/stall, the deliverable/artifact paths, and an explicit **read-only probe license** (Read/Glob/ffprobe-class commands; writes forbidden) — it grades evidence from disk, not the run's testimony.
 
@@ -2397,32 +2254,6 @@ Dispatch ONE fresh general-purpose subagent with a read-only probe license. Hand
    Guardrails: DETECTION may match mapped symptoms — it is the
    recovery that must be class-level; ≤2 handlers need no taxonomy
    (rule of three). Do not flag either.
-   1b. PROPORTION (same canonical section) — a recovery that rests/retires
-   capacity or pulls a pool sizes its cooldown / bench / share from an
-   OBSERVED recovery measurement (cite where) or a bounded ≥×2
-   smallest-first ladder; a guessed constant or wrong scope is a
-   VIOLATION in either direction (90 s rest for a ~24-min throttle;
-   rest-till-midnight on a string that may mean a 60 s limit; N members
-   retired for a pool-wide blip). A signal mapped to two entries of
-   different size that jumps to the larger (or a bespoke 'both' handler)
-   instead of a smallest-first ladder is the same VIOLATION. Bounded
-   growing backoff IS the ladder — do not flag it.
-   1c. HOLD — a capacity-resting recovery counts only if it HOLDS for the
-   hold-window (max of measured recovery / rung used / 15-min floor); cite
-   (a) the compare of a re-fire against the stored last-recovery time for
-   the same (entry, target) and (b) the counter line — a counter reset on
-   verify-pass is the VIOLATION; exit a degraded state on more evidence
-   than entering it; pool re-entry staggered.
-   1d. CHEAP-FIRST — a lighter discriminating probe runs before the
-   consuming action; VIOLATION only when such a probe is already present
-   in the code (health/status read) or named in the map entry — else NOTE.
-   1e. GIVEN NUMBERS — an environment-supplied magnitude (retry-after,
-   quota, ETA, reset boundary) is the first rung, never overridden by a
-   constant; a reset boundary is a VIOLATION unless it cites its
-   measurement source (map entry / comment).
-   Item 1 returns verdicts keyed `1` (class), `1b` (proportion), `1c`
-   (hold), `1d` (cheap-first), `1e` (given numbers); a finding filed
-   under the wrong key is re-keyed by the DRIVER at mtime validation.
 2. EVIDENCE-ONLY — no success declared from labels/exit codes
    alone; verdicts rest on verified output or independent signals;
    nothing assumed.
@@ -2447,7 +2278,7 @@ Brief: *"You did not write this code. For each checklist item return CLEAN or VI
 
 ### Constraint compass — no winning by cheating
 
-Before ANY derived, reviewer-proposed, or un-parked step executes: (a) it traces to the frozen Success line; (b) it violates ZERO Never-do lines; (c) it differs from every APPROACHES.md entry. Any failure → step REJECTED (logged with the broken constraint; the rejection consumes an approach slot so cosmetic variants can't loop — EXCEPT a Navigator NEXT rejection, which is logged only and consumes no slot: that budget counts the run's own attempts, not a reviewer's proposals; tick step 4.6). Every remaining path violates a constraint → **STUCK-user with the tradeoff spelled out**: "goal reachable only by breaking <constraint> — your call." The purpose is never traded away silently.
+Before ANY derived, reviewer-proposed, or un-parked step executes: (a) it traces to the frozen Success line; (b) it violates ZERO Never-do lines; (c) it differs from every APPROACHES.md entry. Any failure → step REJECTED (logged with the broken constraint; the rejection consumes an approach slot so cosmetic variants can't loop). Every remaining path violates a constraint → **STUCK-user with the tradeoff spelled out**: "goal reachable only by breaking <constraint> — your call." The purpose is never traded away silently.
 
 ### Terminals + kill switch
 
@@ -2527,7 +2358,7 @@ Dispatch a fresh sub-agent (`Agent` tool, subagent_type `general-purpose`) — t
 - the Implementation Notes Design Decisions / Deviations cards (so it refutes against intent, not re-litigating settled forks),
 - the runbook **Functions block** (FnReview coverage hand-over): name explicitly every `open`, `unreviewed`, no-stamp and WAIVED line, and every function whose current hash differs from its `clean` stamp's sha — "these were not independently reviewed; look there first". A stale `clean` must never read as coverage. When the refuter was FORCED by an `open` line or a fix-trigger `unreviewed` stamp on a machine-checked goal, add: *"For each named open / unreviewed line return exactly BLOCKER or WAIVED(<citation>); a confirmed BAND-AID (HI #14 aim-test + FnReview items 6–9) is a BLOCKER even though the Success line is machine-green."* Silence / CONCERN / NOTE on a named line = UNRESOLVED → retry once → then the same-context skeptic fallback below must rule BLOCKER(<cited unmet item>) or WAIVED(<citation>) — never a BLOCKER without a named item.
 
-Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13). When the deliverable contains recovery/error-handling code, add: *"Is any handler keyed to a symptom string instead of an evidence-mapped failure class, does any path act on an assumed/unproven signal, or is any capacity-resting recovery SIZED (cooldown / bench / scope) from a guessed constant instead of an observed measurement or a bounded smallest-first ladder? Does any recovery declare success on a verify that didn't HOLD (same recovery re-firing inside the hold-window with counters reset), skip a lighter probe that exists, or override an environment-given magnitude with a constant? (Heaven's Net — canonical in /error-recon.) Any of these is a BLOCKER."*
+Brief: *"You are the REFUTER. The work below claims to be DONE. Prove it is NOT — find a specific Success-line item or verify check that is unmet. Read the artifacts yourself. Return ranked findings BLOCKER / CONCERN / NOTE, each with evidence. A BLOCKER is a concrete unmet success criterion, not a nitpick. Default to finding holes; do not rubber-stamp."* (If /repair is in the chain, add: *"A real fix holds on a different input with no Claude present — does it?"* per the structural-fix rule.) When the claimed DONE rests on a diagnosis or judgment call, add: *"Were the relevant alternative explanations investigated or explicitly ruled out, or was the first hypothesis merely confirmed?"* (HI #13). When the deliverable contains recovery/error-handling code, add: *"Is any handler keyed to a symptom string instead of an evidence-mapped failure class, or does any path act on an assumed/unproven signal? (Heaven's Net — canonical in /error-recon.) Either is a BLOCKER."*
 
 ### RED-TEAM rider — unattended / stateful deliverables
 
@@ -2569,18 +2400,9 @@ Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
 Coverage: <success checks passed, e.g. 7/7 = 100%>
-Current stage:
-  Before:   <state before this run>
-  Now:      <state right now — exists / verified / waiting>
-  Changed:  <what changed and WHY>
-  Next:     <"none" if fully reached, else the milestone remaining>
-  Meant to: <what Next achieves + the problem it fixes>
-  Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
-Suggested action:
-  Paste this:     <"nothing — goal reached", or the answer to THIS TURN'S question — on a pick: the pick + one line why; on a do-it: self-contained prompt: what / files / limits / facts / show-or-ask>
-  → Toward goal:  <a chain, not a tag: move → concrete gain → which lens needs it and why, + cost of the rejected option>
-  → Heaven's Net: <on a pick: seen evidence + what ruled others out + how we'd know if wrong + bounded fallback, never n/a; on a work step: class-keyed, evidence-only, bounded, fail-loud — or n/a>
+Next step: <"none" if fully reached, else the milestone remaining>
+Suggested action: <"nothing — goal reached", or the one move + how it advances the goal>
 Confidence: PERFECT|HIGH|MEDIUM|LOW — <verified directly vs inferred; DONE with anything unverified is forbidden; PERFECT only with all angles tested + refuter-clean, tests named>
 Risk:       HIGH|MEDIUM|LOW — <what's exposed if this is wrong>
 Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -2598,18 +2420,9 @@ Ledger (for the missing part — the P11 facts/unknowns handoff):
   Unknowns:                <what is still unverified>
   Leading hypothesis:      <best guess why + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
-Current stage:
-  Before:   <state before this run>
-  Now:      <state right now — landed / verified / missing>
-  Changed:  <what changed and WHY>
-  Next:     <the immediate milestone between here and that goal>
-  Meant to: <what Next achieves + the problem it fixes>
-  Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
-Suggested action:
-  Paste this:     <answers THIS TURN'S question — on a pick: the pick + one line why (work prompt waits for next turn); on a do-it: self-contained prompt: what / files / limits / facts / show-or-ask before anything costly>
-  → Toward goal:  <a chain, not a tag: move → concrete gain → which lens needs it and why, + cost of the rejected option>
-  → Heaven's Net: <on a pick: seen evidence + what ruled others out + how we'd know if wrong + bounded fallback, never n/a; on a work step: class-keyed, evidence-only, bounded, fail-loud — or n/a>
+Next step:     <the immediate milestone between here and that goal>
+Suggested action: <ONE concrete move + how it advances the next step and the goal>
 Confidence:  HIGH|MEDIUM|LOW — <verified vs inferred; the "Done" list must be all-verified or this drops; PERFECT is impossible on a PARTIAL>
 Risk:        HIGH|MEDIUM|LOW — <what the Missing part exposes; who/what gets hit if it stays missing>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -2629,18 +2442,9 @@ Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead
   Unknowns:                <what is still unverified>
   Leading hypothesis:      <best remaining guess + confidence high/med/low>
   Next highest-value test: <the one probe that would teach the most>
-Current stage:
-  Before:   <state before this run>
-  Now:      <state right now — what's proven, what's parked>
-  Changed:  <what changed and WHY>
-  Next:     <the milestone this STUCK is blocking>
-  Meant to: <what Next achieves + the problem it fixes>
-  Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
-Suggested action (hand back to user):
-  Paste this:     <answers THIS TURN'S question — if the block is a pick the user must make: the recommended pick + one line why; else self-contained prompt for the best unblocking step: what / files / limits / facts / show-or-ask>
-  → Toward goal:  <a chain, not a tag: this unblocking move → concrete gain → which lens needs it and why, + cost of staying stuck>
-  → Heaven's Net: <on a pick: seen evidence + what ruled others out + how we'd know if wrong + bounded fallback, never n/a; on a work step: class-keyed, evidence-only, bounded, fail-loud — or n/a>
+Next step:     <the milestone this STUCK is blocking>
+Suggested action (hand back to user): <best concrete next step + how it unblocks the path to the goal>
 Confidence:  HIGH|MEDIUM|LOW — <how solid the Facts list is; anything inferred drops it; PERFECT is impossible on a STUCK>
 Risk:        HIGH|MEDIUM|LOW — <what stays exposed while this sits stuck>
 Notes:       ./auto-runs/<slug>/notes.md  (decisions + open questions)
@@ -2652,9 +2456,8 @@ Same shape, but written to `auto-runs/<slug>/VERDICT_DONE` or `auto-runs/<slug>/
 ### Any report on a non-terminal run
 Add one line so the user always knows who owns the goal:
 ```
-Guardian:  armed (every N min, expires <date>) — next tick <~time>.
-Navigator: n/a (no tick yet) | <verdict> — <one-line why>   (last tick's analysis)
-           Stop anytime: /auto stop slug=<slug>
+Guardian: armed (every N min, expires <date>) — next tick <~time>.
+          Stop anytime: /auto stop slug=<slug>
 ```
 
 
@@ -2666,7 +2469,6 @@ Navigator: n/a (no tick yet) | <verdict> — <one-line why>   (last tick's analy
 - The goal is a pinned CONTRACT (success + circumstances + never-do, frozen in GOAL.md); no step may win by cheating it; PARTIAL is a checkpoint, never an ending.
 - Every non-terminal turn ends with Status: PARTIAL (checkpoint); ticks flip it active and back. Only DONE (validated + provenance-checked) or STUCK-user ends a run; /auto stop slug=<x> is the kill switch.
 - Diagnose, rotate approaches, never advance on lies; parked steps get up to 3 guardian re-attack rounds via the fresh-eyes blocker-review subagent (citations required).
-- Navigator (2026-08-24): every guardian tick hands the contract + DIGEST.md (a bounded one-page compact brief of significant findings / implementations / errors / trajectory — context, never evidence) + log tail to a fresh subagent that analyzes what just happened and recommends the ONE next move; the driver compass-checks it, books it to APPROACHES.md, and executes it AS step 7, surfacing the reasoning in every checkpoint report. No citations or a dead dispatch → that tick falls back to the plain ladder. Blocker-review is this same shape carrying the stuck packet (leaner, digest-free).
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH. PERFECT = all angles tested + refuter-clean + tests named; the only grade licensing zero-human-input runs.
 - On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it — unless a FnReview line is `open` or a fix-trigger function is `unreviewed`, which force it.

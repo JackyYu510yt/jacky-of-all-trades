@@ -39,137 +39,29 @@ cause is written as fact only when the relevant alternatives were investigated
 or explicitly ruled out — avoid **search-space neglect** and **anchoring
 bias** by actively checking plausible alternatives.
 
-## Goal-compass + confidence/risk footer (all user-facing /spec reports)
+## Confidence + risk footer (all user-facing /spec reports)
 
 Every user-facing /spec report — the INIT completion message, the LOG
-confirmation, any "spec updated" summary — ends with this block:
+confirmation, any "spec updated" summary — ends with these two lines:
 
 ```
-NET: <one sentence — where things stand RIGHT NOW: result gap first, then gains and changes>
-
-**━━ CURRENT STAGE ━━**
-
-BEFORE: <the state before this session's work — one plain sentence>
-
-NOW: <the state right now — what exists, what's verified, what's waiting>
-
-CHANGED: <what changed and WHY — the evidence or decision that moved it>
-
-NEXT: <the immediate milestone between current state and the goal — "none" if reached>
-
-MEANT TO: <what NEXT is supposed to achieve in the system + the specific problem it fixes>
-
-FEYNMAN: <NEXT re-explained to a smart 12-year-old, one everyday analogy, zero jargon — how it fits Heaven's Net AND the ultimate goal>
-
-**━━ ULTIMATE GOAL ━━**  (4 lenses, derived from the spec's Goal — frozen)
-
-Delivers: <the finished result that arrives with zero input from the user>
-
-Heals: <how failures recover or surface themselves, no human needed>
-
-Replaces: <whose job/attention the system deletes — nobody left in the loop>
-
-Guarantees: <what wrongness is structurally impossible>
-
-**━━ SUGGESTED ACTION ━━**
-
-PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next message. Turn ended on a PICK → the pick in the user's voice + one line of why ("Go with Choice 2 — <why>"); the work-prompt waits for the next turn. Turn was a DO-IT request → the work prompt: what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if reached>
-
-→ TOWARD THE GOAL: <a CHAIN, not a tag: "this move → gets us <concrete thing> → which is what <lens> needs because <why>", per lens pushed + what the rejected option would have cost>
-
-→ HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) SEEN evidence the pick stands on, (2) what the other options were ruled out on (same evidence), (3) how we'd know fast if wrong + bounded fallback; unchecked things NAMED — never "n/a" on a pick. On a WORK STEP: how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
-
-**━━ GRADE ━━**
-
-CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
-
+CONFIDENCE: HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
 RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
 ```
 
-One blank line between every field; labels fixed, explaining text plain-language (8/22/26).
-
-The compass is the anti-drift anchor: ULTIMATE GOAL is derived fresh PER
-SCENARIO from the spec's Goal section — the end-state of THIS project, not a
-generic principle. Frame it at the systems level, from the user's seat (a human
-building automation so they never have to give input), through ALL FOUR lenses:
-**Delivers** (factory view — the finished result that arrives with zero input),
-**Heals** (organism view — failures recover or surface themselves), **Replaces**
-(operator view — whose job/attention the system deletes), **Guarantees**
-(structure view — what wrongness is impossible by construction). Fill every
-lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent
-skip. Write each lens in the user's confirmed style (8/13/26): concrete and
-first-person from their seat, real actors and real stakes ("me", "the VA",
-"at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong
-and quiet"), consequences stated — never abstract boilerplate. Once stated, the block is frozen — if a report's goal block ever differs
-from what the user actually asked, that IS the drift they want to catch, so
-never quietly reword it toward what was achieved. CURRENT STAGE (8/22/26): BEFORE /
-NOW / CHANGED (with WHY) / NEXT (the immediate milestone — replaced the old NEXT STEP
-line) / MEANT TO (what NEXT achieves + the problem it fixes) / FEYNMAN (NEXT to a smart
-12-year-old, one analogy, naming both the Heaven's Net fit and the goal fit). SUGGESTED
-ACTION (v3 8/22/26): PASTE THIS answers THIS TURN'S question — on a pick it IS the pick
-in the user's voice + one line of why (the after-pick work prompt waits for the next
-turn); on a do-it request it is the complete standalone work prompt (what / files /
-limits / corrected facts / what to show-or-ask before anything costly). → TOWARD THE
-GOAL is a chain in plain words, never a bare lens tag: this move → gets us <concrete
-thing> → which is what <lens> needs because <why>, plus what the rejected option would
-have cost — an action whose chain doesn't connect is drift and must not be suggested.
-→ HEAVEN'S NET answers "why can we proceed with confidence?": on a pick = the SEEN
-evidence the pick stands on + what ruled the other options out (same evidence) + how
-we'd know fast if wrong and the bounded fallback, unchecked items named, never "n/a";
-on a work step it follows the canonical error-recon definition (class-keyed recovery,
-evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work
-step has no recovery logic). Goal fully reached → NEXT "none", PASTE THIS
-"nothing — goal reached".
-
-Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed
-full-autopilot grade — every angle empirically tested (happy AND failure paths,
-real inputs at real scale), every claim directly observed, zero pending items,
-an independent adversarial check found nothing, AND the autopilot itself was
-proven: the deliverable ran (and recovered) end-to-end with no human thought,
-no human decision, no human intervention, and no Claude in the loop (the
-structural-fix bar — next run, different input, nobody watching, still works);
-the evidence clause must name the tests including the unattended-run proof, and
-one untested angle drops it to HIGH. HIGH only when every
-claim in the report was directly observed this session (but not every angle
-adversarially tested); inferred or secondhand claims cap it at MEDIUM;
-assumptions cap it at LOW. **Hard cap:** anything pending, waiting, retrying,
-or "should work" in the report → Confidence cannot be HIGH (PERFECT
-unreachable), and the RISK line must name the unproven part. A bare grade with
-no evidence clause is invalid. This is the last-line defense against a spec
-session ending on false "all done" confidence.
-
-## Session id discipline (parallel-chat folders)
-
-Every `spec_tool.py` call takes `--sid <session-id>` — **always pass your own**
-(derive it from your scratchpad/task directory path: the UUID segment). Without
-it the tool guesses "active session = freshest pending trail", which
-cross-stamps markers when chats run in parallel (proven failure 2026-08-13).
+Confidence rates verification, not optimism: HIGH only when every claim in the
+report was directly observed this session; inferred or secondhand claims cap it
+at MEDIUM; assumptions cap it at LOW. **Hard cap:** anything pending, waiting,
+retrying, or "should work" in the report → Confidence cannot be HIGH, and the
+RISK line must name the unproven part. A bare grade with no evidence clause is
+invalid. This is the last-line defense against a spec session ending on false
+"all done" confidence.
 
 ## Mode detection
 
 - No `SPEC.md` in the current project dir → **INIT**.
 - The user's arg is `skip` → **SKIP**.
-- The user's arg is `bind` (or asks to bind/attach this session to a spec) → **BIND**.
-- `SPEC.md` exists and no `skip`/`bind` arg → **LOG**.
-
-## BIND — one session ↔ one specialized spec
-
-For folders where several chats work in parallel, each session binds to ITS
-spec so "the spec" is never ambiguous and log blocks land in the right file.
-
-1. List candidates: existing `SPEC-*.md` files (+ `ACTIVE-LANES.md` rows if the
-   file exists). Ask the user which this session is — or whether to create a
-   new specialized spec (run the INIT interview, but Write it as
-   `SPEC-<short-slug>.md` instead of `SPEC.md`).
-2. Bind: `python spec_tool.py bind SPEC-<slug>.md --sid <sid>`
-   (unbind: `bind --clear --sid <sid>`).
-3. From then on, LOG blocks from this session go to the bound spec's Change
-   Log, and a one-line pointer (`see: SPEC-<slug>.md -- <title>`) is prepended
-   to the shared `SPEC.md` so its timeline stays complete. A missing bound file
-   falls back to `SPEC.md` with a warning.
-4. If `ACTIVE-LANES.md` exists, also claim/update your lane row there
-   (scope + last-touch) — the board and the binding cover different halves:
-   the board tells OTHER chats what you own; the binding routes YOUR logs.
+- `SPEC.md` exists and no `skip` arg → **LOG**.
 
 ## INIT — full interview, then scaffold
 
@@ -194,26 +86,10 @@ time, plainly — then write the file:
    also pin the **failure path**, not just the happy path — most failures
    happen there, so a spec that grades only the happy path grades the wrong
    thing. Add self-healing criteria, each empirically checkable: recovers
-   from its *known* failure modes with no human in the loop AND the recovery
-   HOLDS — no recurrence inside the hold-window (the modes come from
-   `/error-recon`), checkpoints progress so a restart resumes instead of
+   from its *known* failure modes with no human in the loop (the modes come
+   from `/error-recon`), checkpoints progress so a restart resumes instead of
    starting over, never blocks on mid-run input, and surfaces failures by
-   count rather than hiding them. Spec the recovery per **Heaven's Net** —
-   one general strategy per failure CLASS (auth/session, timing, network,
-   resource, …), never one criterion per observed error string; a class and
-   its recovery rest only on evidence-mapped failure modes, never on
-   assumption; and each capacity-resting recovery (cooldown / bench /
-   pool pull) is sized in PROPORTION — from an observed measurement or a
-   bounded smallest-first ladder, never a guessed constant, under- and
-   over-sizing both failing the criterion (canonical definition + strict
-   guardrails incl. Proportion: /error-recon, "Heaven's Net" section). Sweep the known modes against the
-   10-category hostile-scenario seed (canonical RED-TEAM brief in
-   `~/.claude/skills/audit/SKILL.md`: mid-op death, check-then-act race,
-   half-done re-entry, flapping, two actors, boundaries, time windows,
-   recovery-fails, poison pill, lying success) — each load-bearing scenario
-   lands in the spec as a RECOVERS-BY line or an ASSUME + PROBE line, and a
-   category with no line means it was checked and doesn't apply, not that it
-   was skipped. Same propagation as the ladder — any
+   count rather than hiding them. Same propagation as the ladder — any
    executor that reads the spec inherits these — and the same KISS bound: a
    one-shot a human watches doesn't need them. (Planning-time twin of
    `/auto`'s Re-entry-hygiene rule: design how recovery is ordered; don't
@@ -255,17 +131,7 @@ Log empty):
 
 ## Success criteria
 <!-- Happy-path bar AND, for unattended tools, the recovery bar (self-heals known
-     failures, checkpoints, no mid-run input, failures reported by count) — known
-     failures swept against the 10-category RED-TEAM scenario seed (canonical
-     brief in the /audit skill).
-     Structural bar (aim at the right fix): each criterion must hold via a
-     mechanism that removes the failure condition itself — a structural fix,
-     never a band-aid that neutralizes one instance while the producing
-     condition survives (special case, narrowed scope, or filtering for inputs
-     that already satisfy a precondition instead of establishing it on any
-     input, e.g. "promote an already-logged-in spare"). Band-aid designs enter
-     the spec only when the user explicitly asked, labeled
-     BAND-AID (user-requested) with the structural version named beside it. -->
+     failures, checkpoints, no mid-run input, failures reported by count). -->
 - <...>
 
 ## Assumptions & Unknowns (skip when the task has no real unknowns)
@@ -393,11 +259,10 @@ any step runs.
    ```
 
 3. Pipe those field lines to the helper on stdin (it stamps the date, prepends
-   newest-first under a lock, and advances the marker — for a BOUND session the
-   block goes to the bound spec + a pointer line in SPEC.md):
+   newest-first under a lock, and advances the marker):
 
    ```
-   python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log --sid <your-sid>
+   python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log
    ```
 
 4. Confirm to the user: one block written, marker advanced.
@@ -428,7 +293,7 @@ stated fact when you see one.
 ## SKIP — throwaway session
 
 ```
-python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" skip --sid <your-sid>
+python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" skip
 ```
 
 Arms a one-shot release so the Stop guard lets this chat end once without a log

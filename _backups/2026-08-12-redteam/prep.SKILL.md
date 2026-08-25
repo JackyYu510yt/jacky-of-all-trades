@@ -333,15 +333,13 @@ Phase 5 (risky-function interviews)
            priority). Document the rationale in field 2 (Reasoning)
            of that function's spec.
 
-Phase 7 (AUDITOR audit + RED-TEAM)
-  Normal:  Dispatch the AUDITOR second-brain and the RED-TEAM attacker
-           in parallel, then pause to walk the user through their
-           findings one at a time (RED-TEAM BREAKS items first).
-  Auto:    Dispatch both (independent reviewer + scenario-attacker
-           subagents), integrate their feedback automatically with
-           `> [AUDITOR]` / `> [RED-TEAM]` callouts — a RED-TEAM BREAKS
-           must be fixed in the plan, not just noted — and note in the
-           plan's open-questions card that the auto path was taken.
+Phase 7 (AUDITOR audit)
+  Normal:  Dispatch the AUDITOR second-brain, then pause to walk the
+           user through its findings one at a time.
+  Auto:    Dispatch the AUDITOR second-brain (independent reviewer
+           subagent), integrate its feedback automatically with
+           `> [AUDITOR]` callouts, and note in the plan's
+           open-questions card that the auto path was taken.
 
 Phase 8 (per-function approval)
   Normal:  Ask "does this match what you pictured?" after each
@@ -574,14 +572,6 @@ did NOT write. Your job is to break it, not bless it. Evaluate:
    failure state it fails to distinguish (signed-out, empty output,
    stale cache) — a check that cannot say NO merely confirms the
    current assumption.
-6. Band-aid scan (aim at the right fix): is any mechanism a band-aid —
-   it neutralizes one instance of a failure while the condition that
-   produces it survives (a special case, a narrowed scope, a workaround
-   around the broken part, or filtering for inputs that already satisfy
-   a precondition instead of establishing it on any input)? For each
-   hit: name the scenario where the same failure returns, and the
-   structural version that removes the condition. A band-aid survives
-   review only if the user explicitly requested a temporary patch.
 Return specific, actionable defects ranked by severity — not approval.
 For each: what's wrong, why it bites, and the concrete fix.
 
@@ -590,13 +580,10 @@ For each: what's wrong, why it bites, and the concrete fix.
 === PLAN ENDS ===
 ```
 
-**The RED-TEAM — second independent attacker, dispatched IN PARALLEL with the AUDITOR (same message, two `Agent` calls).** Its ONLY job is scenario attack: generate concrete hostile scenarios across the 10 canonical attack categories (mid-op death, check-then-act races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walk each one through the plan to a verdict — HANDLED / DEGRADES / BREAKS / UNKNOWN. The canonical RED-TEAM brief lives in `~/.claude/skills/audit/SKILL.md` under the heading "**The brief handed to the RED-TEAM**" — read it there at dispatch time and hand the agent the plan contents as the target. Mandatory when the planned tool is unattended, long-running, stateful, or concurrent; skippable only for a plainly attended one-shot, noted in the plan as `RED-TEAM: skipped — not unattended/stateful`.
+When the AUDITOR's findings come back, integrate each item explicitly with the user:
 
-When the findings come back (AUDITOR + RED-TEAM), integrate each item explicitly with the user — RED-TEAM **BREAKS** items first:
-
-- For each point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
-- Update the plan file with every accepted change, noted with a `> [AUDITOR]` or `> [RED-TEAM]` callout so edits are traceable.
-- A RED-TEAM **UNKNOWN** on a load-bearing scenario becomes an open-questions item carrying the cheapest probe that would resolve it.
+- For each AUDITOR point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
+- Update the plan file with every accepted change, noted with a `> [AUDITOR]` callout so edits are traceable.
 
 Loop until the user says they are satisfied (optionally re-running the AUDITOR on the revised plan for a second pass). Do not proceed to Phase 7.5 without explicit user go-ahead.
 
@@ -668,8 +655,7 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              /error-recon's map when one exists — its
                              confirmed entries are the evidence-backed
                              failure list (+ the `Residue` field feeds
-                             field 12). Group the rows by Heaven's Net
-                             failure class (see Self-Healing Patterns).
+                             field 12).
 
 10. Performance profile      CPU / IO / net bound? Cost per
                              item? Where the bottleneck lives?
@@ -813,41 +799,9 @@ AUDIT    P4 checkpoint vs the END GOAL card. One sentence:
          <next state>; here's the observable evidence."
          If the line doesn't draw to the goal, the function
          is drift — revert and rethink before moving on (P3).
-         EXECUTED BY FnReview — a fresh-context reviewer, not
-         the brain that wrote the function (added 2026-08-22):
-         it reads the function from disk and returns, per item
-         with a file:line citation, GOAL-TRACE (this sentence)
-         + the 5 principles (Heaven's Net / evidence-only /
-         re-entry hygiene / no silenced failures / KISS) +
-         the 4 completeness tests — does the condition that
-         produced the failure / the gap it closes still exist?
-         next run, different input, nobody watching? establish-
-         vs-filter? cause-lock (only when the function was
-         FIXED — otherwise a legal N/A)? The driver still
-         writes the AUDIT card itself (the P4 sentence, the
-         style-match line, Sibling notes) — FnReview's
-         CLEAN+COMPLETE is the condition that lets [A] check.
-         A VIOLATION / BAND-AID sends the function back to
-         GREEN (REAL + AUDIT re-run on the rewrite; bounded per
-         /auto FnReview — fresh approach budget, ≤2 review
-         rounds). Round 2 still failing → stop and surface the
-         finding to the user at the per-function "Does this
-         match what you pictured?" question (under /auto:
-         PARKED, open finding = DONE gate). Plain /prep (no
-         /auto): dispatch a fresh Agent subagent with the
-         canonical brief — same machinery as Phase 7's AUDITOR;
-         subagents unavailable → same-context skeptic pass,
-         marked as the weaker fallback. A finding
-         that would broaden the spec routes through the
-         spec-broadening stop below, and a recorded spec-card
-         decision is a valid WAIVED citation. Under /auto this
-         AUDIT step is the single FnReview executor — no extra
-         dispatch. Canonical mechanism, brief, bounds and
-         stamps: /auto SKILL.md, "FnReview — per-function
-         completeness review" — pointer, not a copy.
 ```
 
-**SAFE function — Green + smoke check + FnReview.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file. Then the same FnReview as a RISKY function's AUDIT (Option B, 2026-08-22: every function is reviewed, not just the load-bearing ones — reviews for several functions fan out in parallel, so it costs wall-clock, not certainty); a SAFE function that was **fixed** — rewritten to clear a failed GREEN / REAL, or it rewrote a def that existed before this build — carries the fix packet too (/auto FnReview "fix-trigger").
+**SAFE function — Green + smoke check.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file.
 
 **P7 guards on every cycle (RISKY and SAFE alike).**
 
@@ -981,7 +935,6 @@ Use these primitives when writing the plan and the prototype. Prefer simple vers
 - **Fail-fast on non-transient errors** — bad codec, missing file, wrong credentials: raise immediately. Only retry truly transient conditions.
 - **Health check before heavy work** — ffprobe the input before a 2-hour encode. Ping the upload endpoint before batching.
 - **Ordered recovery on re-entry** — when retrying or resuming a step that may have run partway, never retry on top of a prior attempt's residue. Restore in order: roll back partial work → re-assert the precondition (re-run the step's health check / readiness check, field 7) → invalidate downstream (the field-5 consumers that read the old output, but only when the redone output actually differs) → resume. The build-time form of /auto's Re-entry hygiene + /spec's RECOVERS-BY.
-- **Heaven's Net (class-level recovery)** — recovery logic keys to failure CLASSES (navigation / auth-session / element / timing / network / resource / unknown), one general strategy per class: diagnose the actual state → classify → recover toward the required state → verify it's restored with evidence → bounded escalate, fail loud. Never one bespoke handler per observed error string — a new symptom joins a class via a new evidence-backed map entry, NEVER by resemblance or assumption (an unmatched signal is "unknown": capture, park, stop loud). Field 9's failure-modes table groups its rows by class accordingly. Canonical definition + strict guardrails (evidence-only, confidence gating, job-level recovery budget): /error-recon, "Heaven's Net" section — read it before designing recovery; don't run it from memory. KISS: the taxonomy is earned at the third handler in the same class, not before. Proportion (guardrail in the same section): a recovery that rests/retires capacity or pulls a pool is sized from an OBSERVED recovery measurement or a bounded ≥×2 smallest-first ladder — never a constant picked by feel; under- and over-sizing are equal failures. Field 9's self-healing path states the size and cites the map entry's measured recovery + `Scope:` it came from. Same section: the recovery must HOLD (recurrence inside the hold-window = failed recovery), verify cheapest-first, and environment-given numbers are measurements.
 
 ## Hard NOs
 
@@ -1022,41 +975,8 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 │         the ambiguity. Not "let me know if you want more."   │
 │         Include metrics to watch on first run when DONE.>    │
 │                                                              │
-│  Current stage:                                              │
-│    Before:   <state before this session's work>              │
-│    Now:      <state right now — built / verified / waiting>  │
-│    Changed:  <what changed and WHY — evidence or decision>   │
-│    Next:     <immediate milestone toward the END GOAL>       │
-│    Meant to: <what Next achieves + the problem it fixes>     │
-│    Feynman:  <Next to a smart 12-year-old, one analogy —     │
-│              how it fits Heaven's Net + the ultimate goal>   │
-│  Ultimate goal (4 lenses, from the END GOAL card — frozen):  │
-│    Delivers:   <finished result, zero input from the user>   │
-│    Heals:      <failures recover or surface themselves>      │
-│    Replaces:   <whose job/attention the system deletes>      │
-│    Guarantees: <what wrongness is structurally impossible>   │
-│  Suggested action:                                           │
-│    Paste this:     <answers THIS TURN'S question: on a pick  │
-│                    = the pick + one line why (work prompt    │
-│                    waits for next turn); on a do-it request  │
-│                    = standalone prompt: what / files /       │
-│                    limits / facts / show-or-ask before cost  │
-│                    — "nothing — goal reached" if DONE>       │
-│    → Toward goal:  <a chain, not a tag: move → concrete gain │
-│                    → which lens needs it and why, + cost of  │
-│                    the rejected option>                      │
-│    → Heaven's Net: <on a pick: seen evidence + what ruled    │
-│                    others out + how we'd know if wrong +     │
-│                    bounded fallback, unchecked named, never  │
-│                    "n/a"; on a work step: class-keyed,       │
-│                    evidence-only, bounded, fail-loud — or    │
-│                    "n/a — no recovery logic">                │
-│                                                              │
-│  Confidence: <PERFECT/HIGH/MED/LOW> — <what was verified     │
-│              directly (tests run, output seen) vs inferred;  │
-│              PERFECT only if all angles incl. failure paths  │
-│              tested on real inputs + AUDITOR found nothing — │
-│              name the tests>                                 │
+│  Confidence: <HIGH/MED/LOW> — <what was verified directly    │
+│              (tests run, output seen) vs inferred/assumed>   │
 │  Risk: <HIGH/MED/LOW> — <what's exposed if this verdict is   │
 │        wrong; which parts are unproven on real inputs>       │
 │                                                              │
@@ -1065,9 +985,7 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 
 The headline contrasts current state with the END GOAL card, not with a sub-step. SHIPPABLE / NOT SHIPPABLE is implied by the state — DONE means shippable, anything else means not.
 
-**Goal-compass rules (mandatory):** `Ultimate goal` is derived fresh PER PROJECT from the END GOAL card — the end-state of THIS scenario, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated — never abstract boilerplate. Once stated the block is FROZEN; never quietly reworded to match what got built (that rewording is exactly the drift the user wants to catch). `Current stage` (8/22/26) precedes it: Before / Now / Changed (with WHY) / Next (the immediate milestone — replaced the old Next-step line) / Meant to (what Next achieves + the problem it fixes) / Feynman (Next to a smart 12-year-old, one analogy, naming both the Heaven's Net fit and the goal fit). `Suggested action` is ONE concrete move (v3 8/22/26): `Paste this` answers THIS TURN'S question — on a pick it IS the pick in the user's voice + one line of why (the after-pick work prompt waits for the next turn); on a do-it request it is the complete standalone work prompt (what / files / limits / corrected facts / what to show-or-ask before anything costly); `→ Toward goal` is a chain in plain words, never a bare lens tag — this move → gets us <concrete thing> → which is what <lens> needs because <why>, plus what the rejected option would have cost — an action whose chain doesn't connect to the goal is drift and must not be suggested; `→ Heaven's Net` answers "why can we proceed with confidence?": on a pick = the SEEN evidence the pick stands on + what ruled the other options out (same evidence) + how we'd know fast if wrong and the bounded fallback, unchecked items named, never "n/a"; on a work step it follows the canonical error-recon definition (class-keyed recovery, evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work step has no recovery logic). If the goal is fully reached: Next "none", Paste this "nothing — goal reached".
-
-**Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — PERFECT is the 100%-guaranteed, full-autopilot grade: every angle tested empirically (happy path AND failure paths, real inputs at real scale), every result directly observed, zero pending items, the independent AUDITOR/pentest tried to break it and found nothing, AND the autopilot itself was proven — the script ran (and recovered) end-to-end with no human thought, no human decision, no human intervention, and no Claude in the loop (structural-fix bar: next run, different input, nobody watching, still works) — the evidence clause must name the tests per angle including the unattended-run proof; one untested angle → HIGH at best. HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read) but not every angle was adversarially tested; anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH (and PERFECT is unreachable). A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
+**Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read); anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH. A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
 
 ### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
 
