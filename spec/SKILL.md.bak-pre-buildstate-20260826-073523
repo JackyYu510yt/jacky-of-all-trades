@@ -39,59 +39,6 @@ cause is written as fact only when the relevant alternatives were investigated
 or explicitly ruled out — avoid **search-space neglect** and **anchoring
 bias** by actively checking plausible alternatives.
 
-## Build-state discipline (all modes)
-
-Every spec carries a **`## Build State`** table directly under `## Goal`. It is
-the first thing a future session reads, and it answers the one question a spec
-otherwise cannot: **is this actually running right now?**
-
-The rules:
-
-**1. State is read from the machine, never from the document.** Before writing
-or updating any row, run its Evidence check and paste the real result. A spec
-that says LIVE because an old Change Log entry said "shipped" is exactly the
-failure this table exists to prevent. If you cannot run the check this session,
-the row's state becomes **UNVERIFIED (was: <old state>, <date>)** — never leave
-a stale confident claim standing.
-
-**2. WIRED and LIVE are different, and the gap is the whole problem.** Code that
-is imported by production is WIRED. Code that has been *observed executing* in
-production is LIVE. The path between them is where finished work quietly dies:
-built, tested, red-teamed, wired, gated off pending a live verify that needed a
-restart — and the chat ended there. Promote a row to LIVE only on a dated
-runtime observation (a file whose timestamp moved, a log line, a metric that
-changed). Code presence proves nothing.
-
-**3. Every gate gets named.** A default-off env var or flag file makes a fully
-built, fully wired feature completely inert. The Gate column names it and states
-whether it is currently open. This is a factual reading of the machine, not a
-design note — check the actual env and the actual file.
-
-**4. KILLED rows are never deleted.** A spec section that vanishes takes its
-reasoning with it, and the same idea gets re-proposed six weeks later at full
-cost. A killed deliverable keeps its row and gains three facts: what evidence
-killed it, what finding that out cost, and what we do instead. "Instead:
-nothing — accepted gap" is a valid and useful answer.
-
-**5. SPEC'D rows are a debt list.** Anything still SPEC'D when a session closes
-gets named explicitly in the closing report under "still specced, not built" —
-not left for the reader to infer from a table they may not scroll to.
-
-**INIT mode:** scaffold the table with one row per deliverable in `## Scope
-(In)`. Everything starts at SPEC'D with a blank Last-checked. Write the Evidence
-column *now*, while you still know what would prove it — a row with no named
-check is a blank HARD field, same bar as an assumption with no probe.
-
-**LOG mode:** before writing the change block, re-run the Evidence checks for
-every row this session touched and update State, Gate, and Last checked. If the
-session moved something from BUILT to WIRED but could not prove LIVE, say so in
-the row *and* in the change block's `context:` line. A LOG that advances a state
-without a re-run check is a guess wearing a conclusion's clothes.
-
-**Cross-check against reality, not against the last entry.** The states most
-worth distrusting are the confident ones — LIVE rows nobody has re-checked in
-weeks, and BUILT rows from a session that ended at PARTIAL.
-
 ## Goal-compass + confidence/risk footer (all user-facing /spec reports)
 
 Every user-facing /spec report — the INIT completion message, the LOG
@@ -297,42 +244,6 @@ Log empty):
 ## Goal
 <goal>
 
-## Build State
-<!-- REQUIRED. The first thing anyone reads. One row per deliverable this spec
-     promises. State is NEVER claimed from memory, from the Change Log, or from
-     "I remember building that" — each row is backed by a named, re-runnable
-     check that a future session can paste and run in seconds.
-
-     STATES (a deliverable is at exactly one):
-       SPEC'D  designed here, no code exists yet.
-       BUILT   code exists and its own tests pass, but nothing in the real
-               system calls it. Harmless and inert.
-       WIRED   the real system imports/calls it. Name the call site file:line.
-       LIVE    PROVEN to actually execute in production. Requires a RUNTIME
-               observation with a date — a fresh output file, a log line, a
-               metric that moved. Code presence is NOT liveness.
-       KILLED  decided against. REASON IS MANDATORY: what we learned, what it
-               cost, and what we do instead. A killed row is never deleted —
-               deleting it is how the idea comes back next quarter.
-
-     THE GATE COLUMN is the trap this table exists to catch. A deliverable can
-     be BUILT + WIRED + loaded in memory and still do nothing because it sits
-     behind a default-off env var or flag file. If a row has a gate, NAME it and
-     say whether it is currently open. No gate = write "none".
-
-     WIRED != LIVE. That gap is where work goes to die: the code is finished,
-     the switch was never flipped, the chat closed, and the next session reads
-     the design and assumes it shipped. -->
-
-| Deliverable | State | Gate (and is it open?) | Evidence — the check that proves this state | Last checked |
-|---|---|---|---|---|
-| <thing this spec promises> | SPEC'D \| BUILT \| WIRED \| LIVE \| KILLED | <env var / flag file / "none"> | <paste-able check + what a passing result looks like> | <YYYY-MM-DD> |
-
-**Killed rows** (never delete — reason is the whole point):
-
-- **<thing>** — KILLED <date>. Learned: <what evidence killed it>. Cost: <what
-  it took to find out>. Instead: <what we do now, or "nothing — accepted gap">.
-
 ## Logic / How it works
 <logic>
 
@@ -498,21 +409,7 @@ any step runs.
    python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log --sid <your-sid>
    ```
 
-4. **Refresh `## Build State` before you confirm.** For every row this session
-   touched, re-run its Evidence check against the machine and update State,
-   Gate, and Last checked. Two states need special care:
-
-   - Moved code from BUILT to WIRED but never saw it run? The row stays
-     **WIRED**, and the change block's `context:` says the live proof is owed
-     and what it needs (a restart, queued work, a flipped gate).
-   - Session is ending at PARTIAL? Any row you advanced this session gets its
-     real state, not its intended one. This is the single most common place a
-     spec starts lying.
-
-5. Confirm to the user: one block written, marker advanced, and **name every row
-   still at SPEC'D or BUILT** — "still specced, not built: X, Y" — so an unbuilt
-   deliverable is spoken out loud at the moment the session closes, rather than
-   silently inherited by whoever opens the spec next.
+4. Confirm to the user: one block written, marker advanced.
 
 **Do NOT** write one block per file-touch — one block per *logical* change.
 The note-taker already records every edit; your job is the reasoning.

@@ -1345,23 +1345,6 @@ These never bend.
 14. **Aim at the right fix — structural by default, band-aids only on explicit request.** When choosing WHAT fix to build, the target is the fix that **structurally strengthens the system** — the one that removes the condition that produced the failure. That aim is set at design time: never build the band-aid first planning to upgrade later, and never present a band-aid as the fix. A band-aid is any fix that neutralizes *this instance* (this input, this account, this state) while the producing condition survives — a special case, a narrowed scope, a workaround routed around the broken part. The aim test, before building: *"after my fix, does the condition that produced this failure still exist?"* — YES → band-aid; climb a layer and re-aim. One common band-aid shape worth naming: a mechanism needs a precondition and the fix **filters** for inputs that already satisfy it instead of **establishing** it on any input (cohort incident 2026-08-20: "promote an already-logged-in spare" — band-aid, dies when no logged-in spare exists; right fix: log in + clean-slate ANY account as part of promotion). A second band-aid shape: a recovery UNDER-sized by a guessed constant (a 90 s rest for a throttle measured at ~24 min) — the aim-test can read "condition removed? yes" only if the constant is trusted, so check its source: an observed measurement or a bounded smallest-first ladder (Heaven's Net Proportion guardrail, canonical in /error-recon). Over-sizing is not a band-aid but is the same guardrail's other violation. The only sanctioned band-aid is the work-once-to-smoke-test scaffold in #10, and it is never the deliverable. If the user explicitly requests a quick/temporary patch, ship it labeled `BAND-AID (user-requested):` with the structural version named beside it so the debt is visible. **No clash with Graduated Scale-Up:** the ramp and this rule turn different dials — **scale-up shrinks SCOPE, never STRUCTURE.** Rung 1 (smoke) runs the REAL mechanism on one input; a band-aid is a *different, weaker* mechanism, not a smaller one, and scale doesn't cure it (rung 1 of the cohort fix = run the real login+clean-slate promotion on ONE account — correct; "promote an already-logged-in spare" stays a band-aid even run on 100 accounts). Litmus at rung 1: *"is this a small version of the right mechanism, or a different mechanism that only handles the easy case?"* Full sequence: scaffold to probe (#10) → build the right fix → prove it small → scale it up — band-aids only ever live in the scaffold step, and they die there.
 
 
-15. **Report BUILT vs WIRED vs LIVE — never let a switched-off deliverable read as shipped.** Every run that produces or touches a deliverable ends by stating that deliverable's real build state, read from the machine at report time, not from what the run intended:
-
-    - **SPEC'D** — designed, no code.
-    - **BUILT** — code exists, its own tests pass, nothing in the real system calls it. Inert.
-    - **WIRED** — the real system imports/calls it. Name the call site `file:line`.
-    - **LIVE** — *observed executing* in production. Requires a dated runtime observation: an output file whose timestamp moved, a log line, a metric that changed. **Code presence is not liveness, and neither is a passing test.**
-    - **KILLED** — abandoned. Reason mandatory: what evidence killed it, what it cost to learn, what we do instead.
-
-    **Name every gate.** A deliverable can be BUILT, WIRED, loaded in memory, and still do exactly nothing because it sits behind a default-off env var or flag file. Read the actual env and the actual file; report whether the gate is open. This is a fact about the machine, not a design note.
-
-    **The WIRED→LIVE gap is where finished work dies.** The shape repeats: code written, tests green, red-teamed, wired in, left behind a safety gate pending one live verify that needs a restart or queued work — then the turn ends at PARTIAL and the chat closes. The next session opens the spec, reads a complete design, and assumes it shipped. So a run may NEVER report a WIRED deliverable in language that implies it is running; when live proof is owed, the report says so and names exactly what the proof needs (a restart, queued work, a flipped gate, a specific observation to watch for).
-
-    This is HI #10 (probe, don't assume) turned on the run's own output: the same evidence bar that governs claims about the system governs claims about what the run delivered. A PARTIAL or STUCK report additionally names every deliverable still at SPEC'D or BUILT, out loud, in the report body — an unbuilt promise must be spoken at the moment the session closes, never left for a future reader to infer.
-
-    When the project has a `SPEC.md`, refresh its `## Build State` table (see /spec) before writing the terminal report, re-running each touched row's Evidence check rather than copying the row forward.
-
-
 ## Pre-Action One-Liner Format
 
 Before each substantive action (running a command that takes >30s, editing >3 files, hitting an external API, kicking off a long process), print one short line so the user knows what's happening:
@@ -2664,7 +2647,6 @@ If sub-agents are unavailable, run a same-context skeptic pass against the Succe
 Goal:    <one sentence>
 Result:  <what happened, with numbers>
 Verified by: <evidence — log line / exit code / file existence>
-Build state: <per deliverable: SPEC'D | BUILT | WIRED | LIVE | KILLED — gate named + is it open? + the dated runtime observation behind any LIVE. Code presence is NOT liveness; a WIRED-but-ungated-off item says what its live proof still needs>
 Coverage: <success checks passed, e.g. 7/7 = 100%>
 Current stage:
   Before:   <state before this run>
@@ -2689,7 +2671,6 @@ Notes:   ./auto-runs/<slug>/notes.md  (decisions + open questions)
 Goal:        <one sentence>
 Done:        <what landed>
 Missing:     <what didn't, with reason>
-Build state: <per deliverable: SPEC'D | BUILT | WIRED | LIVE | KILLED — gate named + open? + dated observation behind any LIVE. NAME every deliverable still at SPEC'D or BUILT, out loud>
 Coverage:    <success checks passed, e.g. 5/7 = 71%>
 Ledger (for the missing part — the P11 facts/unknowns handoff):
   Facts:                   <what is PROVEN about the gap, with evidence>
@@ -2722,7 +2703,6 @@ Approaches tried (N):
   2. <approach> → <failure reason>
   ...
 Why I'm stopping: <why no 6th approach exists>
-Build state: <per deliverable: SPEC'D | BUILT | WIRED | LIVE | KILLED — gate named + open? + dated observation behind any LIVE. NAME every deliverable still at SPEC'D or BUILT, out loud>
 Ledger (the P11 facts/unknowns handoff — a STUCK is a resume point, not a dead end):
   Facts:                   <what is PROVEN, with evidence>
   Unknowns:                <what is still unverified>
