@@ -1,0 +1,1872 @@
+---
+name: principles
+description: Core engineering and collaboration principles the user has codified from past failures. Each principle is a hard-earned rule meant to prevent a specific, real failure mode. Currently covers (1) test-at-scale — tests must exercise the actual target condition, not just set a config value; (2) figure-out-the-conditions-upfront — identify success, testing, and workflow conditions before starting any task; (3) keep-the-end-goal-in-sight — every action and every question must advance the stated goal; don't drift into tangents; don't stop to ask when the answer is already in the plan or prior context; (4) audit-against-the-goal-before-handback — before stopping, run an end-of-task checkpoint comparing current observable state to the end goal, then emit a decision-ready verdict (Result / Toward goal / Next) in one of four states (DONE / PARTIAL / BLOCKED / UNCLEAR); (5) KISS — pick the simplest solution that works; complexity must be justified by a concrete present requirement, not a hypothetical future one; duplication beats the wrong abstraction; rule of three before extracting; (6) think-before-coding — surface assumptions, forks, and tradeoffs *before* the implementation lands; present multiple interpretations rather than silently picking; push back when a simpler approach exists; name confusion instead of guessing; (7) surgical-changes — every changed line traces to the user's request; no drive-by improvements; no style impositions; mention pre-existing dead code instead of deleting it; clean only orphans your own change created; (8) goal-driven-execution — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable success criteria are what enable autonomous loops to keep going without pausing for guidance. Use when writing or running a test, claiming a value or threshold "works", reporting verification results, making any claim about code behavior, starting a non-trivial task, debugging, running a multi-step pipeline, running /auto or /loop, about to ask a clarifying question, mid-task considering a "while I'm here" detour, stalled by a question the context already answers, about to finish a task and hand output back to the user, designing a new component, refactoring, choosing between an abstraction and duplication, vibe-coding or prototyping, adding a factory/registry/wrapper/decorator/config layer, writing a class hierarchy, picking inheritance vs composition, editing existing code, fixing a bug, completing a focused feature ask, working in code with a style you'd write differently, noticing unrelated dead code or bugs, picking between two valid interpretations of a request, picking silent defaults (timeout, retry, format, library), starting work from an imperative without a checkable success criterion, writing a multi-step plan, autonomous run pausing at every fork, or about to say "tested" / "verified" / "confirmed" / "worked" / "fixed" / "done" / "should I" / "do you want me to" / "before I start" / "just to confirm" / "quick question" / "let me know if you want more" / "hope this helps" / "are we done?" / "what's next?" / "anything left?" / "in case we need it later" / "for future flexibility" / "to make it extensible" / "best practice" / "while I'm here" / "I also cleaned up" / "I improved" / "I refactored some adjacent code" / "I noticed" / "I'll just assume" / "they probably meant" / "I'll go with the standard" / "make it pass" / "get it green" / "keep going until" / "set and forget" / "until it's done" / "loop until done". Also covers (9) build-for-the-real-run — design for the actual operating envelope (real scale, real duration, unattended execution, messy/missing inputs, resource limits, recovery after partial failure); a passing demo is not the finish line, the real job surviving under real conditions is; only justifies robustness for conditions you can prove will occur (speculative robustness stays a P5/KISS violation), and is the tiebreaker when two principles conflict; trigger when code worked once on a small or clean input but must run for real, when a job runs overnight / unattended / under /auto or cron, or on "run it for real" / "this runs overnight" / "the real file is huge" / "set and forget" / "it died at 3am" / "works on my test clip but not the real one" / "it filled the disk" / "it hung halfway". Also covers (10) see-it-before-you-call-it — when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log line is not proof on a visual surface; capture inside the test, read before declaring pass/fail, and a captured-but-unread shot or a weak visible assertion ("element exists" when it exists in both the good and bad state) is the failure this prevents; trigger on "is it logged in", "did the page load", "did it render", "smoke test the UI", "is the account ready", "did the image generate", warmup/readiness checks, or any verify gated on a visual outcome. Also covers (11) pin-the-cause-before-the-fix — hypothesis-driven debugging / root cause analysis (RCA): on any unexpected failure, observe and collect evidence first, list 2-4 concrete falsifiable causes, rank by likelihood, design the cheapest probe that isolates ONE variable and pre-register its expected / confirming / disproving results BEFORE running it, run one test at a time, keep a facts/unknowns ledger on long investigations, and only edit code after exactly one cause has positive proof; a fast path exists only for causes genuinely obvious on first read (typo, missing import); trigger on "why is this failing", "debug this", "it's broken", "hypothesis-driven debugging", "root cause analysis", "RCA", "let me just try this", "guess and check", or any impulse to edit code before the cause is locked. This skill is expected to grow — new principles will be appended over time, each following the template at the bottom.
+---
+
+# Principles
+
+A living collection of rules that must be followed across all code work in this user's projects. Each principle comes from a specific real failure it is meant to prevent. Follow them all, not just the ones that feel relevant to the current task.
+
+This file is designed to grow. New principles get appended using the template at the bottom. Every principle has the same structure so the skill stays scannable as it expands.
+
+
+## Installation (one-time, per machine)
+
+The `/principles` skill ships with a hook script — `hooks/principles-check.py` — that fires on Stop and blocks the assistant from declaring `done` / `fixed` / `verified` without engaging the principles checkpoint. The hook has two modes:
+
+- **P4 reminder** — the conversation has stated an end goal + success conditions; nudges for the audit-before-handback verdict
+- **P2 + P4 reminder** — no observable goal/success-condition was stated; forces the assistant to state them and then audit before declaring done
+
+Without this hook, claim-words slip through and the discipline is purely advisory.
+
+To wire it up on a fresh install (or new PC), add this block to your `~/.claude/settings.json` under `hooks` (merge with existing hooks if any):
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"<HOME>/.claude/skills/principles/hooks/principles-check.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Replace `<HOME>` with your actual home path:
+
+```
+Windows  →  C:/Users/<your-username>
+macOS    →  /Users/<your-username>
+Linux    →  /home/<your-username>
+```
+
+**Verification:** after wiring, end any assistant turn that contains a claim word (`done` / `fixed` / `verified` / `works` / `tested` / `confirmed` / `complete`) without engaging the principles skill — the hook should block and emit `P4 checkpoint.` (or `P2 + P4 checkpoint — ...` if no goal was stated). If you don't see that block, the hook isn't wired correctly.
+
+
+`========================================`
+
+## Principles Index
+
+1. **Test the condition, not the label** — the test must place the system in the exact condition being verified; setting a value is not the same as exercising it.
+
+2. **Figure out the conditions upfront** — before acting, nail down the success condition, the testing conditions, and the workflow conditions; without them, "done" has no meaning.
+
+3. **Keep the end goal in sight** — understand the goal and what "done" looks like, use the materials and context you were given, and make every action and question traceable back to the goal; don't drift, don't stall, don't do random stuff.
+
+4. **Audit against the goal before handback** — before stopping, run a checkpoint comparing current observable state to the end goal, then emit a decision-ready verdict (Result / Toward goal / Next) in one of four states (DONE / PARTIAL / BLOCKED / UNCLEAR).
+
+5. **KISS — keep it simple** — pick the simplest solution that solves the present requirement; every layer of abstraction, indirection, or "flexibility" needs a concrete reason that exists today, not a hypothetical one. Duplication beats the wrong abstraction. Rule of three before extracting.
+
+6. **Think before coding** — surface assumptions, forks, and tradeoffs *before* the implementation lands; if multiple readings of the request exist, name them; if a simpler approach exists, push back; if confusion is real, name what's unclear instead of guessing.
+
+7. **Surgical changes** — every changed line traces to the user's request; no drive-by improvements, no style impositions, no silent deletion of pre-existing dead code; mention strays, don't fix them; clean up only the orphans your own change creates.
+
+8. **Goal-driven execution** — transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong, checkable success criteria are what enable autonomous loops.
+
+9. **Build for the real run** — design for the actual operating envelope: real scale, real duration, unattended execution, messy inputs, resource limits, recovery. The demo passing is not the goal; the real job surviving is. Only counts conditions you can prove will occur — speculative robustness still falls to P5.
+
+10. **See it before you call it** — when a result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion; an exit code or a matched log string is not proof on a visual surface.
+
+11. **Pin the cause before the fix** — hypothesis-driven debugging (RCA): evidence first → 2–4 ranked falsifiable causes → one pre-registered, cheapest, one-variable probe at a time → only edit code once exactly one cause has positive proof.
+
+12. **Completed means delivered** — a task is complete ONLY when the user-visible result exists in the world and was verified (seen, not inferred); shipped machinery (fixes, loops, specs, retries) is progress, never completion. Reports lead with the result gap and failures FIRST; a dependency dead >2h is an incident to reroute around, not a wait state to normalize.
+
+13. **The report grades itself** — every report ends with NET + CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) + the goal-compass (4-lens ULTIMATE GOAL derived per scenario — Delivers/Heals/Replaces/Guarantees) + one SUGGESTED ACTION (PASTE THIS, a verbatim-pasteable prompt, with → TOWARD THE GOAL and → HEAVEN'S NET lines) and a self-grade (CONFIDENCE: PERFECT/HIGH/MED/LOW + RISK, each with named evidence). Anything pending caps confidence below HIGH; PERFECT requires proven full-autopilot (no human thought, no human intervention, no Claude in the loop); the goal block is frozen — rewording it toward what was achieved is the drift the footer exists to expose.
+
+> **Crosswalk to Karpathy's 4 principles:** Think Before Coding → P6 · Simplicity First → P5 · Surgical Changes → P7 · Goal-Driven Execution → P8 (also touches P2 + P4).
+
+> **Tiebreaker:** when two principles pull opposite ways, ask which choice keeps the thing working for the *real job* — real-world fit (P9) breaks the tie. This does NOT license speculative complexity: P9 only fires on conditions you can prove will occur, so "practicality" can never be the reason for a safeguard against an imaginary case (that's still a P5 violation). Real fit wins ties; it does not win invented ones.
+
+<!-- Append new entries here as they are added. Keep entries to one line. -->
+
+
+`========================================`
+
+## Principle 1 — Test the condition, not the label
+
+**Rule:** The test must place the system in the exact condition being verified. Setting a value is not the same as exercising it.
+
+**One-line form:** If the question is "does N work?", fire N. Config-load ≠ load test.
+
+### When it applies
+
+- Any test written or run to answer "does X work?" for a specific value, condition, scale, concurrency, or failure mode.
+
+- After any change that introduces a new constant, threshold, or config value the user asked to be verified.
+
+- Trigger phrases: "test at N", "verify concurrency", "does this work with X", "stress test", "prove it handles Y", "pentest this", "try M threads".
+
+### Failure modes this catches
+
+- **Label vs behavior** — `THREADS = 80` proves the assignment works, not that 80 concurrent threads work.
+
+- **Happy path vs target path** — a 1-item queue never reaches the N-item logic even when N=80 is configured.
+
+- **Convenient proxy vs actual spec** — the test spec comes from the user's question, not from what's easiest to run.
+
+### Three-check gate before declaring "tested"
+
+Answer each in one sentence. If any answer is no, the test did NOT exercise the target — say so.
+
+1. **Did the test actually reach the condition?** If X = "80 concurrent submissions", did 80 requests fire at the same moment? If X = "10 hour wait", did it actually wait 10 hours?
+
+2. **Would the test have failed if the target value were wrong?** A test that passes whether the value is 8, 80, or 8000 isn't testing the value — it's testing that the code path doesn't crash.
+
+3. **Does the test check the specific failure signature the target would produce?** If the API throws `LIMIT_403` when over capacity, did the test grep for it? Or did it just check "no exception"?
+
+### Common invalid patterns
+
+- `MAX_CONCURRENT = 100`, test sends 1 request → invalid
+
+- "Does it retry on error?" test with no induced failure → invalid
+
+- "Does it handle empty input?" test with a small non-empty list → invalid
+
+- "Is it thread-safe?" test with sequential calls → invalid
+
+- "Does this survive N hours?" test that runs for N minutes → invalid (unless the gap is stated explicitly)
+
+- "Does it handle 1000 users?" load test with 10 users → invalid
+
+### When you can't run at full scale
+
+Real cost, destructive side effects, or external dependencies can make the true-scale test impossible. That's okay. What's NOT okay is silently downscaling.
+
+Required:
+
+1. **Say so explicitly** — "I cannot run the true N=1000 test because each request costs $5 / would take 6 hours / would trip the rate limit."
+
+2. **Propose the closest realistic approximation** — "I'll run N=10 against the live system; the failure mode would be the same N thing."
+
+3. **Report the gap in the verdict** — "Tested at M, not the requested N, because [reason]. Extrapolated verdict: …"
+
+### Hard NOs
+
+- Do not report "worked" when the test didn't reach the target condition.
+
+- Do not accept "it ran without error" as proof of the target value.
+
+- Do not substitute a convenient proxy for the user's actual question.
+
+- Do not silently downscale — always name the gap.
+
+- Do not re-use a smoke-test result as load-test evidence.
+
+
+`========================================`
+
+## Principle 2 — Figure out the conditions upfront
+
+**Rule:** Before acting, figure out the conditions that define the task — what success looks like, what a valid test requires, and what preconditions the workflow needs at each step.
+
+**One-line form:** Define the target before you shoot. "Done" has to mean something specific and observable.
+
+### When it applies
+
+- Starting any non-trivial task — writing a function, debugging a bug, running a pipeline, doing a refactor.
+
+- Before writing or running a test for a specific function.
+
+- Before claiming a bug is fixed, a feature is complete, or a workflow ran correctly.
+
+- Trigger phrases: "test this", "debug this", "is this working?", "fix this", "run this pipeline", "let me just try X and see".
+
+### The three kinds of conditions to nail down
+
+- **Success condition** — what specific observable outcome means "done". Not "runs without error" — the actual thing that has to be true. Example: "file exists on disk, >10KB, valid JSON" or "all 15 beats generate and their files are ≥50KB each".
+
+- **Testing condition** — for a specific function or debug scenario, what must hold for the test to genuinely validate the thing we care about. What inputs, what state, what pass/fail signatures. Feeds directly into Principle 1.
+
+- **Workflow condition** — for multi-step flows, what preconditions each stage needs, what it hands off to the next stage, and what end state signals the whole thing worked.
+
+### Output format (always include all four sections)
+
+Whenever this principle is applied, the output MUST contain these four sections in this order. The TL;DR is not optional — it exists so the user can verify I actually understood the task, instead of just parroting the template back.
+
+```
+**Success condition**
+- <observable criteria, or "n/a" with explicit reason>
+
+**Testing condition**
+- <inputs, required state, pass/fail signatures, or "n/a" with explicit reason>
+
+**Workflow condition**
+- <per-stage preconditions and handoffs, or "n/a" with explicit reason>
+
+**TL;DR**
+**<Headline: 2-4 bolded words naming the kind of task.>** <One short sentence, ~20 words max, naming what matters MOST for this specific task.>
+```
+
+Rules for the TL;DR (headline + clarifier form):
+
+- **Headline** is 2-4 bolded words that name the *kind* of task. Examples: "Fix one function.", "Prove both directions.", "Guard every handoff.", "Chase a silent bug.", "Tighten a slow loop."
+
+- **Clarifier** is ONE sentence, ~20 words max, written in **active voice with concrete verbs** — "Run it on X", "Watch the bug vanish", "Catch bad sizes", "Feed it N inputs", not "is expected to" / "should be verified that" / passive constructions. Active verbs move; passive voice limps.
+
+- **Keep the specifics.** Numbers, filenames, sizes, counts — preserve them. "10 runs, empty files" beats "a bunch of runs and bad output." Active phrasing should reduce word count, not replace precision with vibes.
+
+- **No paragraph form.** If it won't fit in one sentence, the three conditions above weren't tight enough — go tighten them, don't inflate the TL;DR.
+
+- Don't recap "n/a" sections in the TL;DR. The TL;DR picks the single most important thing, not a summary of the template.
+
+- Analogy or warning variants are allowed if they land cleaner than a standard clarifier, but still ≤ headline + one sentence total.
+
+**Reference TL;DRs (hybrid style — active verbs + precision):**
+
+- **Fix one function.** Run it on the slow file plus three fast ones — every image back real and under 30 seconds, no blurry fallback.
+
+- **Prove both directions.** Watch the bug happen on old code, then watch it vanish on new code — 10 runs each, check for empty files.
+
+- **Guard every handoff.** Each stage hands its work to the next — catch bad sizes at every boundary, and make sure the final file hits spec.
+
+### Gate before starting
+
+Answer each in one sentence. If any answer is "I don't know", stop and figure it out before acting.
+
+1. **Can you state the success condition in one sentence with observable criteria?**
+
+2. **Do you know what a valid test looks like — inputs, required state, pass/fail signatures?**
+
+3. **For a workflow, can you list the preconditions and handoff for each stage?**
+
+### Common invalid patterns
+
+- Starting to fix a bug without pinning down what "fixed" means.
+
+- Running a test where "no exception" is the implicit pass condition.
+
+- Running a multi-stage pipeline without knowing what each stage should hand off.
+
+- "Let me just try this and see what happens" as a verification strategy (fine for exploration — NOT for verification).
+
+- Editing code in response to a bug report without first nailing down the reproducer and the expected-vs-actual behavior.
+
+### Hard NOs
+
+- Do not start writing code until you can state what success looks like.
+
+- Do not declare a bug fixed without a reproducer that demonstrated the bug AND now shows the fix works.
+
+- Do not declare a workflow "done" if you can't point to the specific outcome that proves it ran correctly.
+
+- Do not substitute "it didn't crash" for a real success condition.
+
+- Do not skip this gate because "the condition is obvious" — write it down, even if it's one short sentence.
+
+### Origin
+
+Surfaced during the WHISK_THREADS=80 episode and surrounding pentest sessions. Repeated pattern: without an upfront definition of what the test was actually verifying, we accepted degenerate "passes" that didn't exercise the target (1-beat test for an 80-thread claim, for example). This principle prevents the same class of failure as Principle 1 but earlier — before the test is even written.
+
+
+`========================================`
+
+<!--
+===============================================================================
+APPEND NEW PRINCIPLES BELOW THIS MARKER
+===============================================================================
+
+Copy the template block below and fill it in. Then:
+1. Bump the number (Principle N)
+2. Add a one-line entry to the Principles Index at the top
+3. Update the skill description (frontmatter) if the new principle adds a new
+   trigger phrase the model-invocation matcher should see
+
+Keep the section order and heading names identical across all principles so the
+skill stays scannable. If a principle doesn't need a subsection (e.g. no "when
+you can't fully apply"), delete that subsection — don't leave it empty.
+===============================================================================
+-->
+
+
+## Principle 3 — Keep the end goal in sight
+
+**Rule:** Fully understand the end goal and what "done" looks like. Inventory the materials, docs, references, and context the user has given you. Then move toward the goal piece by piece using what you've got — every action and every question traceable back to the goal. Don't drift into tangents, don't stall asking questions the context answers, don't forget the initial issue that started this, and don't do random stuff.
+
+**One-line form:** Know the target. Use what you have. Remember why you started. Don't do random stuff.
+
+### When it applies
+
+- Any multi-step task where the user has stated an end goal or raised an initial issue.
+
+- User has provided source material, docs, references, examples, or prior decisions that inform the work.
+
+- `/auto` runs, `/loop` runs, approved plans under execution, any autonomous flow.
+
+- Any moment you're about to ask a clarifying question.
+
+- Any moment you catch yourself "improving", "cleaning up", or exploring outside the target.
+
+- Any point where a sub-problem has pulled focus from the original issue.
+
+- Trigger phrases: "finish this", "keep going", "/auto", "/loop", "you know what to do", "stop asking", "use this doc", "here's the reference", "did the original thing get fixed?", "stay on track".
+
+### Failure modes this catches
+
+- **Drift** — tangential work that feels helpful but doesn't advance the goal. Unprompted cleanup, refactors, "while I'm here" edits.
+
+- **Question-stalling** — asking a clarifying question whose answer is already derivable from the plan, the goal, prior turns, or materials the user provided.
+
+- **Ignoring provided materials** — user hands over a doc / reference / example describing how to do X well, and the output doesn't use it. Decent work, but not the work the materials enabled.
+
+- **Random output** — actions or choices that can't be traced back to the end goal. Winging it instead of reasoning from the target backward.
+
+- **Losing the initial issue** — getting pulled into sub-problems and never circling back to verify the original problem the user raised is actually fixed. Intermediate wins without final confirmation.
+
+- **Not picturing "done"** — starting work without a concrete mental image of what the finished state looks like. Without that, every decision becomes a guess.
+
+- **Pre-work interrogation** — asking 3-5 clarifying questions when the task is already concrete enough to start. Stalls the goal under the guise of rigor.
+
+- **Re-opening settled decisions** — surfacing a decision the user already made, as if it's still open, with no new evidence that would change it.
+
+### Gate before acting or asking
+
+Answer each in one sentence. If any answer is no or "I don't know", stop and correct course.
+
+1. **Can I state the end goal and what "done" looks like in one sentence?** If no, re-read the request or ask ONE targeted question — not three.
+
+2. **What do I have already?** Inventory the materials, docs, references, plan, and prior decisions that apply here. Use them.
+
+3. **Does this action or question trace back to the goal?** If I can't draw a line from "this" to "the goal," it's random — don't do it.
+
+4. **If I'm about to ask — is the answer derivable from the plan, the goal, prior turns, or materials the user provided?** If yes, don't ask. Act on the most logical reading.
+
+5. **Is the initial issue still the target?** If the work has drifted into a sub-problem, make sure the original issue is going to get resolved and confirmed, not abandoned.
+
+### When you CAN ask (the narrow list)
+
+- Genuine ambiguity that blocks progress AND the plan / materials offer no default.
+
+- About to take a destructive or irreversible action (deletes, force pushes, external sends).
+
+- Two stated goals conflict with no tiebreaker in context.
+
+- New information surfaced that invalidates a prior decision.
+
+Everything else — pick the most logical reading, act, and note the assumption in one line.
+
+### Common invalid patterns
+
+- User provides a doc on how to do X well — output does X but ignores the doc's methods → invalid.
+
+- Task is "fix the bug" — I start reformatting unrelated code → invalid.
+
+- `/auto` is running — I stop to ask a question the plan already answers → invalid.
+
+- User asked for one principle — I ask three clarifying questions before drafting → invalid.
+
+- User's initial issue was A — we fixed related thing B — I declare done without rechecking A → invalid.
+
+- User said "make it work with 80 threads" — I ask "are you sure about 80?" without new evidence → invalid.
+
+### Hard NOs
+
+- Do not start work without a clear picture of what "done" looks like.
+
+- Do not ignore materials, docs, or references the user provided — read them and use them.
+
+- Do not take actions that can't be traced back to the end goal.
+
+- Do not stall `/auto` or `/loop` for questions the context or plan already answers.
+
+- Do not declare a task complete without verifying the ORIGINAL issue the user raised is actually fixed and observable.
+
+- Do not re-open a settled decision without new evidence.
+
+- Do not wrap stalling in the language of rigor ("just to be safe", "to double-check", "before I start").
+
+### Worked examples
+
+Each example shows the wrong move (failure mode) and the right move (what the principle demands).
+
+**A — Provided materials ignored**
+
+Situation: User attaches a doc describing how to do X well, asks for X.
+
+- ❌ Do X using general knowledge, ignore the doc's methods. Output is "decent" but not what the doc enabled.
+
+- ✅ Read the doc first. Extract the specific techniques. Apply them. Use general knowledge only to fill gaps the doc doesn't cover. Every choice traces back to "goal + material given."
+
+**C — Initial issue forgotten**
+
+Situation: User reports "tests failing because of Redis timeout." You dig in, find the Redis config is wrong, fix it.
+
+- ❌ "Fixed the Redis config. Done."
+
+- ✅ Rerun the ORIGINAL failing tests. Confirm green. THEN declare done. Sub-problems are waypoints, not destinations — the original symptom is the finish line.
+
+**E — `/auto` halts when a move WAS available**
+
+Situation: `/auto` is mid-run. Hits a small choice — f-strings vs .format(), a naming style, a sensible default.
+
+- ❌ Halt the loop and ask the user which to use.
+
+- ✅ Check for a derivable answer. Match the file's existing style. Fall back to a modern Python default. Follow the plan's implied choice. Take the move, log it in one line, continue.
+
+**The rule for `/auto` halts:** the bar is "genuinely no move is available," NOT "first moment of uncertainty." Most halts fall in the "a move WAS available" bucket — that's the failure.
+
+**I — Easier-adjacent task ≠ actual goal**
+
+Situation: User says "make the image generator 10x faster." You notice caching is easier than optimizing raw generation.
+
+- ❌ Add caching, say "faster now" — true only on cache hits, not on the thing the user actually asked about.
+
+- ✅ Measure raw generation speed. Improve that. Caching is a bonus, not a substitute for the stated goal.
+
+**J — `/auto` hits a genuine blocker**
+
+Situation: `/auto` plan step is "deploy to staging." Staging DB schema is outdated and the plan doesn't cover migrations.
+
+- ❌ Halt the whole run and ask "should I migrate?"
+
+- ❌ Kill the run entirely.
+
+- ✅ Park THIS step with a clear flag ("blocked: schema migration needed, not in plan scope"). Keep the run alive on any independent work. This step waits for unblock — the run does not die, and no user input is solicited mid-flow.
+
+Pair E and J together — they're the two halves of `/auto`'s decision rule. E is "derive and continue" when an answer exists. J is "park and flag" when one genuinely doesn't. Never "halt and ask."
+
+**K — Random addition not traceable to goal**
+
+Situation: Task is "build a retry wrapper that handles rate limits." You consider exponential backoff, jitter, AND a circuit breaker.
+
+- ❌ Ship all three because they're "best practice."
+
+- ✅ Ship what the stated goal requires (exponential backoff for rate limits). Add jitter only if the API's own docs suggest it. Skip the circuit breaker unless the goal mentions cascading failures. Every addition traces back to what was asked — unasked-for additions are drift, even if they're "good."
+
+### Origin
+
+Surfaced 2026-04-23 after two recurring instances:
+
+1. Same-session meta incident: user asked to add this principle about end-goal drift and question-stalling. Instead of drafting, I responded with three clarifying questions — the exact failure the principle is meant to prevent.
+
+2. Separate session on character consistency: user provided a source doc describing how to do character consistency well. The output was "decent" but didn't pull much from the doc — failure to connect the chain "here is the goal" + "here is helpful material" + "use the material to reach the goal." Did semi-random work that happened to land close-ish, not goal-directed reasoning.
+
+Both failures share one root: losing sight of the end goal and what reaching it requires. This principle makes the goal, the materials, and the logical next step the primary inputs to every action — not tangents, not questions, not random effort. And it extends to remembering the initial issue so the original problem is confirmed fixed, not quietly abandoned along the way.
+
+
+`========================================`
+
+
+## Principle 4 — Audit against the goal before handback
+
+**Rule:** Before handing back at the end of every task, run an active checkpoint. State the end goal. State the current observable state. Name the gap. Emit a verdict with three fields — Result, Toward goal, Next — in one of four states. The verdict is the OUTPUT of that audit, not a decoration. The user reads it to decide what to do next, so every line must be decision-useful.
+
+**One-line form:** Before you stop: audit vs the goal, emit Result / Toward goal / Next. Cut anything the user wouldn't use.
+
+### When it applies
+
+- End of every task-turn where any real work was done.
+
+- Especially after multi-step tasks, debugging, pipeline runs, code changes, refactors, anything where "are we there yet?" is a real question for the user.
+
+- Trigger phrases in the situation: about to send a response that ends with work-output; about to say "let me know if you want more"; about to hand back without a status line; user asked "are we done?", "what's left?", "what's next?", "anything else?".
+
+### The checkpoint procedure
+
+Before writing the verdict, run these 4 steps:
+
+1. **What was the end goal the user originally asked for?** State it to yourself in one sentence. Not the immediate sub-step — the thing they actually want.
+
+2. **What is the current observable state?** Not "I did X" — what exists / runs / passes on disk right now, provable by something the user could check.
+
+3. **What's the gap?** Zero, small, blocked, or ambiguous.
+
+4. **Emit the verdict** based on that gap, with decision-useful content in every line.
+
+### Verdict block format
+
+Pick one of the four states. Headline says what's true or what's needed. Body splits into **Done** (what now exists, observable) and **Pending / Blocker / Ambiguity** (what's still open, named concretely). Always end with **Next** — one concrete action.
+
+```
+**✅ DONE — <one-line summary of what's now true>.**
+
+Done:
+- <observable artifact / state 1>
+- <observable artifact / state 2>
+
+Next: nothing. Optional: <X>.
+```
+
+```
+**🟡 PARTIAL — <one-line summary of what still needs to happen>.**
+
+Done:
+- <change / artifact 1>
+- <change / artifact 2>
+
+Pending:
+- <gap, named concretely>
+
+Next: <specific action that closes the gap>.
+```
+
+```
+**🔴 BLOCKED — <one-line summary of what's stopping it>.**
+
+Done:
+- <progress made before the block>
+
+Blocker: <what stopped it, with evidence>.
+
+Next: <what would unblock — you do X, or I retry with Y>.
+```
+
+```
+**❓ UNCLEAR — need your call on <one-line headline>.**
+
+Done:
+- <what was attempted>
+
+Ambiguity: <the one thing I can't decide without more info>.
+
+Next: <the one piece of info that resolves it>.
+```
+
+### Rendering style
+
+Keep the verdict block consistent with the rest of the response. Two rules, inline:
+
+- **Active voice.** Subjects do things: "I check the current state" beats "the current state is checked." "You rerun the test" beats "the test should be rerun."
+
+- **Spacing.** One blank line above and below any `====` separator. One blank line between bullets in a list. Don't double up.
+
+For richer step-by-step responses that wrap a verdict block, follow the full explain skill walkthrough format — bold step names, `====` separators between steps, and a TL;DR bullet list at the end. See `~/.claude/skills/explain/SKILL.md` format #11 for the canonical example.
+
+### Failure modes this catches
+
+- **Silent stop** — hand back output with no verdict, user has to infer status from the prose.
+
+- **Format without substance** — emit a verdict block that was not produced by an actual audit (writing DONE because the step finished, not because the end goal was cross-checked).
+
+- **False complete** — declare DONE on a sub-step even though the end goal isn't hit. P3 failure, caught again here as a second net.
+
+- **Narrative verdict** — replace the decision-ready block with a prose recap of what I did. User has to extract status manually.
+
+- **Non-useful content** — verdict lines that don't help decide the next move. "Progress made" without naming what. "More work needed" without naming what.
+
+- **Gap without next move** — name that something is missing but not say what action closes it.
+
+- **Burden shift** — "let me know if you want more" / "hope this helps" / "feel free to ask" instead of telling the user where things stand and what to do.
+
+- **Fake precision** — "75% done" with no basis for the number.
+
+### Gate before handback
+
+Before sending the response, answer each:
+
+1. **Did I run the 4-step checkpoint?** If no, run it now.
+
+2. **Is every line in the verdict decision-useful?** Would the user use each line to pick a next move? If a line wouldn't change their action, cut it.
+
+3. **Does each "Done:" bullet name an observable thing, not a claim?** "Config updated" is a claim. "`retry_count=3` in `config.yaml`, service restarted" is observable.
+
+4. **Does the headline contrast current state with the original end goal, not with the sub-step?** Sub-step wins are waypoints; the goal is the destination. The headline should be true at the level of the user's actual ask.
+
+5. **If not DONE, does "Next" name one concrete action?** Not "probably need to X" — the actual action the user or I would take next.
+
+### When you can skip the verdict block (the narrow list)
+
+- Pure conversational replies — greetings, clarifications, meta-chat.
+
+- Single Q&A where the answer IS the completion (e.g., "what does this function do?" — the answer satisfies, no block needed).
+
+- Deliberate proposal or structure for user review (planning passes, draft phases) — the request for feedback IS the next step, block optional.
+
+Everywhere else, emit the block.
+
+### Common invalid patterns
+
+- "Done. Let me know if you want more." → invalid (no Result, no goal-position, no concrete next).
+
+- Format present, but `Result` line reads "All changes applied successfully" → invalid (not observable, not useful).
+
+- Verdict says DONE on a sub-step while the end goal remains unverified → invalid (false complete).
+
+- Verdict block wrapped around a narrative recap of every step taken → invalid (not decision-ready; user still has to extract status).
+
+- "Toward goal — 75% done" with no basis for the number → invalid (fake precision).
+
+- `Next — "I can help with more if you want"` → invalid (burden shift, not a concrete action).
+
+### Hard NOs
+
+- Do not hand back without a verdict when real work was done.
+
+- Do not emit a verdict that was not produced by an actual checkpoint against the end goal.
+
+- Do not declare DONE without citing observable evidence in the Result line.
+
+- Do not name a gap without naming the concrete next move.
+
+- Do not pad the verdict with narrative, caveats, or cheerleading.
+
+- Do not use "let me know if you want more" as a substitute for a Next line.
+
+- Do not fake-audit — rubber-stamping DONE because the step ran is the worst failure mode.
+
+### Worked examples
+
+**Example 1 — PARTIAL handback (Redis / render case)**
+
+User asked: "fix the video render bug."
+
+Wrong:
+
+> Fixed the Redis config. Let me know if you want to rerun the tests.
+
+Right:
+
+```
+**🟡 PARTIAL — render not yet re-run with the new timeout.**
+
+Done:
+- Redis timeout raised from 2s → 10s in config.yaml.
+- Service restarted; new value confirmed in /healthz.
+
+Pending:
+- Original failing render (clip_42.mp4) has not been re-run against the patched config.
+
+Next: rerun render_test.py with clip_42.mp4. If it passes, update to DONE.
+```
+
+**Example 2 — DONE handback (feature added and verified)**
+
+User asked: "add pagination to the /videos endpoint."
+
+Wrong:
+
+> Added pagination to /videos. Hope this works!
+
+Right:
+
+```
+**✅ DONE — /videos endpoint now supports pagination.**
+
+Done:
+- /videos?page=N&per_page=M parameters wired; defaults page=1, per_page=20.
+- Response body includes total, page, per_page.
+- Integration test test_pagination.py passes.
+
+Next: nothing. Optional: update the client SDK if it's in use.
+```
+
+**Example 3 — BLOCKED handback (prod deploy)**
+
+User asked: "deploy the new auth middleware to production."
+
+Wrong:
+
+> Tried to deploy but hit an issue. Can you check?
+
+Right:
+
+```
+**🔴 BLOCKED — prod deploy failed at the secrets-lookup step.**
+
+Done:
+- Staging deploy succeeded; auth middleware running on staging.
+
+Blocker: prod IAM role missing secrets:GetSecretValue on AUTH_SIGNING_KEY (403 from secretsmanager).
+
+Next: grant the prod deploy role access to the new key, OR rotate the key into the existing accessible bundle, then rerun the prod deploy step.
+```
+
+### Relationship to the other principles
+
+- **P2** runs BEFORE work — defines what "done" looks like.
+
+- **P3** runs DURING work — keeps every action traceable to the goal.
+
+- **P4** (this one) runs AFTER work — audits current state vs the goal and reports in a form the user can act on.
+
+Before / during / after. Three checkpoints around every task.
+
+### Origin
+
+Surfaced 2026-04-23. Recurring pattern: task responses end with a sub-step status ("fixed the Redis config") without checking whether the END goal (the original bug) is actually hit. The user is left to ask "so are we done?" or manually run the reproducer. Related pattern: responses that close with "let me know if you want more" instead of telling the user where things stand. Both force the user to do the audit themselves. P4 pushes the audit back where it belongs — my side of the handback — and shapes the output as a decision tool, not a narrative dump.
+
+
+`========================================`
+
+
+## Principle 5 — KISS (Keep It Simple)
+
+**Rule:** Pick the simplest solution that solves the present requirement. Every layer of abstraction, indirection, configuration, or "flexibility" must be justified by a concrete reason that exists *today* — not a hypothetical future one. Duplication beats the wrong abstraction. Wait for the rule of three before extracting.
+
+**One-line form:** Simplest thing that works wins. Complexity needs a reason that exists right now.
+
+### When it applies
+
+- Designing a new component, function, class, or service from scratch.
+
+- Refactoring tangled code, deciding whether to add an abstraction or live with duplication.
+
+- Vibe-coding, prototyping, or any "just make it work" task where it's tempting to over-build.
+
+- About to add a factory, registry, decorator, wrapper, base class, plugin system, or config layer.
+
+- Choosing between inheritance and composition for a new class hierarchy.
+
+- About to write a function longer than ~50 lines, or one that mixes I/O and business logic.
+
+- Trigger phrases: "in case we need it later", "for future flexibility", "to make it extensible", "best practice", "let's make it generic", "this should be configurable", "what if we want to swap X someday", "I'll abstract this", "refactor this", "design pattern", "architecture", "let's build a framework", "vibe code this", "quick prototype", "just make it work".
+
+### Failure modes this catches
+
+- **Speculative generality** — code shaped for a use case that doesn't exist yet ("we might want to support YAML one day").
+
+- **Premature abstraction** — extracting a base class or helper from two callers, then locking in the wrong shape when the third caller is different.
+
+- **Pattern theatre** — applying a Factory / Strategy / Observer / Singleton because it's "best practice", when a dict / function / module-level value would do the same job in a fraction of the code.
+
+- **Layer inflation** — wrapping every operation in service → repository → adapter → port when the project has one database and one caller.
+
+- **Config-itis** — exposing a knob for a value that has only ever held one setting, "in case it changes later".
+
+- **God class / megafunction** — opposite failure: cramming HTTP parsing, validation, business logic, DB access, and response formatting into one unit because "splitting it feels like overkill". Both extremes are KISS violations — the right size is one reason to change.
+
+- **Inheritance trees for behavior reuse** — three-deep class hierarchies where one composed object would do.
+
+- **Clever one-liner** — a comprehension or generator chain that takes five minutes to read; the loop version reads in five seconds.
+
+- **Wrapping working code** — adding a helper / decorator / facade around code that already works, because the wrapper "feels cleaner". It isn't, and now the caller has two things to learn instead of one.
+
+### Check / gate before adding complexity
+
+Answer each in one sentence. If any answer is "no" or "I don't know", do the simpler thing.
+
+1. **Can I name the concrete present-day problem this complexity solves?** Not a future-tense problem. A real one, today, in this codebase. If the only justification is "future flexibility", cut it.
+
+2. **Does the simpler version actually fail to meet a stated requirement?** Run the simpler version mentally — what specifically breaks? If nothing breaks, the simpler version wins.
+
+3. **Have I seen this pattern at least three times?** (Rule of three.) Two similar callers is duplication. Three is a pattern. One is fantasy. Wait for the third before extracting — unless the duplicates are already diverging in dangerous ways.
+
+4. **If I'm splitting a unit: does each piece have one reason to change, in one domain?** HTTP parsing AND business logic AND SQL in one class is too many. But splitting "validate" from "save" inside one domain is often pointless. The test is "different reasons to change", not "different verbs".
+
+5. **If I'm composing vs inheriting: would composition work?** Default to composition. Reach for inheritance only when there is a true is-a relationship AND you need polymorphism the language gives you for free. Almost never on first draft.
+
+6. **Senior-engineer test:** would a senior engineer reading this say it's overcomplicated? If yes, it is. Cut.
+
+### Common invalid patterns
+
+- Two callers, extract a shared helper "for consistency" → invalid (rule of three).
+
+- `OutputFormatterFactory.register("json")` for three formatters with no plugin system in sight → invalid (a dict beats it).
+
+- `class BaseService` with one subclass → invalid (just be the class).
+
+- `def get_user_by_id_with_cache_and_retry_and_logging(...)` mixing I/O, caching, retries, and logging → invalid (split, or use middleware/composition).
+
+- `config.yaml` exposing 14 knobs that have never been changed in production → invalid (inline the defaults until someone needs to override).
+
+- Adding an interface / Protocol with one implementation "in case we want to mock it" → invalid (mock the concrete one or pass a fake — the Protocol can come when there's a second impl).
+
+- Wrapping a stdlib call in a 20-line helper that adds nothing the stdlib doesn't already give you → invalid.
+
+- Replacing a 6-line for-loop with a nested comprehension that takes 30 seconds to parse → invalid (clever ≠ simple).
+
+- 200 lines where 50 would do the job → invalid (rewrite it; if your draft is 4× the necessary size, the design is wrong).
+
+- `try / except` blocks for failure modes that cannot occur (e.g. catching `ZeroDivisionError` on a literal `1 / 2`) → invalid (no error handling for impossible scenarios).
+
+### Hard NOs
+
+- Do not add a layer, abstraction, or pattern whose only justification is "we might need it later".
+
+- Do not extract a shared abstraction from two callers — wait for the third, OR until divergence is causing bugs.
+
+- Do not use inheritance when composition works, on first draft.
+
+- Do not split a class until you can name two separate reasons-to-change in two separate domains.
+
+- Do not mix HTTP parsing, business logic, and data access in the same unit — that's the *one* split that is non-negotiable.
+
+- Do not wrap working code in a "cleaner" facade unless the wrapper removes a concrete pain (not a stylistic preference).
+
+- Do not write clever code where plain code reads in half the time.
+
+- Do not introduce a config knob for a value that has never varied.
+
+- Do not call this rule "satisfied" because the code is *short*. Short clever code can still be a KISS violation. The test is **readable in one pass and justified by today's need.**
+
+- Do not write error handling for failure modes that cannot occur. `try/except` exists to handle real failure surfaces, not to look defensive.
+
+### Worked examples
+
+**A — Factory vs dict**
+
+Situation: Need to pick a formatter (`json`, `csv`, `xml`) by name.
+
+- ❌ Build `FormatterFactory` with a `@register` decorator and a class registry.
+
+- ✅ `FORMATTERS = {"json": JsonFormatter, "csv": CsvFormatter, "xml": XmlFormatter}` plus a four-line `get_formatter(name)`. Promote to a factory only when there's a real plugin loader, not because "factories are better".
+
+**B — Inheritance vs composition for notifications**
+
+Situation: Need to send notifications via email, with SMS and push planned later.
+
+- ❌ `NotificationService` base class, subclass `EmailNotificationService`, subclass `SmsNotificationService`, override `notify()` in each.
+
+- ✅ One `NotificationService` that takes injected `email_sender`, optional `sms_sender`, optional `push_sender`. Add channels by passing more senders, not by adding subclasses.
+
+**C — Premature extraction (rule of three)**
+
+Situation: Two functions, `process_orders` and `process_returns`, look structurally similar.
+
+- ❌ Extract `_process_collection(items, validate, process)` because "DRY".
+
+- ✅ Leave the duplication. The validation and processing rules are domain-specific and likely to drift apart. Wait for a third real case before deciding there's a pattern.
+
+**D — God function refactor**
+
+Situation: `process_order(order)` is 140 lines: validation, inventory, payment, notification, logging.
+
+- ❌ Leave it because "splitting feels like overkill" — KISS doesn't mean "refuse to split".
+
+- ✅ Five focused calls inside `process_order`: `validate_order(order)`, `reserve_inventory(order)`, `charge_payment(order)`, `send_confirmation(...)`, return result. Each function does one thing; `process_order` reads like a table of contents.
+
+**E — Vibe-coding and "best practice" drift**
+
+Situation: User says "vibe code a quick script that downloads a CSV and prints the rows".
+
+- ❌ Set up a `Downloader` class, a `Parser` class, a `dataclass` for rows, an `argparse` CLI, a `logging` config, a `pyproject.toml`.
+
+- ✅ A 15-line script: `requests.get`, `csv.reader`, a for-loop, a `print`. If the user asks for more, add it then. KISS at prototype stage means YAGNI is on by default.
+
+**F — Optional Protocol with one impl**
+
+Situation: One service uses one cache. Tempted to define a `Cache` Protocol so it's "swappable".
+
+- ❌ `class Cache(Protocol): ...` plus `RedisCache(Cache)` plus injected `Cache` everywhere, with one implementation.
+
+- ✅ Inject `RedisCache` directly. If a second cache implementation appears (rule of three: a real test fake counts as one), introduce the Protocol then. Mocking does NOT require a Protocol — `unittest.mock` patches the concrete class fine.
+
+### Relationship to the other principles
+
+- **P2** defines what success looks like. KISS asks: *what's the simplest thing that meets that definition?* Anything beyond that is decoration.
+
+- **P3** keeps every action traceable to the goal. KISS is a sub-rule of P3 for the *code itself* — every layer of code must trace to a present requirement, not a hypothetical one.
+
+- **P4** audits state vs goal at handback. If the audit shows the goal is met but the code is heavier than it needs to be, the verdict is **PARTIAL** with a "simplify" pending — not DONE.
+
+- **`simplify` skill** — the runtime tool for applying KISS to a code change. This principle is the standard; `simplify` is the procedure.
+
+- **`strict-mode` skill** — forbids drive-by improvements. KISS forbids drive-by *abstractions*. They're complementary: don't change what wasn't asked, AND don't add what isn't needed.
+
+### Origin
+
+Surfaced 2026-04-25 during a discussion of vibe-coding and keeping prototypes from ballooning. Pattern observed across multiple sessions: the user explicitly asks for "simple" or "quick" work, and the default response reaches for factories, base classes, configurable knobs, and Protocols-with-one-impl — all of which are "best practice" in the abstract but pure overhead for the actual job. The user's existing memories already encode this preference (KISS-first optimization, smallest change biggest dial, no overengineering); promoting it to a Principle puts it on the same checkpoint footing as P1–P4, so it gets actively applied at design time, not retrofitted by a later cleanup pass.
+
+Reinforced same day by absorbing the **"Simplicity First"** principle from Andrej Karpathy's CLAUDE.md (forrestchang/andrej-karpathy-skills): the senior-engineer overcomplication test, the "200 lines could be 50, rewrite it" check, and "no error handling for impossible scenarios" all live here as a result.
+
+
+`========================================`
+
+
+## Principle 6 — Think before coding
+
+**Rule:** Before writing code, surface what's silent. State your assumptions out loud. If multiple interpretations of the request exist, present them — don't pick one in your head and run with it. If a simpler approach is available, say so and push back. If something is genuinely unclear, stop and name what's confusing instead of guessing.
+
+**One-line form:** Don't run with a silent assumption. Say it. Say the alternative. Say the tradeoff.
+
+### When it applies
+
+- About to start any non-trivial task — a function, a fix, a refactor, a script.
+
+- The request is ambiguous, under-specified, or could mean two different things.
+
+- A simpler approach exists than the one the user named, and they may not have seen it.
+
+- An unstated assumption (about scale, format, environment, ordering, error semantics) is required to proceed.
+
+- The default approach has a real tradeoff the user should weigh (cost, perf, complexity, lock-in).
+
+- Trigger phrases: "implement X", "add Y", "make Z work", "write a script that…", any request where the problem statement is short and the solution space is wide. Also: any moment you catch yourself thinking "I'll just assume…" or "they probably meant…".
+
+### Failure modes this catches
+
+- **Silent assumption** — picking one of multiple valid interpretations without naming the choice. User reads the diff and finds you built the wrong thing.
+
+- **Hidden confusion** — feeling unsure, charging ahead anyway, hoping it lands. The doubt was the signal — running past it just means the bug arrives later, with worse context.
+
+- **Buried tradeoff** — choosing approach A over approach B silently, when B was simpler / cheaper / faster and the user would have picked it if shown. The "best" answer often isn't the one the user asked for verbatim.
+
+- **No pushback** — implementing a needlessly complicated request without flagging that a one-line version exists. Silence reads as agreement.
+
+- **Multi-interpretation collapse** — "build a cache" can mean five things. Picking one without asking erases four other valid readings.
+
+- **Default-config drift** — assuming a default (timeout=30s, retries=3, format=JSON) without saying so. Defaults that aren't surfaced are silent assumptions.
+
+### Gate before writing the first line of code
+
+Answer each in one sentence. If any answer is "I'm guessing", stop and surface it.
+
+1. **What am I assuming the user means by this request?** Write it down. If there's another reasonable reading, that's a fork — name both.
+
+2. **Are there silent defaults I'm picking?** (Library, format, error semantics, timeout, ordering, idempotency, transactional vs not.) If yes, list them.
+
+3. **Is there a simpler approach than the one being asked for?** If yes, say so before starting — even if I end up doing the asked-for version.
+
+4. **Is anything genuinely unclear?** If yes, ask ONE targeted question — not three. (Pair with P3: only ask if the answer isn't already derivable from context.)
+
+5. **Are there real tradeoffs the user should weigh?** Cost, perf, lock-in, complexity, reversibility. Surface in one line, not a paragraph.
+
+### How to surface — the format
+
+Keep it short. Three patterns work for almost every case.
+
+**Single assumption:**
+
+> Going to assume X (because Y). Say if you'd rather Z.
+
+**Forked interpretation:**
+
+> Two ways to read this:
+> - **A:** [...] — simpler, but [tradeoff].
+> - **B:** [...] — what you literally asked for.
+>
+> I'll go with A unless you say otherwise.
+
+**Pushback on complexity:**
+
+> You asked for X with N moving parts. A 5-line version using Y would do the same job for this case. Want the simple one, or do you actually need the full N?
+
+The shape: name the choice → give the reason → invite a redirect. Three lines, not three paragraphs.
+
+### When you do NOT need to surface
+
+P3 still applies — don't stall on questions the context answers. Do not surface when:
+
+- The answer is unambiguous from the request, the materials, or prior turns.
+
+- The "assumption" is so trivial it doesn't change the diff (variable naming, formatting, file location within a clearly-scoped folder).
+
+- The user explicitly said "just do it" / `/auto` is running and a derivable choice exists. (Pair with P3 example E: in `/auto`, take the move and log it in one line — that one line IS the assumption-surfacing.)
+
+The bar: surface when a different choice would produce a meaningfully different diff. If the diff would look the same either way, it's not a real fork — just pick.
+
+### Common invalid patterns
+
+- "Add caching" → I implement Redis-backed write-through caching with TTL=300 → user wanted in-memory `functools.lru_cache` → invalid (didn't surface the fork).
+
+- Request mentions a library; I substitute a different one I think is "better" without saying so → invalid (silent override).
+
+- Request would take 200 lines as written, but a 30-line version exists; I write the 200 → invalid (no pushback).
+
+- I feel unsure which of two endpoints to call, pick one, ship it. The wrong one → invalid (hidden confusion; the doubt was the signal).
+
+- Three clarifying questions before drafting a one-line task → invalid (P3 violation; ask zero or one, not three).
+
+- "I'll go with the standard approach" → invalid unless I say what the standard approach IS (vague reassurance is not surfacing).
+
+### Hard NOs
+
+- Do not pick silently between two valid interpretations.
+
+- Do not implement a complicated request when a one-line version does the same job, without at least flagging the simpler option.
+
+- Do not push past unresolved confusion. If you don't know, say you don't know — name what specifically is unclear.
+
+- Do not pad the surfacing with hedges and disclaimers. One sentence per assumption, one sentence per tradeoff, then move.
+
+- Do not use this principle as cover for stalling. Surfacing is fast; if it takes a paragraph, it's drift.
+
+- Do not assume the user wants the verbose answer when the request was minimal — but DO surface that you're picking the minimal version.
+
+### Worked examples
+
+**A — Forked interpretation, surfaced**
+
+User: "add validation to the create_user endpoint."
+
+- ❌ Implement Pydantic schema with 12 fields, custom regex on email, password strength rules, async DB uniqueness check. Ship.
+
+- ✅ "Two ways to read this — (A) just type/required-field checks on the input model, (B) full business validation including DB uniqueness for email. I'll start with A; say if you want B." Then start with A.
+
+**B — Pushback on complexity**
+
+User: "build a config system that supports YAML, TOML, JSON, and env vars with hierarchical overrides."
+
+- ❌ Build it. 400 lines.
+
+- ✅ "Quick check — is this a real need today, or for future flexibility? If it's just env vars + one YAML file right now, `pydantic-settings` does it in 20 lines. If you genuinely need all four formats, I'll build the full thing." Wait one turn.
+
+**C — Hidden confusion, named instead**
+
+Situation: User asks me to "fix the broken retry logic in worker.py". I read the file, two retry mechanisms exist (decorator + manual loop), and I'm not sure which one they mean.
+
+- ❌ Pick one, fix it, hope it's the right one.
+
+- ✅ "Two retry mechanisms in worker.py — the `@retry` decorator on `process_job` (line 42) and the manual `while attempts < 3` loop in `_send_request` (line 88). Which one is broken?" One question, specific, blocks progress.
+
+**D — Surfacing in `/auto`**
+
+Situation: `/auto` plan step says "add a CLI flag for verbose mode". The codebase uses both `argparse` and `click` in different scripts.
+
+- ❌ Halt and ask.
+
+- ✅ Match the file's existing style (whichever this script already uses). One-line note in the run log: "used argparse to match existing CLI in this script." Continue. (P3 example E.)
+
+**E — Default-config drift caught**
+
+User: "write a function that fetches a URL and returns the body."
+
+- ❌ Use `requests.get(url).text`, no timeout, no error handling. Ship.
+
+- ✅ "Going with `requests.get(url, timeout=10).text`, no retry, raises on HTTP error. Say if you want async, retries, or a different timeout." 15 seconds of surfacing, prevents an "oh wait, I needed httpx" round-trip.
+
+### Relationship to the other principles
+
+- **P2** defines what success looks like. **P6** is what runs *before* P2 when the request itself is ambiguous — you can't write success conditions for a goal you've silently re-interpreted.
+
+- **P3** says *don't* stall asking questions the context answers. **P6** says *do* surface the ones the context doesn't. Together: ask zero questions when context resolves it, one targeted question when it doesn't, and never three.
+
+- **P5 KISS** is the standard for the code itself. **P6** is the standard for the conversation *about* the code — surfacing the simpler approach is how P5 gets a chance to apply.
+
+### Origin
+
+Adopted 2026-04-25 from Andrej Karpathy's CLAUDE.md (forrestchang/andrej-karpathy-skills, principle #1 "Think Before Coding"). The user already has memories about KISS-first optimization and naming tradeoffs, but the *upstream* habit — surfacing the assumption / fork / tradeoff *before* the implementation lands — was not encoded as a principle until now. P6 makes the pre-implementation surfacing a hard checkpoint, mirroring how P4 makes the post-implementation audit a hard checkpoint.
+
+
+`========================================`
+
+
+## Principle 7 — Surgical changes
+
+**Rule:** Touch only what the user's request requires. Don't drive-by improve adjacent code, comments, or formatting. Don't refactor things that aren't broken. Match the existing style even if you'd write it differently. If you notice unrelated dead code or bugs, *mention* them — don't delete or fix them silently. Clean up only the orphans your own change creates.
+
+**One-line form:** Every changed line traces to the request. Mention strays. Don't fix them.
+
+### When it applies
+
+- Editing existing code anywhere — single function, single file, multi-file refactor.
+
+- Approving a fix for a specific bug or completing a specific feature ask.
+
+- Working in code that you didn't write, or code with a style you'd personally do differently.
+
+- Running `/auto` or `/loop` where the temptation to "tidy while I'm in here" compounds.
+
+- Trigger phrases: "fix X", "update Y", "change Z", "while I'm here", "I noticed…", "I also cleaned up…", "I improved…", "I refactored some adjacent code", "I fixed a typo I saw", "I removed unused imports while I was at it" — any phrasing that signals expanding beyond the asked-for scope.
+
+### Failure modes this catches
+
+- **Drive-by improvement** — reformatting, renaming, restructuring code that wasn't part of the ask. Bloats the diff, hides the real change, breaks `git blame`.
+
+- **Style imposition** — replacing the file's existing patterns with the patterns I prefer (e.g. f-strings → `.format()`, list comprehension → for-loop, or vice-versa). Match what's there.
+
+- **Silent dead-code deletion** — finding pre-existing unused imports / functions / branches and deleting them without being asked. May be load-bearing in ways not visible from the file (re-exported, monkey-patched, used by tests).
+
+- **Side-quest fix** — noticing an unrelated bug, fixing it, shipping it in the same change. The fix may be wrong, untested, or politically not yours to make.
+
+- **Refactor-by-stealth** — restructuring "while I was here" — extracting helpers, splitting functions, rearranging order. Even when the result is "better", the user didn't ask, and now the diff isn't reviewable as a fix.
+
+- **Comment churn** — rewording comments to "clarify" them. Comments often encode context the original author had and you don't.
+
+- **Orphan neglect (the one error in the OPPOSITE direction)** — removing a function but leaving its now-unused import, or renaming a thing but leaving five callers stale. Your change made these orphans; you must clean them.
+
+### Gate before staging the diff
+
+Answer each in one sentence. If any answer is "no" or "I added some extras", trim the diff.
+
+1. **Does every changed line trace directly to the user's request?** If a line was changed for any other reason, revert it.
+
+2. **Did I match the file's existing style — naming, indentation, idiom, comment voice — even where I'd personally write it differently?** If no, conform.
+
+3. **Did I touch any pre-existing dead code or pre-existing bugs?** If yes, revert the touch and instead **mention** it in the response. Do not delete pre-existing dead code silently.
+
+4. **Did my changes create orphans (now-unused imports, variables, functions, callers, type stubs)?** If yes, clean them up — those ARE part of the request, transitively.
+
+5. **Is the diff reviewable as a single intent?** If a reviewer would have to ask "what is THIS line doing in here?", that line is drift.
+
+### When mentioning vs fixing
+
+The rule for things you noticed but weren't asked to touch:
+
+- **Mention** — in the response: "noticed `legacy_helper` is unused at the top of `users.py` — left it untouched, flag it if you want a cleanup pass."
+
+- **Don't fix** unless: (a) the user asked, (b) it's directly blocking the asked work, or (c) it's an orphan your own change created.
+
+- **For genuinely critical issues** (security hole, data-loss bug) — surface immediately and ask, don't silently patch.
+
+### Common invalid patterns
+
+- Asked to fix a bug in `process_order`; I also reformat `validate_inventory` because "it was inconsistent" → invalid.
+
+- Asked to add a feature; I delete three unused imports I noticed → invalid (P7 violation, even though linters would agree).
+
+- Asked to rename `userId` to `user_id`; I also change `customerId` to `customer_id` "for consistency" → invalid (different name, different ask).
+
+- Asked to fix a typo in a docstring; I rewrite the whole docstring "to make it clearer" → invalid.
+
+- Asked to update a function; I "simplify" the function above it because it caught my eye → invalid.
+
+- I notice a small bug while doing the asked work; I fix it inline without mentioning → invalid (mention, then ask).
+
+- I make a change that leaves an import unused; I leave the import there → invalid in the OTHER direction (orphans I created are mine to clean).
+
+### Hard NOs
+
+- Do not change a line that doesn't trace back to the user's specific request.
+
+- Do not "improve" working code that wasn't part of the ask.
+
+- Do not impose your preferred style on a file that has its own style.
+
+- Do not delete pre-existing dead code, comments, or branches silently — mention them and let the user decide.
+
+- Do not bundle a side-quest fix into a focused change. If you notice something, surface it as a separate item.
+
+- Do not reword comments unless the comment was wrong, the code it documents has changed, or the user asked.
+
+- Do not leave orphans your own change created. Clean those.
+
+- Do not use "I was already in the file" as justification. Being in the file is not authorization to edit beyond scope.
+
+### Worked examples
+
+**A — Asked to fix one function**
+
+User: "fix the off-by-one in `paginate()`."
+
+- ❌ Fix the off-by-one. Also rename the variable `lst` to `items` because it reads better. Reformat the docstring. Add a type hint that wasn't there before. Ship.
+
+- ✅ Fix the off-by-one. Nothing else. If the docstring is now wrong because of the fix, update it (that's an orphan from my change). If the docstring was already wrong before my fix, mention it: "docstring also says page=0 returns first page; with this fix it returns empty. Want me to update the docstring too?" Wait for a yes.
+
+**B — Mention dead code, don't delete**
+
+While fixing a bug, I notice `_legacy_format()` is defined but never called.
+
+- ❌ Delete `_legacy_format()` along with the bug fix.
+
+- ✅ Bug fix lands. Response includes: "noticed `_legacy_format()` (line 142) appears unused — left it; flag if you want it removed in a follow-up." User decides.
+
+**C — Style match, not style upgrade**
+
+File uses `.format()` strings throughout. I'm adding a new line that builds a string.
+
+- ❌ Use an f-string because they're "more modern".
+
+- ✅ Use `.format()` to match the file. If `.format()` is genuinely worse for this case (e.g. multi-line, complex expressions), say so once and ask: "the rest of the file uses .format() but this expression has 4 nested calls that read cleaner as f-strings — match-the-file or pick-the-cleaner?"
+
+**D — Orphan cleanup IS part of the change**
+
+User asks me to remove the `legacy_auth` function.
+
+- ❌ Remove the function, leave the `from .legacy_auth import legacy_auth` import in three other files because "the user only asked about the function".
+
+- ✅ Remove the function AND every now-stale import / caller / test that becomes dead because of the removal. Those orphans were created by my change, so they're mine to clean. Stop at code that was *already* unused before my edit — mention those, don't delete.
+
+**E — Side-quest bug, surfaced not bundled**
+
+While adding pagination to `/videos`, I notice `/users` has a SQL injection.
+
+- ❌ Patch the SQL injection in the same PR. Mention it in passing in the description.
+
+- ✅ Pagination ships clean. Response: "🚨 separate from this change — `/users/search` (line 88 of `users.py`) builds SQL with f-string interpolation of the `q` param, which is a SQL injection. Recommend handling that as its own focused change. Want me to write a dedicated patch?" The severity earns immediate surfacing; the *fix* still gets its own review.
+
+### Relationship to the other principles
+
+- **P3** keeps every action traceable to the goal. **P7** keeps every *line of the diff* traceable to the request — same discipline, applied to the diff instead of to the work.
+
+- **P5 KISS** says don't add layers without a reason. **P7** says don't add CHANGES without a reason. Together: nothing in the code or in the diff exists without justification.
+
+- **`strict-mode` skill** is the runtime tool for applying P7 to a specific change. This principle is the standard; `strict-mode` is the procedure. (If `strict-mode` is active, P7 is implicitly active too.)
+
+- **`audit` skill** runs before risky changes ship. It checks scope-match against the discussed intent — that check IS a P7 application.
+
+### Origin
+
+Adopted 2026-04-25 from Andrej Karpathy's CLAUDE.md (forrestchang/andrej-karpathy-skills, principle #3 "Surgical Changes"). Existing `strict-mode` skill already encoded most of this as a runtime-callable tool; promoting it to a Principle puts it on the same standing-checkpoint footing as P1–P6, so it applies even when `strict-mode` isn't explicitly invoked. The user's pattern of inheriting / vibe-coding into existing scripts where drive-by improvements would obscure the actual change makes this an ongoing risk, not a one-time concern.
+
+
+`========================================`
+
+
+## Principle 8 — Goal-driven execution
+
+**Rule:** For any non-trivial task, transform the imperative request ("do X") into a declarative goal with built-in verification ("X is done when <observable check> passes"). For multi-step tasks, pair every step with its verify check and run the loop until all checks clear. Strong, observable success criteria are what enable autonomous looping — without them, every fork becomes a question for the user.
+
+**One-line form:** Don't loop on instructions. Loop on success criteria.
+
+### When it applies
+
+- Any non-trivial task — feature add, bug fix, refactor, migration, pipeline run.
+
+- Especially multi-step work where the same loop will run several times before "done."
+
+- Any `/auto` or `/loop` run — these are the canonical environments for autonomous looping.
+
+- Any moment work is about to start with a goal stated as a verb but no observable check named.
+
+- Trigger phrases: "add X", "fix Y", "refactor Z", "make it work", "implement W", "build a script that…", "/auto", "/loop", "keep going until", "set and forget", "until it's done", "make it pass", "get it green".
+
+### What "transform" means
+
+Take the imperative form and rewrite it as a goal + verification, before starting:
+
+```
+"Add validation"     →    "Inputs failing schema X get rejected with code 400.
+                          test_invalid_inputs.py covers each case. Done when
+                          test_invalid_inputs.py passes AND existing suite green."
+
+"Fix the bug"        →    "test_repro.py currently demonstrates the bug
+                          (failing). Done when test_repro.py passes AND no
+                          other test regressed."
+
+"Refactor X"         →    "Behavior unchanged: existing test suite was green
+                          at SHA <A>; same suite is green at SHA <B> after
+                          refactor. Done when both runs match."
+
+"Make it faster"     →    "Benchmark P95 latency was Y ms. Done when post-
+                          change benchmark shows ≤ Z ms AND no functional
+                          test regressed."
+```
+
+The transformed form contains a check the work can run *itself* against. That's what enables the loop.
+
+### The verify-loop pattern (multi-step tasks)
+
+```
+For tasks with N steps, write the plan as N pairs:
+
+  1. <step>   → verify: <observable check>
+  2. <step>   → verify: <observable check>
+  3. <step>   → verify: <observable check>
+  ...
+  N. <step>   → verify: <observable check>
+
+Then run the loop:
+
+  for step in plan:
+      do(step)
+      if verify(step) fails:
+          diagnose, fix, retry (bounded)
+      else:
+          continue
+
+  if every check clears: DONE
+  if any check refuses to clear after bounded retries: BLOCKED
+```
+
+The plan is the list. The loop is the execution. The user only intervenes when something genuinely refuses to clear (P3 example J — park and flag).
+
+### Failure modes this catches
+
+- **Imperative-only execution** — taking "add validation" at face value, writing code that *looks* like validation, declaring done with no test. The goal was never made checkable, so "done" is opinion, not observation.
+
+- **Unverified step** — multi-step work where step 3 silently broke step 1, but no per-step check caught it. Discovered hours later, often in production.
+
+- **Pause-and-ask drift** — autonomous run halts at every minor fork to ask the user, because the success criterion is too vague to act on alone. The criterion was the bug, not the model.
+
+- **Synthetic verification** — adding a test that passes whether the change is correct or not. The "verify" step exists but proves nothing (P1 cousin — same root cause).
+
+- **Verb-without-noun** — "make it work" / "fix it up" / "improve it" as the entire goal. Nothing to verify against; every fork becomes a guess.
+
+### Gate before starting
+
+Answer each in one sentence. If any answer is "I can't", restate the goal before starting.
+
+1. **Have I rewritten the imperative as a declarative goal with an observable check?** "Add X" alone is not a goal; "X is done when test_X passes" is.
+
+2. **For multi-step work, have I written the verify check for EACH step?** Not just the final step.
+
+3. **Could the work run itself against these checks without me at the keyboard?** If no, the criteria are too weak — sharpen them before starting (this is what enables `/auto`).
+
+4. **Does the verify check actually exercise the target?** (P1 crosscheck — a test that passes whether the change is right or wrong is not a verify check.)
+
+### Common invalid patterns
+
+- "Add input validation" → I add a Pydantic schema, no test → invalid (no observable check; "done" is just my opinion).
+
+- "Fix the bug" → I edit code that looks plausible, no reproducer → invalid (the bug was never made observable; "fixed" can't be proven).
+
+- "Refactor the auth layer" → I move code around, run no tests → invalid (refactor's whole guarantee is "behavior unchanged"; without a test pass before/after, that guarantee is unverified).
+
+- Multi-step plan: 5 steps, only step 5 has a verify check → invalid (steps 1–4 can break each other silently).
+
+- `/auto` run pauses at every step to ask "is this what you want?" → invalid (criteria were too weak; the model is asking because it can't verify alone).
+
+### Hard NOs
+
+- Do not start non-trivial work from an imperative without a checkable goal.
+
+- Do not run multi-step work where intermediate steps have no verify check.
+
+- Do not declare done on a "make it work"-style task without naming the test that proves it works.
+
+- Do not accept a verify check that would pass whether the change is correct or not.
+
+- Do not treat the user as the verify step. If the only way to know "done" is to ask the user, the criterion is too weak.
+
+- Do not skip writing the verify check because "it's obvious." Obvious checks are the easiest to write; not writing them is laziness, not efficiency.
+
+### Worked examples
+
+**A — Bug fix, transformed**
+
+User: "Fix the off-by-one in `paginate()`."
+
+- ❌ Read the function, change `<` to `<=`, ship. No test of the bug, no test of the fix.
+
+- ✅ Write `test_paginate_off_by_one.py` first. Run it — it fails (proves the bug). Now make the change. Run the test — it passes (proves the fix). Run the full suite — it passes (proves no regression). DONE means all three observations, not just the change being made.
+
+**B — Multi-step plan, every step paired**
+
+User: "Migrate the users table from int to UUID."
+
+```
+Plan:
+  1. Add uuid column nullable        → verify: schema has uuid col, all NULL
+  2. Backfill uuids                  → verify: 0 NULLs in uuid col
+  3. Add unique index on uuid        → verify: index exists, no duplicates
+  4. Update writers to set uuid      → verify: new rows have uuid set
+  5. Update readers to use uuid      → verify: app test suite green
+  6. Drop int id column              → verify: schema has no int id col
+```
+
+- ❌ Do all six steps, run tests at the end, hope for the best.
+
+- ✅ Each step is its own gate. Step 3 can't start until step 2 verifies. Step 6 can't start until step 5 verifies. If step 4 fails, fix step 4 — don't drag the failure forward into 5 and 6.
+
+**C — Autonomous run, criteria-driven**
+
+User: "/auto build the rate-limit middleware described in the spec."
+
+- ❌ Goal is "build the middleware." Halt at every micro-decision (which decorator style? which header for the limit? what's the default rate?) and ask.
+
+- ✅ Goal becomes: "test_rate_limit.py passes AND existing suite green AND README rate-limit section updated." Now every fork has a tiebreaker: does this choice make the test pass without breaking others? If yes, take it. If genuinely no answer fits (P3 example J), park that step and continue elsewhere.
+
+**D — Refactor with the strongest possible criterion**
+
+User: "Refactor `process_order` — it's a god function."
+
+- ❌ Split it up by feel. Run the test suite at the end, hope it's green.
+
+- ✅ Run the test suite BEFORE — record the green. Now refactor. Run the suite AFTER — must match the BEFORE result exactly. The verify is "test set X was green at SHA A; same set X is green at SHA B." Anything else (a flaky test, a new failure) blocks the refactor from being declared done.
+
+### When this principle does NOT apply
+
+- Trivial one-liners — typo fixes, rename a variable, fix a comment. Writing a test for a typo fix is the wrong tradeoff; visual diff IS the verification.
+
+- Exploratory / scratch work the user explicitly wants quick-and-dirty.
+
+- Cases where the user explicitly says "just try it and see" — they're using me as a fast prototyping tool, not asking for production rigor.
+
+The bar: when work is non-trivial AND the user expects it to actually work, transform-then-verify is on. When trivial or exploratory, judgment.
+
+### Relationship to the other principles
+
+- **P2** says: define success/testing/workflow conditions BEFORE starting. **P8** says: rewrite the imperative as one of those conditions and use it as the loop's exit criterion. P2 is the upfront definition; P8 is what you do with it during execution.
+
+- **P4** says: audit current state vs goal at handback. **P8** says: audit *at every step*, not just at handback. P4 is the final gate; P8 is the per-step gate that makes the final gate honest.
+
+- **P1** says: a test must actually exercise the target condition. **P8** says: every step needs a verify check. **P1 + P8 together:** every step needs a verify check that actually exercises the target. A weak P8 check is just P1's failure mode under a new name.
+
+- **P3** says: every action traces to the goal. **P8** says: every step has its own verify against the goal, so traceability is built into execution, not a manual audit afterward.
+
+- **`prep` skill** — Phase 8's Red → Green → Real → Audit cycle is P8 applied per-function during prototype build. Phase 9 is P8 applied at the integration/scale layer.
+
+- **`test-driven-development` skill** — the runtime tool for the verify-first half of P8. This principle sets the standard; that skill is the procedure.
+
+### Origin
+
+Adopted 2026-04-30 from Andrej Karpathy's CLAUDE.md (forrestchang/andrej-karpathy-skills, principle #4 "Goal-Driven Execution"). Karpathy's framing: *"LLMs are exceptionally good at looping until they meet specific goals... Don't tell it what to do, give it success criteria and watch it go."*
+
+Already partially covered by P2 (define conditions upfront) and P4 (audit at handback), but the *in-flight* pattern — transforming every imperative into a declarative goal and pairing every step of multi-step work with its own verify check — was not encoded as a hard checkpoint. P8 makes the transformation and the per-step verify mandatory, so autonomous loops have something concrete to loop *on*.
+
+
+`========================================`
+
+
+## Principle 9 — Build for the real run
+
+**Rule:** Design for the conditions the thing will actually meet in real use — real input size, real run duration, unattended execution, messy/missing inputs, resource limits, and recovery after partial failure. A passing demo is not the finish line; the real job completing under real conditions is. This applies ONLY to conditions you can prove will occur in this use case — speculative "might happen someday" robustness is a P5 (KISS) violation, not practicality.
+
+**One-line form:** Build for the real job, not the demo. Real conditions only — not imagined ones.
+
+### When it applies
+
+- Anything that will run on real data: big files, long jobs, batch pipelines, renders.
+
+- Anything that runs unattended — `/auto`, cron, overnight jobs, no human at the keyboard.
+
+- Before declaring DONE on code that worked once on a small/clean input.
+
+- Trigger phrases: "run it for real", "this runs overnight", "the real file is huge", "set and forget", "it died at 3am", "works on my test clip but not the real one", "it filled the disk", "it hung halfway".
+
+### Failure modes this catches
+
+- **Demo-scale fit** — verified on a 3-second clip; the real input is a 4GB file and the memory/disk/time profile is completely different. (Pairs with P1 — test the real condition; P9 is the design-time half of that.)
+
+- **No recovery** — a 10-hour job dies at hour 9 with no checkpoint, so the whole run is lost. Real long jobs need resume points and bounded retries.
+
+- **Blocks unattended** — an `input()` prompt, a confirmation gate, or an unhandled prompt mid-pipeline that stalls a job nobody is watching.
+
+- **Resource blindness** — disk fills, pagefile exhausts, memory blows up, temp files never cleaned. The DWM-crash class of failure.
+
+- **Messy-input fragility** — assumes inputs are present, well-formed, and correctly encoded; the real corpus has gaps, garbage, and odd encodings.
+
+- **No progress visibility** — a long unattended run gives no signal whether it's working, stuck, or dead, so failure is discovered hours late.
+
+### Check / gate before claiming done
+
+Answer each in one sentence. If any answer is "only the demo case", the design isn't done.
+
+1. **What does the REAL input look like?** Size, count, duration, messiness. Did I verify against that, or against a convenient small/clean proxy? (Feeds P1.)
+
+2. **How long does the real run take, and what happens if it dies partway?** If there's no checkpoint/resume and the job is long, that's a gap.
+
+3. **Does this run unattended?** If yes, is there any `input()` / confirmation / prompt that would stall it? Are retries bounded and self-healing?
+
+4. **What real resource limit could it hit?** Disk, memory, pagefile, time, rate limits. Is the limit handled or at least surfaced?
+
+5. **Can someone tell it's alive?** Is there progress/heartbeat output for a long run?
+
+6. **Is every safeguard tied to a condition I can prove will occur?** If a safeguard defends an imaginary case, cut it — that's P5, not P9.
+
+### Common invalid patterns
+
+- "Works" claimed after one run on a clean 5-row sample; real input is 5M messy rows → invalid.
+
+- A long render with no checkpoint, so a crash at 90% restarts from zero → invalid.
+
+- An unattended `/auto` job that hits `input()` and silently waits forever → invalid.
+
+- Temp files written every iteration, never cleaned, disk fills mid-run → invalid.
+
+- Adding retries/fallbacks/guards for failure modes that cannot occur → invalid (P5, not P9 — practicality is not a license to overbuild).
+
+### Hard NOs
+
+- Do not declare done after testing only the demo-scale, clean-input case.
+
+- Do not ship a long unattended job with no checkpoint, no bounded retries, and no progress signal.
+
+- Do not leave an `input()`/confirmation in a path that runs unattended.
+
+- Do not ignore a provable resource limit (disk/memory/pagefile/time).
+
+- Do not invoke "practicality" to justify handling a condition you cannot show will occur — that is a KISS violation wearing this principle's name.
+
+### Worked examples
+
+**A — Demo-scale vs real run**
+
+Situation: A frame-extraction script works on a 10-second test clip.
+
+- ❌ "Works — done." Real input is a 2-hour 4K file; it OOMs at minute 12.
+
+- ✅ Profile against a realistic file first. Stream/chunk instead of loading whole. Verify at real scale (P1). THEN done.
+
+**B — Long job, no recovery**
+
+Situation: An overnight batch renders 500 clips sequentially.
+
+- ❌ One loop, no state. Crash at clip 480 → all 480 redone.
+
+- ✅ Checkpoint completed clips to disk; on restart, skip done ones; bounded retry per clip. (Pairs with the retries-are-optimization memory.)
+
+**C — Practicality misused (the anti-example)**
+
+Situation: A one-shot local script that reads one config file you control.
+
+- ❌ Wrap config load in retry-with-backoff and three format fallbacks "to be practical".
+
+- ✅ Just read the file. The failure modes don't occur here — P5 wins. P9 only fires on conditions you can prove will happen.
+
+### Relationship to the other principles
+
+- **P1** tests the real condition; **P9** is the design-time mandate to build for it. P9 decides what real conditions matter; P1 proves you actually exercised them.
+
+- **P5 (KISS)** is the hard boundary. P9 justifies robustness for proven conditions; P5 forbids it for speculative ones. The dividing line — "can I prove this occurs?" — is what keeps P9 from becoming an overengineering loophole.
+
+- **P4** audits state vs goal at handback; P9 adds the operational rows to that audit (real scale hit? survives unattended? recovers?).
+
+### Origin
+
+Surfaced 2026-06-08. The user's recurring burns are operational, not algorithmic: the DWM crash from commit/resource exhaustion, long video/ffmpeg jobs needing checkpoint+resume, and unattended `/auto` runs that must not stall on a prompt. P1–P8 covered honest testing, goal-tracking, and code restraint, but none made "does it survive the real job under real conditions" a checkpoint at design time. P9 does, with a hard P5 boundary so practicality strengthens robustness without reopening the overengineering door.
+
+
+`========================================`
+
+
+## Principle 10 — See it before you call it
+
+**Rule:** When a check's result is something you can *see* — a rendered page, an app window, a generated image — confirm it by reading a screenshot before you trust it. A passing exit code or a matched log string is not proof on a visual surface. Capture the shot inside the test at each state-change and assertion, and read it before declaring pass or fail.
+
+**One-line form:** If the answer is visible, look at it. Exit 0 is not a pass on a screen.
+
+### When it applies
+
+- Writing or running a smoke test / verify step against a browser, a GUI app, a rendered frame, or any surface a human would *look* at to judge.
+
+- Warmup / readiness checks that decide "this account / session / page is good to go."
+
+- `/auto`, `/prep`, `/repair` runs that gate a step on a visual outcome.
+
+- Trigger phrases: "is it logged in?", "did the page load?", "did it render?", "smoke test the UI", "check the screen", "is the account ready?", "did the image generate?".
+
+### Failure modes this catches
+
+- **Present-but-unread shot** — a screenshot was captured but the verdict was read off log text instead of the image. The exact account-95 miss.
+
+- **Exit-0 illusion** — a signed-out page shows a prompt box and exits 0 just like a signed-in one; the machine check passes while the real state is wrong.
+
+- **Weak visible assertion** — the check tests "an element exists" when that element exists in both the good and bad state (a prompt box on signed-in AND signed-out pages).
+
+- **Text-trusting** — believing the page's own words ("image creation isn't available in your location") over what the screenshot plainly shows ("Sign in").
+
+### Check / gate before claiming done
+
+1. **Is this verdict about something visible?** — if a human would look at it to judge, a screenshot must be read before pass/fail.
+
+2. **Was the shot captured at the assertion, inside the test?** — built-in capture at the state-change/assertion, not a slow after-the-fact grab.
+
+3. **Did I actually read it, with a written one-line verdict?** — a missing read makes the verify INCONCLUSIVE (blocked), never a silent pass.
+
+4. **Does the visible assertion distinguish the good state from the bad one?** — "element exists" fails this if it's true in both; tighten it AND read the shot.
+
+### Common invalid patterns
+
+- Warmup asserts READY because a prompt box exists; the page is actually signed out → invalid (exit-0 illusion + weak assertion).
+
+- Screenshot saved to disk but the verdict drawn from the reply text → invalid (present-but-unread).
+
+- Headless run can't screenshot, so the visual verify "passes" on an artifact probe → invalid (a signed-out page has a valid artifact too — that's INCONCLUSIVE, not pass).
+
+### Hard NOs
+
+- Do not declare a visual check passed from an exit code or log string alone.
+
+- Do not trust a page's text over a screenshot of the page.
+
+- Do not treat a captured-but-unread screenshot as if it were read.
+
+- Do not let "must look" stay a promise — make it a recorded per-shot verdict, or the step fails.
+
+### Origin
+
+Surfaced 2026-06-18 from the account-95 incident: an autonomous run concluded "new-build accounts can't generate images" from a page's text reply, when the captured screenshot plainly showed the account was simply signed out. The shot existed and was never read; the readiness check only looked for a prompt box, which a signed-out page also shows. Two holes — present-but-unread shot and a weak visible assertion — that this principle closes. Encoded into `/auto` (Hard Invariant #11 + the Smoke-test/verify capture subsection) and `/prep` (visual smoke capture in the build + pentest phases).
+
+
+`========================================`
+
+
+## Principle 11 — Pin the cause before the fix
+
+**Rule:** On any unexpected failure, run the debug loop before touching code: observe the actual failure artifact, collect the facts, list 2–4 concrete falsifiable causes, rank them by likelihood, then run ONE cheapest one-variable probe at a time — pre-registering what result confirms and what disproves BEFORE the probe runs — until exactly one cause has positive proof. Only then edit.
+
+**One-line form:** Hypothesis-driven debugging (RCA): rank causes, pre-register one cheap probe, lock the cause, THEN edit.
+
+### The canonical loop
+
+```
+THE DEBUG LOOP — hypothesis-driven debugging / root cause analysis
+(standard: P11 · full procedure: /repair)
+
+1. Observe            read the actual failure artifact — log, trace, output
+2. Collect evidence   list the known FACTS; separate facts from UNKNOWNS
+3. Hypothesize        2–4 concrete, falsifiable causes
+4. Rank               order by likelihood given the evidence; name the leader
+5. Design the test    cheapest probe that isolates ONE variable. Pre-register
+                      before running: variable tested / expected result /
+                      what result CONFIRMS / what result DISPROVES
+6. Run ONE test       one probe at a time — never a shotgun of changes
+7. Interpret          compare against the pre-registered predictions;
+                      confirm or rule out — only positive evidence locks
+8. Update + repeat    update the facts/unknowns ledger, re-rank survivors,
+                      loop 5–7 until ONE cause has positive proof
+9. Only then edit     no code change before the cause is locked
+
+Running ledger (long investigations): facts · unknowns · leading hypothesis
++ confidence · next highest-value test. In /auto this maps onto the
+activity log's DIAGNOSING entries.
+
+Fast path (KISS): cause genuinely obvious on first read (typo, missing
+import, wrong variable name) → name cause + fix in one sentence each,
+verify, done. First "let me just try this" = past the fast path — run the loop.
+```
+
+Pre-registration (step 5) is what makes step 7 honest: the pass/fail meaning of the probe is written down *before* the result exists, so the result can't be rationalized after the fact.
+
+### When it applies
+
+- Any unexpected failure, in any lane — a failing test, a wrong value, a crashed run, a misbehaving page, a regression. If the cause is not locked, the loop is on.
+
+- Mid-build (a prototype part breaks), mid-run (/auto verify fails), mid-analysis (a probe returns something surprising).
+
+- Trigger phrases: "why is this failing?", "debug this", "it's broken", "hypothesis-driven debugging", "root cause analysis", "RCA", "let me just try this", "I'll just change X and see".
+
+### Failure modes this catches
+
+- **Guess-and-edit** — editing code on the first plausible theory. The edit becomes a new variable, evidence is contaminated, and the real cause is now harder to find.
+
+- **Favorite-hypothesis lock-in** — chasing one cause without listing rivals; the actual bug was candidate #3 that never got written down.
+
+- **Shotgun probing** — changing three things at once; whatever happens next proves nothing (no single variable isolated).
+
+- **Post-hoc rationalizing** — running a probe with no pre-registered prediction, then reading whatever came back as support for the favorite theory.
+
+- **Elimination-as-proof** — ruling out three of four candidates and declaring the fourth guilty with no positive evidence of its own.
+
+### Check / gate before editing code
+
+1. **Are 2–4 falsifiable causes written down and ranked?** — one candidate is a hunch, not a differential.
+
+2. **Was the probe pre-registered?** — variable / expected / confirms / disproves stated before the result existed.
+
+3. **Did the probe isolate ONE variable?** — a multi-change probe locks nothing.
+
+4. **Does the surviving cause have POSITIVE proof?** — not just "everything else ruled out."
+
+5. **If claiming the fast path: is the cause genuinely one-read obvious?** — the first "let me just try this" means no.
+
+### Common invalid patterns
+
+- Error appears → immediately edit the line in the traceback → invalid (guess-and-edit; the traceback line is the trigger, not necessarily the cause).
+
+- "It's probably the cookie" → refresh the cookie → worked once → declared fixed → invalid (no isolating probe, no positive proof).
+
+- Change timeout + retries + input file at once, run passes → invalid (three variables; which one fixed it is unknown).
+
+- Probe run first, prediction written after → invalid (post-hoc rationalizing).
+
+### Hard NOs
+
+- Do not edit code before exactly one cause has positive proof (fast path excepted, honestly).
+
+- Do not run a probe without pre-registering what confirms and what disproves.
+
+- Do not change more than one variable per probe.
+
+- Do not treat process of elimination as proof.
+
+- Do not claim the fast path after the first failed "obvious" fix — that failure IS the evidence the cause wasn't obvious.
+
+### Worked examples
+
+**A — The loop, run properly**
+
+Stage 4 image gen returns `no_images_generated` for ~12% of beats.
+
+- ❌ "Probably rate limiting — I'll add a sleep." Edit shipped; failure rate unchanged; now the run is slower AND still broken.
+
+- ✅ Facts: failures cluster on one account; other accounts clean. Causes: (1) cookie expiry on that account, (2) quota hit, (3) content filter. Rank: cookie first (cheapest probe + failures started ~4h after login). Pre-register: "print the session cookie expiry; CONFIRMS if expiry < now; DISPROVES if expiry > now+1h." Probe → expiry was 3h ago → locked. Fix the refresh logic. One probe, one edit.
+
+**B — Fast path, honestly claimed**
+
+`NameError: name 'confg' is not defined` on a line written 2 minutes ago.
+
+- ✅ Typo, visible on first read. Name it, fix it, re-run. Loop not required — and if the re-run still fails, the fast path is over: run the loop.
+
+### Relationship to the other principles
+
+- **`/repair`** — the full 9-step *procedure* this standard compresses (Transform → Hypothesize → Lock → Isolate → RED → GREEN → Integrate → Step 2 → Audit). P11 is the rule that applies everywhere; /repair is the methodology when a repair is the task. Same split as P5 ↔ `/simplify`.
+
+- **P6 (think before coding)** covers assumptions before *new* code; **P11** covers causes before *fix* code. Both forbid running on a silent guess.
+
+- **P1 (test the condition)** — a probe that can't disprove anything is P1's failure mode inside the loop.
+
+- **/auto** — fix mode runs this loop (ranked hypotheses + pre-registered probe before any rotation edit). **/prep** — build/pentest failures route here. **/spec** — a `why:` claiming a cause must name the decisive probe that pinned it.
+
+### Origin
+
+Adopted 2026-08-06. The loop existed only as /repair's internal procedure; outside /repair (mid-build in /prep, fix mode in /auto, ad-hoc debugging) nothing formally forbade guess-and-edit. User asked to codify the observe → evidence → hypothesize → rank → cheapest-test → one-test → interpret → update → only-then-edit sequence as a standing principle, upgraded with pre-registration and the facts/unknowns ledger from a hypothesis-driven-debugging protocol comparison. Matches the existing "Pin the fix, don't guess" memory — this principle is its promoted, enforceable form.
+
+
+`========================================`
+
+
+## Principle 12 — Completed means delivered
+
+**Rule:** A task is COMPLETE only when the user-visible result exists in the world and has been verified by observation — the correct file in the folder, the working page on the screen, the right image seen with eyes. Everything else — fixes shipped, loops armed, specs written, retries running — is progress toward completion, and must be reported as NOT DONE with the result gap as the headline.
+
+**What it means in practice:**
+
+- Success criteria are written in terms of the USER'S observable result ("the correct thumbnail exists in the VA folder"), never machinery milestones ("the retry loop works"). A model left to author its own criteria will substitute achievable sub-goals and truthfully pass them — pin the criteria to the user's outcome before work starts.
+
+- Reports lead with what the user still does NOT have. Failures, gaps, and unverified claims come first; wins come after, framed as progress toward the unmet result. A NET/summary line states the gap before the gains.
+
+- Every claim in a report is tagged by epistemic status: VERIFIED (observed directly), ASSUMED (inferred, not checked), or COULD-STILL-BE-WRONG. The confession section is where the bugs live.
+
+- An external dependency that has been dead for more than ~2 hours is an INCIDENT, not a wait state: stop waiting, build another route (hand-verify, hand-deliver, swap providers), and say so. "It retries automatically" never justifies an undelivered result.
+
+- Self-grading is structurally unreliable: the context that built the thing shares the blind spots that broke it. Where stakes allow, the DONE verdict comes from an independent check (fresh reviewer, refuter agent, or the user's own acceptance examples) — not from the builder.
+
+### Origin
+
+Adopted 2026-08-12 from the thumbnail-pipeline incident: two days of truthful "DONE — everything good" reports (leak fixed, health line live, retry loops armed) while the user's actual result — correct thumbnails delivered to the VA — did not exist, and a core dependency sat dead for 32 hours framed as "retrying, fine." The user's standard: if the desired result isn't coming out, it is not working. Promoted from the `definition-of-completed` memory to a standing principle; enforced through /auto's Success-line authoring, /spec's success criteria, and the always-on personal-prefs.
+
+
+`========================================`
+
+
+## Principle 13 — The report grades itself
+
+**Rule:** Every report ends with a state block, a goal-compass and a self-grade — one blank line between every field, labels fixed, explaining text plain-language (layout confirmed 8/22/26): NET (where things stand now); CURRENT STAGE (BEFORE / NOW / CHANGED with WHY / NEXT — the immediate milestone / MEANT TO — what NEXT achieves + the problem it fixes / FEYNMAN — NEXT to a smart 12-year-old with one analogy, naming the Heaven's Net fit and the goal fit); a 4-lens ULTIMATE GOAL derived fresh per scenario (Delivers / Heals / Replaces / Guarantees); one SUGGESTED ACTION (PASTE THIS — a self-contained prompt the user pastes verbatim; → TOWARD THE GOAL — which lens(es), how it advances NEXT; → HEAVEN'S NET — class-keyed recovery, evidence-only, bounded, fail-loud per the canonical error-recon definition, or n/a); a CONFIDENCE grade (PERFECT / HIGH / MEDIUM / LOW) with named evidence; and a RISK grade naming the exposure and the unproven parts. The canonical template lives in /explain; /auto, /prep, /spec mirror it.
+
+**One-line form:** A report you can't grade is a report you can't trust — the footer IS the grade.
+
+### When it applies
+
+- Every report from /explain, /auto, /prep, /spec — and any end-of-task summary or DONE claim anywhere.
+
+- Trigger phrases: any status report, any "done/finished/fixed" claim, any NET line, any handback.
+
+### Failure modes this catches
+
+- **False confidence** — a summary reads "all done" while work is pending or unverified; the user acts on it and closes the chat.
+
+- **Goal drift** — the stated goal quietly rewords itself toward whatever got achieved, so partial work grades as complete.
+
+- **Buried live wires** — a dangerous unknown (unverified claim touching production) hides mid-report instead of being named on the risk line.
+
+- **Aimless next moves** — a suggested action that doesn't advance the user's actual goal (tangent work dressed as progress).
+
+### Check / gate before claiming done
+
+1. **Is the footer present and complete?** — NET; CURRENT STAGE with all six lines (BEFORE / NOW / CHANGED / NEXT / MEANT TO / FEYNMAN); all four lenses filled (or "n/a — why"); SUGGESTED ACTION with PASTE THIS + → TOWARD THE GOAL + → HEAVEN'S NET ("n/a" allowed, never skipped); both grades with evidence clauses; one blank line between every field.
+
+2. **Does the confidence grade survive the hard cap?** — anything waiting/queued/retrying/"should" anywhere in the report → below HIGH. PERFECT only with every angle tested (happy + failure paths, real inputs) AND proven full-autopilot (no human thought, no human intervention, no Claude in the loop) AND an independent breaker-check failed to break it — tests named.
+
+3. **Does the goal block match the user's original ask?** — compare against what the user actually said, not what got built. Frozen once stated.
+
+4. **Does the risk line name the live wire?** — every unproven claim that touches production/user-facing output is called out, not summarized away.
+
+### Common invalid patterns
+
+- Bare grade with no evidence clause ("CONFIDENCE: HIGH") → invalid
+
+- PERFECT without a named unattended-run proof → invalid
+
+- Status DONE + confidence capped by pending work → the STATUS is wrong; downgrade the status, never inflate the grade
+
+- Goal lens filled with abstract boilerplate ("the system operates autonomously") → invalid; lenses use the user's concrete style (real actors, real stakes, good state vs bad state, consequences)
+
+### Hard NOs
+
+- Do not reword the frozen ULTIMATE GOAL toward what was achieved.
+
+- Do not award PERFECT on faith, inference, or "should work" — it requires empirical proof of full-autopilot operation.
+
+- Do not suggest an action whose connection to the goal can't be stated in the same line.
+
+### Origin
+
+Adopted 2026-08-13 from the thumbnail-pipeline aftermath: the user nearly closed a chat on a false "all done" reading (P12's origin incident), then asked for reports to carry their own trust-gauge — a confidence/risk footer, a PERFECT tier meaning "full autopilot, no human thought, no human intervention," and a per-scenario goal compass so drift is visible at a glance. Codified in /explain, /auto, /prep, /spec + the confidence-risk-footer memory; this principle is the canonical statement.
+
+
+`========================================`
+
+
+## Principle N — {{ short title, imperative if possible }}
+
+**Rule:** {{ one-sentence statement of the principle }}
+
+**One-line form:** {{ the memorable / pithy version }}
+
+### When it applies
+
+- {{ situation or task type }}
+
+- {{ trigger phrases from the user that should activate this rule }}
+
+### Failure modes this catches
+
+- **{{ mode name }}** — {{ what goes wrong }}
+
+- **{{ mode name }}** — {{ what goes wrong }}
+
+### Check / gate before claiming done
+
+1. **{{ question }}** — {{ what a pass looks like }}
+
+2. **{{ question }}** — {{ what a pass looks like }}
+
+### Common invalid patterns
+
+- {{ pattern }} → invalid
+
+- {{ pattern }} → invalid
+
+### Hard NOs
+
+- Do not {{ forbidden behavior }}.
+
+- Do not {{ forbidden behavior }}.
+
+### Origin
+
+{{ one or two sentences on the real incident that produced this rule, so future-you
+can judge whether the rule still applies in edge cases }}
+
+
+`========================================`
+
+
+## How to use this skill at runtime
+
+1. When the skill loads, scan the **Principles Index** at the top.
+
+2. For each principle whose "When it applies" matches the current task, treat that principle as a hard constraint for the rest of the turn.
+
+3. Before declaring a test passed / a value verified / a change safe, run through the relevant principle's **check / gate**. If any check fails, report it honestly — never paper over a failed check.
+
+4. If the current task would violate a **Hard NO**, stop and flag it to the user before proceeding.
+
+5. **Acknowledging the stop hook.** When a `principles-check.py` Stop hook fires (the user sees `Stop hook feedback: P4 checkpoint.`) and you respond with a bare acknowledgment, format it exactly as:
+
+   ```
+   Acknowledged — principles.
+
+   =====
+   ```
+
+   The trailing `=====` separator gives the user a visual landmark to scroll past the enforcement chain (which can fire several times in a row) and resume the conversation. Do NOT add the separator when the response is a full P4 verdict block — the verdict block already serves as its own visual landmark. The separator applies only to bare acks where the entire reply is the acknowledgment line.
+
+
+## Relationship to other skills
+
+- **`strict-mode`** — constrains *what* code to change. `principles` constrains *how* to verify a change once made.
+
+- **`audit`** — pre-execution gate that checks scope, risk, and assumptions. `principles` is the evidentiary standard the audit holds verification claims to.
+
+- **`repair`** — debugging workflow. The "conclusive proof" phase of `repair` must satisfy the active principles in this skill.
+
+- **`prep`** — planning workflow. Principles here shape what counts as an acceptable pentest result for the prototype.
+
+
+## TL;DR
+
+- Living list of hard rules, each tied to a specific past failure.
+
+- **P1 — test-at-scale:** fire N, not 1; config-load ≠ load test.
+
+- **P2 — figure out the conditions upfront:** state success, testing, and workflow conditions in one sentence each before acting. Don't start without them.
+
+- **P3 — keep the end goal in sight:** understand "done", use provided materials, every action and question traces to the goal; confirm the original issue got fixed; in `/auto`, halt only when genuinely no move is available — never when one was.
+
+- **P4 — audit against the goal before handback:** before stopping, run a checkpoint (goal / current state / gap) and emit a decision-ready verdict — Result / Toward goal / Next — in one of DONE / PARTIAL / BLOCKED / UNCLEAR. No narrative, no "let me know if you want more," no fake precision.
+
+- **P5 — KISS, keep it simple:** simplest thing that solves the present requirement wins; complexity needs a concrete reason that exists today, not a hypothetical one; duplication beats the wrong abstraction; rule of three before extracting; default to composition over inheritance.
+
+- **P6 — think before coding:** before writing the first line, surface assumptions, name forks when two readings exist, push back when a simpler approach is available, and stop to name confusion instead of guessing past it. Adopted from Karpathy's CLAUDE.md.
+
+- **P7 — surgical changes:** every changed line traces to the user's request; no drive-by improvements, no style impositions, no silent deletions of pre-existing dead code; mention strays — don't fix them; clean only the orphans your own change created. Adopted from Karpathy's CLAUDE.md; pairs with the `strict-mode` skill.
+
+- **P8 — goal-driven execution:** transform every imperative ("do X") into a declarative goal with an observable check ("X is done when test_X passes"); for multi-step work, pair every step with its own verify check; strong checkable criteria are what enable autonomous loops to keep going without pausing for guidance. Adopted from Karpathy's CLAUDE.md; pairs with P2 (define conditions upfront) and P4 (audit at handback).
+
+- **P9 — build for the real run:** design for the real operating envelope — real scale, real duration, unattended execution, messy inputs, resource limits, recovery; a passing demo isn't the finish line, the real job surviving is. Only fires on conditions you can prove will occur — speculative robustness still falls to P5, which is its hard boundary. Real-world fit is also the tiebreaker when two principles conflict.
+
+- **P10 — see it before you call it:** when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion before trusting it; an exit code or matched log line is not proof on a visual surface. Capture inside the test at each state-change/assertion; a captured-but-unread shot is the account-95 miss. Encoded into /auto (Hard Invariant #11) and /prep (visual smoke capture).
+
+- **P11 — pin the cause before the fix:** hypothesis-driven debugging (RCA) — observe and collect evidence, list 2–4 ranked falsifiable causes, run one pre-registered cheapest one-variable probe at a time (confirms/disproves written before the result exists), keep a facts/unknowns ledger, and only edit code once exactly one cause has positive proof; fast path only for one-read-obvious causes. Standard here; full procedure in /repair; runs inside /auto fix mode and /prep build/pentest failures.
+
+- Append new principles using the template. Update the index and the frontmatter description when you do.
