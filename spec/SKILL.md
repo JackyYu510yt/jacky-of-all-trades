@@ -132,6 +132,8 @@ PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next mes
 
 → HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) SEEN evidence the pick stands on, (2) what the other options were ruled out on (same evidence), (3) how we'd know fast if wrong + bounded fallback; unchecked things NAMED — never "n/a" on a pick. On a WORK STEP: how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
 
+FEYNMAN: <the CHOICE in kid words — ONE everyday analogy, zero jargon, three beats: why THIS move won, what we passed on instead, and what happens if it turns out wrong. The plain-words twin of the two arrows above; never a repeat of the CURRENT STAGE FEYNMAN (that one explains the milestone, this one explains the decision). "n/a — <why>" only when there is no action (goal reached / standalone question)>
+
 **━━ GRADE ━━**
 
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
@@ -171,8 +173,14 @@ evidence the pick stands on + what ruled the other options out (same evidence) +
 we'd know fast if wrong and the bounded fallback, unchecked items named, never "n/a";
 on a work step it follows the canonical error-recon definition (class-keyed recovery,
 evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work
-step has no recovery logic). Goal fully reached → NEXT "none", PASTE THIS
-"nothing — goal reached".
+step has no recovery logic). FEYNMAN (8/27/26) re-tells the CHOICE in kid words — one
+everyday analogy, zero jargon, three beats: why THIS move won, what we passed on
+instead, and what happens if it turns out wrong. It is the plain-words twin of the two
+arrows (they are the audit trail; this is the version the user can repeat back), and it
+must NOT repeat the CURRENT STAGE FEYNMAN — that one explains the milestone, this one
+explains the decision. On a do-it request with no rival option, beat two is the obvious
+alternative we are not taking and why it loses. Goal fully reached → NEXT "none",
+PASTE THIS "nothing — goal reached", FEYNMAN "n/a — goal reached".
 
 Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed
 full-autopilot grade — every angle empirically tested (happy AND failure paths,
