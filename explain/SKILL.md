@@ -108,6 +108,8 @@ PASTE THIS: <the answer to THIS TURN'S question, as a self-contained prompt the 
 
 → HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) the SEEN evidence the pick stands on (files read, diffs, logs — never "should"), (2) what the other option(s) were ruled out on — same evidence, not vibes, (3) how we'd know fast if the pick is wrong + the bounded fallback (nothing burned, can still switch); anything unchecked is NAMED, not hidden. On a WORK STEP that touches recovery logic: how it leaves a STRONGER system — recovery keyed to failure class (not symptom), detection evidence-only, tries bounded, bottom rung fail-loud. "n/a — no recovery logic in this step" ONLY for a work step with no recovery logic — never on a pick.>
 
+FEYNMAN: <the CHOICE re-told to a smart 12-year-old with ONE everyday analogy and zero jargon, three beats: why THIS move won, what we passed on instead, and what happens if it turns out wrong. The plain-words twin of the two arrows above — never a repeat of the CURRENT STAGE FEYNMAN (that one explains the milestone; this one explains the decision).>
+
 **━━ GRADE ━━**
 
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
@@ -119,9 +121,9 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 - One blank line between EVERY field, every time. Section headers are bold with `━━`. NET is the first line of the footer.
 
-- Labels stay exactly as above (BEFORE / NOW / CHANGED / NEXT / MEANT TO / FEYNMAN; Delivers / Heals / Replaces / Guarantees; PASTE THIS / → TOWARD THE GOAL / → HEAVEN'S NET; CONFIDENCE / RISK). The explaining text under each label is plain language — one everyday sentence, no jargon, no shorthand codes.
+- Labels stay exactly as above (BEFORE / NOW / CHANGED / NEXT / MEANT TO / FEYNMAN; Delivers / Heals / Replaces / Guarantees; PASTE THIS / → TOWARD THE GOAL / → HEAVEN'S NET / FEYNMAN; CONFIDENCE / RISK). The explaining text under each label is plain language — one everyday sentence, no jargon, no shorthand codes.
 
-- Standalone question with no active project → CURRENT STAGE and ULTIMATE GOAL may read "none active — standalone question", PASTE THIS reads "nothing — standalone question".
+- Standalone question with no active project → CURRENT STAGE and ULTIMATE GOAL may read "none active — standalone question", PASTE THIS reads "nothing — standalone question" and the SUGGESTED ACTION FEYNMAN reads "n/a — standalone question".
 
 **CURRENT STAGE rules:**
 
@@ -143,13 +145,15 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
   - **On a PICK** (the turn ended on a decision): three parts, always — (1) the SEEN evidence the pick stands on (files read, diffs run, logs, backups found — never "should"/"probably"); (2) what the other option(s) were ruled out on, using the same evidence, not vibes; (3) how we'd know fast if the pick is wrong, and the bounded fallback (nothing deleted, nothing burned, the other option still open). Anything NOT checked is named, not glossed ("what I didn't check: who edited at 20:21"). This is the Heaven's Net frame applied to a decision: evidence-only, alternatives ruled out rather than assumed away, bounded, fail-loud. "n/a" is NEVER valid on a pick.
   - **On a WORK STEP**: follows the canonical definition in `~/.claude/skills/error-recon/SKILL.md` ("Heaven's Net" section) — recover by failure CLASS toward the required state, detection evidence-only (unmatched = unknown → capture, park, stop loud), bounded tries, fail-loud bottom rung. If the action touches recovery logic, READ that section before writing the line — never paraphrase it from memory. When the work step genuinely has no recovery logic, write "n/a — no recovery logic in this step", never skip the line.
 
+- FEYNMAN (added 8/27/26 — the user asked for a Feynman on the action too) re-tells the CHOICE in kid words: ONE everyday analogy, zero jargon, three beats — (1) why THIS move won, (2) what we passed on instead, (3) what happens if it turns out wrong. Example shape: “Two doors. We rolled a test cart through one and it came out the far side in thirty seconds — so that’s our door. If it turns out to be a closet, nothing’s lost; we haven’t unpacked anything yet.” It is the plain-words twin of the two arrows above it — the arrows are the audit trail, this is the version the user can repeat back from memory without re-reading. It must NOT repeat the CURRENT STAGE FEYNMAN: that one explains the milestone (NEXT), this one explains the decision. On a *do-it* request with no rival option, beat (2) is the obvious alternative we are not taking (patch it instead / wait / do it by hand) and why it loses. Goal reached or standalone question → “n/a — <why>”, never skipped.
+
 **The compass rules (anti-drift):**
 
 - ULTIMATE GOAL is derived fresh PER SCENARIO — it's the end-state of THIS conversation's objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (the factory view — what finished result arrives with zero input), **Heals** (the organism view — how failures recover or surface themselves), **Replaces** (the operator view — whose job/attention the system deletes), **Guarantees** (the structure view — what wrongness is impossible by construction). Fill every lens for the scenario; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, naming real actors and real stakes ("me", "the VA", "at 2 AM"), contrasting the good state against the bad one ("delivered correct" vs "wrong and quiet"), and stating consequences ("one bad item never costs the other 200") — never abstract boilerplate like "the system operates autonomously".
 
 - Once stated for a scenario, the line is FROZEN — never quietly reworded toward whatever was achieved. If this line ever drifts from what the user wanted, that's exactly what they'll call out.
 
-- Goal fully reached → NEXT: "none", PASTE THIS: "nothing — goal reached".
+- Goal fully reached → NEXT: "none", PASTE THIS: "nothing — goal reached", SUGGESTED ACTION FEYNMAN: "n/a — goal reached".
 
 The scale is about **verification, not vibes**:
 
@@ -301,4 +305,4 @@ The session does not end until you've verified the user has **demonstrated** und
 
 - Right gear: quick unless the user explicitly asked to be taught or quizzed.
 
-- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → SUGGESTED ACTION (PASTE THIS + → TOWARD THE GOAL + → HEAVEN'S NET) → GRADE — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
+- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → SUGGESTED ACTION (PASTE THIS + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
