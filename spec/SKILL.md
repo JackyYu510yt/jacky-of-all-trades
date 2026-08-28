@@ -124,6 +124,36 @@ Replaces: <whose job/attention the system deletes — nobody left in the loop>
 
 Guarantees: <what wrongness is structurally impossible>
 
+**━━ USER OPTION ━━  (only when this turn puts a decision to the user)**
+
+QUESTION: <the decision this turn is putting to the user, in one plain sentence>
+
+  1. <the option in the user's own terms>                    (<cost — time / effort / money>)
+
+     + <what it gets you>
+     + <what it gets you>
+     − <what it costs you>
+     − <what it costs you>
+
+     HOLDS UP: <the durability read. Does this survive the NEXT run, on a
+     DIFFERENT input, with NOBODY watching? What maintenance does it create?
+     What breaks later because we picked it? A band-aid is NAMED as a band-aid
+     — "fixes tonight, recurs next batch" — never softened.>
+
+  2. <next option>                                           (<cost>)
+
+     + / − / HOLDS UP — same four fields, always, in the same order
+
+  <n>. <the option that holds up best>                       (<cost>)   ← RECOMMENDED
+
+     + / − / HOLDS UP — same four fields
+
+IF YOU SAY NOTHING: I take <n> and keep going.
+
+WHY THAT DEFAULT: <why it wins on STRUCTURE, not on speed — what each losing
+option leaves broken, and what makes this one the least maintenance and the
+least likely to come back.>
+
 **━━ SUGGESTED ACTION ━━**
 
 PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next message. Turn ended on a PICK → the pick in the user's voice + one line of why ("Go with Choice 2 — <why>"); the work-prompt waits for the next turn. Turn was a DO-IT request → the work prompt: what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if reached>
@@ -140,6 +170,8 @@ CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inf
 
 RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
 ```
+
+**USER OPTION rules (added 8/28/26 — user-designed, C1 shape).** The block sits directly ABOVE `SUGGESTED ACTION` and appears ONLY when this turn genuinely puts a decision to the user — no fork → omit the whole block (never write "n/a"), and `SUGGESTED ACTION` stands alone as before. Every option carries FOUR fields in order: the option line with its cost in parentheses, `+` pros, `−` cons, and `HOLDS UP`. **`HOLDS UP` is the field that earns the section** — it judges the option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching; what maintenance does it create; what breaks later because we chose it. That is the structural-fix bar applied per option, so a band-aid is NAMED as a band-aid there ("fixes tonight's batch, recurs on the next one"), never softened into a neutral trade-off. Because `HOLDS UP` forces the durability question, **a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped** — if every listed option is a band-aid, that IS the finding: say so and add the option that isn't. Exactly ONE option carries `← RECOMMENDED` on the option line itself, decided on the `HOLDS UP` reads FIRST and cost second (the fastest option wins only when it also holds up). Pros and cons stay balanced in count — writing more about the favorite stacks the deck. `IF YOU SAY NOTHING` names the option taken when the user never answers, so an unattended run keeps moving. `WHY THAT DEFAULT` argues on STRUCTURE: what each losing option leaves broken, and why the pick is the least maintenance and least likely to recur — "it's faster" is never sufficient. **ECHO RULE (hard):** `PASTE THIS` below MUST name the option marked `← RECOMMENDED`. One decision, two renderings — `USER OPTION` is where it gets made, `SUGGESTED ACTION` is where it gets handed over as pasteable words plus the goal chain, Heaven's Net and Feynman. If the two ever differ the report is wrong: fix the reasoning above, never split the verdict across two sections.
 
 One blank line between every field; labels fixed, explaining text plain-language (8/22/26).
 

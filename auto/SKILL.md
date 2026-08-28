@@ -2080,6 +2080,36 @@ Replaces:   <whose job/attention the system deletes — nobody left in the loop>
 
 Guarantees: <what wrongness is structurally impossible>
 
+━━ USER OPTION ━━  (only when this turn puts a decision to the user)
+
+QUESTION: <the decision this turn is putting to the user, in one plain sentence>
+
+  1. <the option in the user's own terms>                    (<cost — time / effort / money>)
+
+     + <what it gets you>
+     + <what it gets you>
+     − <what it costs you>
+     − <what it costs you>
+
+     HOLDS UP: <the durability read. Does this survive the NEXT run, on a
+     DIFFERENT input, with NOBODY watching? What maintenance does it create?
+     What breaks later because we picked it? A band-aid is NAMED as a band-aid
+     — "fixes tonight, recurs next batch" — never softened.>
+
+  2. <next option>                                           (<cost>)
+
+     + / − / HOLDS UP — same four fields, always, in the same order
+
+  <n>. <the option that holds up best>                       (<cost>)   ← RECOMMENDED
+
+     + / − / HOLDS UP — same four fields
+
+IF YOU SAY NOTHING: I take <n> and keep going.
+
+WHY THAT DEFAULT: <why it wins on STRUCTURE, not on speed — what each losing
+option leaves broken, and what makes this one the least maintenance and the
+least likely to come back.>
+
 ━━ SUGGESTED ACTION ━━
 
 PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next message. Turn ended on a PICK → the pick in the user's voice + one line of why ("Go with Choice 2 — <why>"); the work-prompt waits for the next turn. Turn was a DO-IT request → the work prompt: what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if DONE>
@@ -2115,6 +2145,8 @@ external dependency dead >~2h is reported as an incident with a reroute, never a
 - A bare grade with no evidence clause is invalid. The dash and the justification are part of the line.
 
 **Goal-compass rules (anti-drift):** `Ultimate goal` is derived fresh PER RUN from the current scenario — the end-state of THIS objective, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated ("one bad item never costs the other 200") — never abstract boilerplate. Once stated the block is FROZEN (same freeze as the Success line): never quietly reworded toward what was achieved, because that rewording is exactly the drift the user wants to be able to catch by comparing the block against their original ask. `NEXT` (inside CURRENT STAGE — it replaced the old Next-step line, 8/22/26) is the immediate milestone between here and that goal; `MEANT TO` states what NEXT achieves + the problem it fixes; `FEYNMAN` re-explains NEXT to a smart 12-year-old with one analogy and must name both the Heaven's Net fit and the goal fit. `SUGGESTED ACTION` is ONE move, not a menu (v3 8/22/26): `PASTE THIS` answers THIS TURN'S question — on a pick it IS the pick in the user's voice + one line of why (the after-pick work prompt waits for the next turn; writing it now skips the question and reads as drift); on a do-it request it is the complete standalone work prompt (what / files / limits / corrected facts / what to show-or-ask before anything costly); `→ TOWARD THE GOAL` is a chain in plain words, never a bare lens tag — this move → gets us <concrete thing> → which is what <lens> needs because <why>, per lens pushed, plus what the rejected option would have cost — an action whose chain doesn't connect to the goal is drift and must not be suggested; `→ HEAVEN'S NET` answers "why can we proceed with confidence?": on a pick = (1) the SEEN evidence the pick stands on, (2) what the other options were ruled out on — same evidence, not vibes, (3) how we'd know fast if it's wrong + the bounded fallback, with anything unchecked NAMED, never "n/a"; on a work step it follows the canonical definition in error-recon (class-keyed recovery toward required state, evidence-only detection, bounded, fail-loud — read it, don't paraphrase from memory; "n/a — no recovery logic in this step" only when a work step has none); `FEYNMAN` (8/27/26) re-tells the CHOICE in kid words — one everyday analogy, zero jargon, three beats: why THIS move won, what we passed on instead, and what happens if it turns out wrong — the plain-words twin of the two arrows (they are the audit trail, this is the version the user can repeat back from memory), never a repeat of the CURRENT STAGE FEYNMAN (that one explains the milestone, this one explains the decision); on a do-it request with no rival option, beat two is the obvious alternative we are not taking and why it loses; "n/a — <why>" only when there is no action at all. Layout: one blank line between every field; labels fixed, explaining text plain-language.
+
+**USER OPTION rules (added 8/28/26 — user-designed, C1 shape).** The block sits directly ABOVE `SUGGESTED ACTION` and appears ONLY when this turn genuinely puts a decision to the user — no fork → omit the whole block (never write "n/a"), and `SUGGESTED ACTION` stands alone as before. Every option carries FOUR fields in order: the option line with its cost in parentheses, `+` pros, `−` cons, and `HOLDS UP`. **`HOLDS UP` is the field that earns the section** — it judges the option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching; what maintenance does it create; what breaks later because we chose it. That is the structural-fix bar applied per option, so a band-aid is NAMED as a band-aid there ("fixes tonight's batch, recurs on the next one"), never softened into a neutral trade-off. Because `HOLDS UP` forces the durability question, **a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped** — if every listed option is a band-aid, that IS the finding: say so and add the option that isn't. Exactly ONE option carries `← RECOMMENDED` on the option line itself, decided on the `HOLDS UP` reads FIRST and cost second (the fastest option wins only when it also holds up). Pros and cons stay balanced in count — writing more about the favorite stacks the deck. `IF YOU SAY NOTHING` names the option taken when the user never answers, so an unattended run keeps moving. `WHY THAT DEFAULT` argues on STRUCTURE: what each losing option leaves broken, and why the pick is the least maintenance and least likely to recur — "it's faster" is never sufficient. **ECHO RULE (hard):** `PASTE THIS` below MUST name the option marked `← RECOMMENDED`. One decision, two renderings — `USER OPTION` is where it gets made, `SUGGESTED ACTION` is where it gets handed over as pasteable words plus the goal chain, Heaven's Net and Feynman. If the two ever differ the report is wrong: fix the reasoning above, never split the verdict across two sections.
 
 Before emitting DONE on a **judgment-based** goal, the report must have passed the **Terminal Refuter Gate** (see below) — on those goals, DONE is the refuter's verdict, not the driver's self-grade.
 
@@ -2803,8 +2835,18 @@ Current stage:
   Meant to: <what Next achieves + the problem it fixes>
   Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
+User option (omit this whole block if the turn has no fork):
+  Question: <the decision put to you, one line>
+    1. <option in your terms>  (<cost>)
+         + <what it gets you>   − <what it costs you>
+         Holds up: <survives next run / different input / nobody watching? what maintenance? what breaks later? band-aids NAMED as band-aids>
+    <n>. <the one that holds up best>  (<cost>)   ← RECOMMENDED
+         + <what it gets you>   − <what it costs you>
+         Holds up: <why this one survives — the structural read that won it>
+  If you say nothing: I take <n> and keep going.
+  Why that default: <why it wins on STRUCTURE — what each loser leaves broken, least maintenance, least likely to recur. Not just "faster".>
 Suggested action:
-  Paste this:     <"nothing — goal reached", or the answer to THIS TURN'S question — on a pick: the pick + one line why; on a do-it: self-contained prompt: what / files / limits / facts / show-or-ask>
+  Paste this:     <"nothing — goal reached", or the answer to THIS TURN'S question — on a pick: the pick + one line why; on a do-it: self-contained prompt: what / files / limits / facts / show-or-ask. If a User option block is present, this MUST name the ← RECOMMENDED option — never a different one>
   → Toward goal:  <a chain, not a tag: move → concrete gain → which lens needs it and why, + cost of the rejected option>
   → Heaven's Net: <on a pick: seen evidence + what ruled others out + how we'd know if wrong + bounded fallback, never n/a; on a work step: class-keyed, evidence-only, bounded, fail-loud — or n/a>
   Feynman:        <the choice in kid words — one analogy, three beats: why THIS move won, what we passed on, what happens if it's wrong; never a repeat of the stage Feynman above>
@@ -2834,8 +2876,18 @@ Current stage:
   Meant to: <what Next achieves + the problem it fixes>
   Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
+User option (omit this whole block if the turn has no fork):
+  Question: <the decision put to you, one line>
+    1. <option in your terms>  (<cost>)
+         + <what it gets you>   − <what it costs you>
+         Holds up: <survives next run / different input / nobody watching? what maintenance? what breaks later? band-aids NAMED as band-aids>
+    <n>. <the one that holds up best>  (<cost>)   ← RECOMMENDED
+         + <what it gets you>   − <what it costs you>
+         Holds up: <why this one survives — the structural read that won it>
+  If you say nothing: I take <n> and keep going.
+  Why that default: <why it wins on STRUCTURE — what each loser leaves broken, least maintenance, least likely to recur. Not just "faster".>
 Suggested action:
-  Paste this:     <answers THIS TURN'S question — on a pick: the pick + one line why (work prompt waits for next turn); on a do-it: self-contained prompt: what / files / limits / facts / show-or-ask before anything costly>
+  Paste this:     <answers THIS TURN'S question — on a pick: the pick + one line why (work prompt waits for next turn); on a do-it: self-contained prompt: what / files / limits / facts / show-or-ask before anything costly. If a User option block is present, this MUST name the ← RECOMMENDED option — never a different one>
   → Toward goal:  <a chain, not a tag: move → concrete gain → which lens needs it and why, + cost of the rejected option>
   → Heaven's Net: <on a pick: seen evidence + what ruled others out + how we'd know if wrong + bounded fallback, never n/a; on a work step: class-keyed, evidence-only, bounded, fail-loud — or n/a>
   Feynman:        <the choice in kid words — one analogy, three beats: why THIS move won, what we passed on, what happens if it's wrong; never a repeat of the stage Feynman above>
@@ -2867,8 +2919,18 @@ Current stage:
   Meant to: <what Next achieves + the problem it fixes>
   Feynman:  <Next to a smart 12-year-old, one analogy — fits Heaven's Net + the goal>
 Ultimate goal (4 lenses): Delivers <...> · Heals <...> · Replaces <...> · Guarantees <...>
+User option (omit this whole block if the turn has no fork):
+  Question: <the decision put to you, one line>
+    1. <option in your terms>  (<cost>)
+         + <what it gets you>   − <what it costs you>
+         Holds up: <survives next run / different input / nobody watching? what maintenance? what breaks later? band-aids NAMED as band-aids>
+    <n>. <the one that holds up best>  (<cost>)   ← RECOMMENDED
+         + <what it gets you>   − <what it costs you>
+         Holds up: <why this one survives — the structural read that won it>
+  If you say nothing: I take <n> and keep going.
+  Why that default: <why it wins on STRUCTURE — what each loser leaves broken, least maintenance, least likely to recur. Not just "faster".>
 Suggested action (hand back to user):
-  Paste this:     <answers THIS TURN'S question — if the block is a pick the user must make: the recommended pick + one line why; else self-contained prompt for the best unblocking step: what / files / limits / facts / show-or-ask>
+  Paste this:     <answers THIS TURN'S question — if the block is a pick the user must make: the recommended pick + one line why; else self-contained prompt for the best unblocking step: what / files / limits / facts / show-or-ask. If a User option block is present, this MUST name the ← RECOMMENDED option — never a different one>
   → Toward goal:  <a chain, not a tag: this unblocking move → concrete gain → which lens needs it and why, + cost of staying stuck>
   → Heaven's Net: <on a pick: seen evidence + what ruled others out + how we'd know if wrong + bounded fallback, never n/a; on a work step: class-keyed, evidence-only, bounded, fail-loud — or n/a>
   Feynman:        <the choice in kid words — one analogy, three beats: why THIS move won, what we passed on, what happens if it's wrong; never a repeat of the stage Feynman above>

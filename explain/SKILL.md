@@ -100,6 +100,31 @@ Replaces: <whose job/attention the system deletes — nobody left in the loop>
 
 Guarantees: <what wrongness is structurally impossible>
 
+**━━ USER OPTION ━━**  (only when this turn puts a decision to the user)
+
+QUESTION: <the decision this turn is putting to the user, in one plain sentence>
+
+  1. <the option in the user's own terms>                          (<cost — time / effort / money>)
+
+     + <what it gets you>
+     + <what it gets you>
+     − <what it costs you>
+     − <what it costs you>
+
+     HOLDS UP: <the durability read. Does this survive the NEXT run, on a DIFFERENT input, with NOBODY watching? What maintenance does it create? What breaks later because we picked it? A band-aid is NAMED as a band-aid — "fixes tonight, recurs next batch" — never softened.>
+
+  2. <next option>                                                 (<cost>)
+
+     + / − / HOLDS UP — same four fields, always, in the same order
+
+  <n>. <the option that holds up best>                             (<cost>)   ← RECOMMENDED
+
+     + / − / HOLDS UP — same four fields
+
+IF YOU SAY NOTHING: I take <n> and keep going.
+
+WHY THAT DEFAULT: <why it wins on STRUCTURE, not on speed — name what each losing option leaves broken, and what makes this one the least maintenance and the least likely to come back.>
+
 **━━ SUGGESTED ACTION ━━**
 
 PASTE THIS: <the answer to THIS TURN'S question, as a self-contained prompt the user pastes verbatim as their next message. If the turn ended on a pick (Choice 1 vs 2, Option A/B): the pick itself in the user's voice + one line of why — "Go with Choice 2 — <why>". If the turn was a do-it request: the next work prompt — what to do, on which files/paths, the limits (paper-only / no prod touch / budget), which corrected facts to use, and what to show or ask before anything costly. "nothing — goal reached" if the goal is fully reached.>
@@ -121,7 +146,7 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 - One blank line between EVERY field, every time. Section headers are bold with `━━`. NET is the first line of the footer.
 
-- Labels stay exactly as above (BEFORE / NOW / CHANGED / NEXT / MEANT TO / FEYNMAN; Delivers / Heals / Replaces / Guarantees; PASTE THIS / → TOWARD THE GOAL / → HEAVEN'S NET / FEYNMAN; CONFIDENCE / RISK). The explaining text under each label is plain language — one everyday sentence, no jargon, no shorthand codes.
+- Labels stay exactly as above (BEFORE / NOW / CHANGED / NEXT / MEANT TO / FEYNMAN; Delivers / Heals / Replaces / Guarantees; QUESTION / the numbered options with their `+` / `−` / HOLDS UP fields / IF YOU SAY NOTHING / WHY THAT DEFAULT; PASTE THIS / → TOWARD THE GOAL / → HEAVEN'S NET / FEYNMAN; CONFIDENCE / RISK). The explaining text under each label is plain language — one everyday sentence, no jargon, no shorthand codes.
 
 - Standalone question with no active project → CURRENT STAGE and ULTIMATE GOAL may read "none active — standalone question", PASTE THIS reads "nothing — standalone question" and the SUGGESTED ACTION FEYNMAN reads "n/a — standalone question".
 
@@ -134,6 +159,28 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 - MEANT TO is two parts, always: what NEXT is supposed to achieve in the system, and the specific problem it's supposed to fix.
 
 - FEYNMAN uses the Feynman technique: re-explain NEXT to a smart 12-year-old with ONE everyday analogy and zero jargon, and it MUST name both fits — how NEXT fits Heaven's Net and how it fits the ultimate goal. It is the *understand it* version; the arrows under SUGGESTED ACTION are the *check it* version — both stay.
+
+**USER OPTION rules (added 8/28/26 — user-designed, C1 shape):**
+
+- The section appears ONLY when this turn genuinely puts a decision to the user. No fork → omit the whole block (do NOT write "n/a"), and SUGGESTED ACTION stands alone exactly as before. It is *echo when a fork exists*, not *always present*.
+
+- It sits directly ABOVE SUGGESTED ACTION, always — the reasoning first, the pasteable handoff second.
+
+- Every option carries FOUR fields, never fewer, in this order: the option line with its cost in parentheses; `+` pros; `−` cons; `HOLDS UP`.
+
+- **HOLDS UP is the field that earns the section.** It judges the option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching? what does it cost to maintain? what breaks later because we chose it? This is the structural-fix bar applied per option — a band-aid gets named as a band-aid there ("fixes tonight's batch, recurs on the next one"), never softened into a neutral trade-off.
+
+- **Because HOLDS UP forces the durability question, a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped.** If every option on the list is a band-aid, that IS the finding — say so, and add the option that isn't. This is the main reason the section exists: without it the report offers three patches and recommends the fastest.
+
+- Exactly ONE option carries `← RECOMMENDED`, on the option line itself so it is visible at a glance. The pick is decided on the HOLDS UP reads FIRST and cost second — the fastest option wins only when it also holds up.
+
+- Pros and cons stay balanced in count. Two pros against one con stacks the deck by writing more about the favorite; the reasoning has to survive equal space.
+
+- `IF YOU SAY NOTHING` names the option taken if the user never answers, so an unattended run keeps moving. Under /auto that is what actually happens; elsewhere it is what I would do.
+
+- `WHY THAT DEFAULT` argues on STRUCTURE: name what each losing option leaves broken, and why the pick is the least maintenance and least likely to recur. "It's faster" is never a sufficient reason.
+
+- **ECHO RULE (hard):** `PASTE THIS` in the section directly below MUST name the option marked `← RECOMMENDED`. One decision, two renderings — USER OPTION is where it gets *made* (menu, pros/cons, durability read), SUGGESTED ACTION is where it gets *handed over* (pasteable words + goal chain + Heaven's Net + Feynman). If the two ever differ, the report is wrong: fix the reasoning above, never split the verdict across two sections and leave the user to reconcile it.
 
 **SUGGESTED ACTION rules:**
 
@@ -305,4 +352,4 @@ The session does not end until you've verified the user has **demonstrated** und
 
 - Right gear: quick unless the user explicitly asked to be taught or quizzed.
 
-- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → SUGGESTED ACTION (PASTE THIS + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
+- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → USER OPTION (only when the turn puts a decision to you: each option with its cost, balanced `+`/`−`, a HOLDS UP durability read, exactly one ← RECOMMENDED, then IF YOU SAY NOTHING + WHY THAT DEFAULT — omitted entirely when there is no fork) → SUGGESTED ACTION (PASTE THIS, which MUST name the ← RECOMMENDED option when a USER OPTION block is present, + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
