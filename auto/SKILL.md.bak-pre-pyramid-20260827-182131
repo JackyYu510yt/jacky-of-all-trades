@@ -98,27 +98,17 @@ Glob the working directory for **input plans only** (not state from prior or par
 3. ./PLAN.md                (manual plan)
 4. ./SPEC.md                (ONLY when BOUND — a pointer, a chained /spec, or
                              your direction; never by mere presence. See
-                             "Milestone Blueprint Mode" below)
+                             "Phase Blueprint Mode" below)
 5. ./.claude/plans/*.md     (older /prep outputs)
 6. User's invocation message + recent context
 ```
 
-A `SPEC.md` with a `## Milestones` blueprint is a plan source ONLY when /auto is
-**bound** to it per the binding rule in **Milestone Blueprint Mode** below (explicit
+A `SPEC.md` with a `## Phases` blueprint is a plan source ONLY when /auto is
+**bound** to it per the binding rule in **Phase Blueprint Mode** below (explicit
 pointer, a chained `/spec`, or your direction). A SPEC.md merely sitting in the
-working directory does NOT make it a source — and a SPEC.md with NO `## Milestones`
+working directory does NOT make it a source — and a SPEC.md with NO `## Phases`
 section is never an execution plan. In both cases /auto falls through to the
 rest of the list and runs as normal.
-
-**Legacy heading (specs written before 2026-08-27).** A `## Phases` heading is
-the OLD name for this same blueprint, back when the pyramid ran PHASE ▸
-MILESTONE ▸ STEP. Read it as a `## Milestones` section with the two upper
-layers renamed in place: its top-level `## Phase N` blocks are MILESTONES, and
-its inner `Milestone N.x` waypoints are PHASES. Same fields, same checkpoints,
-same behavior — only the words moved. Never blend the two vocabularies in one
-run; adopt the new names in the runbook and the board, and say so once in the
-report. Rewriting the spec file itself is a `/spec` job, not something /auto
-does mid-run.
 
 Existing `./auto-runs/*/runbook.txt`, `./auto-runs/*/RUNBOOK.md`, and `./auto-runs/*/GOAL.md` files are state from prior or parallel /auto runs and are deliberately ignored here. This is what makes parallel chats in the same directory safe — each gets its own slug and its own runbook with no glob-based crosstalk.
 
@@ -203,20 +193,18 @@ This is the ONE place /auto pauses before doing real work. The authorization rul
 Once the gate clears, the rule is permanent for the rest of the run: no further pauses except the Hard Invariant trips and STUCK.
 
 
-## Milestone Blueprint Mode — follow a /spec blueprint when one is bound
+## Phase Blueprint Mode — follow a /spec blueprint when one is bound
 
-A `SPEC.md` produced by `/spec` can carry a `## Milestones` **blueprint**: an ordered
-plan nested in three zoom levels — **MILESTONE ▸ PHASE ▸ STEP**:
+A `SPEC.md` produced by `/spec` can carry a `## Phases` **blueprint**: an ordered
+plan nested in three zoom levels — **PHASE ▸ MILESTONE ▸ STEP**:
 
 ```
-MILESTONE    the biggest unit — a named chunk of the goal, carrying
-             REQUIRES / VERIFY-REQUIRES / PRODUCES / DONE-WHEN
-  PHASE      a waypoint inside a milestone with its own DONE-WHEN
-             (optional layer — only on big milestones)
-    STEP     a single action (the flexible doing)
+PHASE      a milestone-sized goal with REQUIRES / VERIFY-REQUIRES / PRODUCES / DONE-WHEN
+  MILESTONE  a waypoint inside a phase with its own DONE-WHEN (optional layer — only on big phases)
+    STEP       a single action (the flexible doing)
 ```
 
-(`PHASE` is the blueprint's middle layer — distinct from build **stage-mode**'s
+(`MILESTONE` is the blueprint's middle layer — distinct from build **stage-mode**'s
 `stages/stage_N.py` file layout; they don't interact.) When /auto is bound to a
 blueprint, it follows it instead of deriving its own step list — the blueprint
 pins *where* each checkpoint is; /auto still owns *how* to reach it (it
@@ -234,11 +222,11 @@ working directory does NOT bind. /auto binds only when one of these holds:
 1. Explicit pointer   — invocation names a file (/auto <path>/SPEC.md) → use it.
 2. /spec chained      — /spec is invoked alongside /auto (e.g. `/auto /spec`,
                          or /spec is the active spec lane this session) → bind
-                         to that spec's `## Milestones` blueprint.
+                         to that spec's `## Phases` blueprint.
 3. You direct it       — the user references the spec/blueprint as what to run,
                          or it's the blueprint we've actively been working in
                          this session → bind to it.
-4. None of the above   → run as NORMAL /auto, even if a `## Milestones` SPEC.md is
+4. None of the above   → run as NORMAL /auto, even if a `## Phases` SPEC.md is
                          sitting in the folder. Presence is not a clue. Derive
                          the runbook from the other plan sources / invocation.
                          Nothing changes from today's behavior.
@@ -256,20 +244,20 @@ the chosen blueprint's path is frozen for the run alongside the slug.
 
 ### Blueprint → runbook
 
-Each milestone becomes a runbook step cluster. Carry the milestone's fields onto it
+Each phase becomes a runbook step cluster. Carry the phase's fields onto it
 verbatim — do NOT re-derive them:
 
 ```
-Cluster for Milestone N:
-  pre-verify: <the milestone's VERIFY-REQUIRES check>   (gate before any work runs)
-  action:     <the milestone's STEPS>                   (guidance — may improvise)
-  verify:     <the milestone's DONE-WHEN check>         (the checkpoint)
+Cluster for Phase N:
+  pre-verify: <the phase's VERIFY-REQUIRES check>   (gate before any work runs)
+  action:     <the phase's STEPS>                   (guidance — may improvise)
+  verify:     <the phase's DONE-WHEN check>         (the checkpoint)
 ```
 
-When a milestone has the **phase layer**, each phase becomes its own
-sub-step with its own `DONE-WHEN` checkpoint, run in order between the milestone's
-pre-verify and the milestone's final `DONE-WHEN`. This is what makes a failure
-narrow to one waypoint: milestone red → the phase whose checkpoint failed → its
+When a phase has the **milestone layer**, each milestone becomes its own
+sub-step with its own `DONE-WHEN` checkpoint, run in order between the phase's
+pre-verify and the phase's final `DONE-WHEN`. This is what makes a failure
+narrow to one waypoint: phase red → the milestone whose checkpoint failed → its
 steps.
 
 The blueprint's `DONE-WHEN`s and `VERIFY-REQUIRES` are the verify checks — they
@@ -282,28 +270,28 @@ quality bar vets checkability, not principles.
 **Assumptions & Unknowns → early probes.** When the bound SPEC.md carries an
 `Assumptions & Unknowns` section (see /spec — one unproven belief + its
 cheapest probe per line), schedule each **load-bearing** assumption's probe as
-an EARLY runbook step, before the milestones that stand on that assumption; the
+an EARLY runbook step, before the phases that stand on that assumption; the
 step's verify is the probe's expected fact. A wrong assumption then dies on
 minute one, not at hour three of the run. A probe that DISPROVES its assumption
 is a failed foundation, not a fix-mode bug: branch like a failed pre-verify —
-an earlier milestone can establish the real condition → STUCK naming it; the
+an earlier phase can establish the real condition → STUCK naming it; the
 assumption was externally supplied → stop and surface the recipe. Assumptions
-whose probe no milestone depends on may run in any order (KISS — don't front-load
+whose probe no phase depends on may run in any order (KISS — don't front-load
 what nothing stands on).
 
-### Per-milestone loop — verify the foundation BEFORE the work
+### Per-phase loop — verify the foundation BEFORE the work
 
-For each milestone in order:
+For each phase in order:
 
 ```
 1. Run VERIFY-REQUIRES (the readiness gate).
      PASS → go to step 2.
      FAIL → identify WHICH `REQUIRES` condition the gate actually failed on
-            (when a milestone lists several, with mixed tags), then branch on THAT
+            (when a phase lists several, with mixed tags), then branch on THAT
             line's SOURCE TAG:
-        ← from Milestone X  → STUCK. A milestone that should have produced this
+        ← from Phase X  → STUCK. A phase that should have produced this
                           under-delivered. Do NOT fake the condition, do NOT
-                          test on a missing foundation. Report which milestone.
+                          test on a missing foundation. Report which phase.
         ← external      → STOP and surface the how-to-get-it recipe to the
                           user ("Missing <condition>. To get it: <recipe>.
                           Supply it, then resume."). This is a Phase-0-style
@@ -312,13 +300,13 @@ For each milestone in order:
                           places /auto pauses; it pauses because it CANNOT
                           manufacture the condition, per Probe-don't-assume.)
 2. Run the work, improvising the route as needed (fix mode on sub-failures):
-     - flat milestone → run STEPS.
-     - phased         → for each PHASE in order: run its STEPS, then check its
-                     DONE-WHEN. A phase whose DONE-WHEN fails localizes the
+     - flat phase  → run STEPS.
+     - milestone'd → for each MILESTONE in order: run its STEPS, then check its
+                     DONE-WHEN. A milestone whose DONE-WHEN fails localizes the
                      break to that waypoint → fix mode there before advancing.
-3. Run the milestone DONE-WHEN (the final checkpoint).
-     PASS → mark PRODUCES satisfied, advance to the next milestone.
-     FAIL → fix mode / approach rotation on this milestone, up to the 5-approach
+3. Run the phase DONE-WHEN (the final checkpoint).
+     PASS → mark PRODUCES satisfied, advance to the next phase.
+     FAIL → fix mode / approach rotation on this phase, up to the 5-approach
             bound, then PARK or STUCK as usual.
 ```
 
@@ -398,31 +386,23 @@ Mode:    NORMAL | DIAGNOSING | ROTATING
 Functions:  (any run that writes/rewrites a def — labeled by the author checklist; see Function-author sub-agent + FnReview)
   <name>: AUTHOR | INLINE — <one-line reason naming the deciding checklist line> | review: <FnReview stamp — see FnReview stamp vocabulary>
 
-Milestone: <the one named chunk of the goal this run delivers>
+Steps:
+  1. [PENDING] <action one-liner>
+        requires:   <precondition + source tag: ← from step X | ← external: recipe>  (optional)
+        pre-verify: <yes/no check the requires hold — run BEFORE the action>          (optional)
+        verify: <observable check the step is done>
+        rollback: <undo if step later breaks — optional>
 
-Steps:  (grouped into ordered PHASES — see The Board)
-
-  Phase 1 · <what this phase achieves>
-      DONE-WHEN: <observable checkpoint proving the whole phase landed>
-    1.1 [PENDING] <action one-liner>
-          requires:   <precondition + source tag: ← from 1.2 | ← external: recipe>  (optional)
-          pre-verify: <yes/no check the requires hold — run BEFORE the action>       (optional)
-          verify: <observable check the step is done>
-          rollback: <undo if step later breaks — optional>
-
-    1.2 [PENDING] <action one-liner>
-          verify: <observable check>
-
-  Phase 2 · <what this phase achieves>
-      DONE-WHEN: <observable checkpoint>
-    2.1 [PENDING] <action one-liner>
-          verify: <observable check>
+  2. [PENDING] <action one-liner>
+        verify: <observable check>
 
   ...
 
+  N. [PENDING] <action one-liner>
+        verify: <observable check>
+
 Status:
-  Current phase:     1 of N — <phase name>
-  Current step:      1.1
+  Current step:      1
   Approaches tried:  0   (resets each step)
   Parked steps:      []
   Mode reason:       (filled when Mode != NORMAL)
@@ -437,104 +417,10 @@ Status:
   Jobs:              []    (live background jobs: id/PID + artifact path + expected duration)
   Reviewer:          n/a | pending | <last verdict>
   Navigator:         n/a | <verdict> @<ISO> — <one-line reasoning> (mirrored to PROGRESS.md)
-  Board:             ./auto-runs/<slug>/BOARD.md — <k> of <N> phases green
   Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
 
 `Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate) — unless a FnReview `open` line or a fix-trigger `unreviewed` stamp forces the refuter, then `n/a → pending` (see FnReview). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate). `Principles:` rides the same way for code deliverables — the principles-sweep (Goal-Guardian section) stamps it mid-run; only its appended violation STEPS gate DONE (via all-steps-verified), never the field itself.
-
-### The Board — the chronological to-do list (every run, every pattern)
-
-The runbook is the contract; the **board** is the human-readable view of it.
-`./auto-runs/<slug>/BOARD.md` is written at runbook generation, rewritten on
-every phase transition, and reprinted in **every** checkpoint and final report.
-It is the one artifact the user reads to know where a long run is without
-opening anything.
-
-**The pyramid — one vocabulary, used everywhere (see /principles → Plan vocabulary):**
-
-```
-MILESTONE    the biggest unit — the named chunk of the goal this run delivers
-  PHASE      an ordered waypoint inside it, with its own DONE-WHEN checkpoint
-    STEP     a single action (the flexible doing)
-```
-
-A normal /auto run has **exactly one milestone** — the Success line, named in
-plain words. Multiple milestones only when the user's goal genuinely contains
-several deliverables; then the board lists them in order and only one is amber
-at a time.
-
-**Board format:**
-
-```
-BOARD — <slug>
-
-Milestone  🟡  <the deliverable in plain words>
-
-  Phase 0 · <name> ......... ✅  <the evidence that closed it>
-  Phase 1 · <name> ......... ✅  <the evidence that closed it>
-  Phase 2 · <name> ......... 🟡  <what's happening right now>
-  Phase 3 · <name> ......... ⬜
-  Phase 4 · <name> ......... ⬜
-
-  Stop before: <the never-do line from GOAL.md, if the contract has one>
-```
-
-Marks: `⬜` not started · `🟡` in progress · `✅` closed with evidence ·
-`🔴` blocked (in fix mode) · `⏸️` parked · `⏭️` skipped (say why on the line).
-
-**A ✅ costs evidence, not a claim.** A phase goes green only when its
-`DONE-WHEN` passed, and the line carries the observable that proved it
-("1.4 MB mp3", "instance 27431, ssh ok", ".srt with 214 cues"). A green phase
-with no evidence on its line is a lying board — the exact false-pass shape
-HI #10 and the Visual Checkpoints rules exist to stop. Never mark a phase from
-the fact that its steps ran.
-
-### Phase gates — how the board earns its keep
-
-Grouping steps into phases is structural, not cosmetic. For a self-derived
-runbook (sources 3–4), runbook generation now does this:
-
-1. **Name the milestone first** — one plain sentence, the same words the user
-   would use. It is the frozen Success line restated for a human; it never
-   changes mid-run (same freeze rule as the Success line).
-
-2. **Group the steps into 3–6 ordered phases.** A phase is a chunk that means
-   something on its own ("rig up", "claim a job", "transcribe", "deliver") — not
-   an arbitrary slice of three steps. If a phase can't be given a name a
-   non-engineer would understand, the grouping is wrong.
-
-3. **Give every phase a `DONE-WHEN`** — one observable checkpoint proving the
-   whole phase landed, distinct from its last step's `verify`. The step verify
-   asks *did this action work*; the phase `DONE-WHEN` asks *is this chunk of the
-   goal actually true now*. Same discriminating-test bar as any other check
-   (HI #13): a `DONE-WHEN` that would also pass in the nearest failure state is
-   hand-wavy — tighten it. Self-derived `DONE-WHEN`s go through the same
-   verify-check sanity pass and carry the same `false-pass:` trap line.
-
-4. **Run phase by phase.** Steps inside a phase run in order; the phase's
-   `DONE-WHEN` runs after its last step. PASS → phase green, advance. FAIL →
-   fix mode scoped to **that phase**, up to the usual 5-approach bound, then
-   PARK or STUCK. This is what makes a failure read *"Phase 3 red — step 3.1"*
-   instead of *"step 7 of 11 failed"*: blame lands on one named waypoint.
-
-5. **A blocked phase blocks only its dependents.** Independent later phases
-   still run (existing PARK behavior, now scoped at phase level).
-
-**Depth scales (KISS, P5).** A trivial one-shot — a rename, a one-line fix —
-gets a milestone and ONE phase, and the board is three lines. Do not
-manufacture phases to fill a pyramid. The rule is *always structured*, not
-*always big*.
-
-**Blueprint-bound runs** (see Milestone Blueprint Mode) already carry this
-shape — the blueprint's milestones and phases ARE the board. Render it; do not
-re-derive it.
-
-**Runs already in flight get no retrofit.** The board is created at runbook
-generation. A run whose runbook was written before this rule existed keeps its
-flat step list and reports without a board — resuming or a guardian tick must
-NOT invent one mid-run, because a board rebuilt from memory would carry green
-marks nothing verified. New run, new board.
 
 ### Per-step lifecycle
 

@@ -380,8 +380,8 @@ Log empty):
      with no probe = a blank HARD field. -->
 - ASSUME: <belief>   PROBE: <cheapest check that proves or disproves it>
 
-## Milestones (blueprint — default; omit only for a trivial one-shot)
-<!-- Ordered MILESTONE ▸ PHASE ▸ STEP plan /auto follows. One block per milestone. -->
+## Phases (blueprint — default; omit only for a trivial one-shot)
+<!-- Ordered PHASE ▸ MILESTONE ▸ STEP plan /auto follows. One block per phase. -->
 
 ---
 
@@ -391,92 +391,90 @@ Log empty):
 
 Tell the user it's created and that changes are now tracked.
 
-### Milestone blueprint — the step-by-step plan /auto follows
+### Phase blueprint — the step-by-step plan /auto follows
 
-For any task beyond a trivial one-shot, the `## Milestones` section holds an ordered
+For any task beyond a trivial one-shot, the `## Phases` section holds an ordered
 blueprint `/auto` runs without guessing. It nests in **three zoom levels** —
 write only as deep as the task needs:
 
 ```
-MILESTONE      the biggest unit — a named chunk of the goal, with its own
-               conditions + checkpoint
-  PHASE        a waypoint inside a milestone, with its own checkpoint
-               (optional layer)
-    STEP       a single action (the flexible doing)
+PHASE        a milestone-sized goal with its own conditions + checkpoint
+  MILESTONE    a waypoint inside a phase, with its own checkpoint (optional layer)
+    STEP         a single action (the flexible doing)
 ```
 
 **Depth scales with the task** (KISS — don't nest deeper than it earns):
 - Trivial one-shot (a rename) → no blueprint; the top-level Goal + Success
   criteria already cover it.
-- Normal task → MILESTONES with STEPS directly under each (no phase layer).
-- Big / risky / failure-prone (a login flow) → full depth MILESTONE ▸ PHASE ▸
-  STEP, so a failure narrows to one waypoint instead of the whole milestone.
+- Normal task → PHASES with STEPS directly under each (no milestone layer).
+- Big / risky / failure-prone (a login flow) → full depth PHASE ▸ MILESTONE ▸
+  STEP, so a failure narrows to one waypoint instead of the whole phase.
 
-**Milestone block — the unit `/auto` reads and runs:**
+**Phase block — the unit `/auto` reads and runs:**
 
 ```
-## Milestone N — <what this milestone achieves>
+## Phase N — <what this phase achieves>
 
-REQUIRES:          <condition that must be true first>   ← from Milestone <X>            [HARD]
+REQUIRES:          <condition that must be true first>   ← from Phase <X>            [HARD]
                    <another condition>                   ← external: <how to get it>  [HARD]
 VERIFY-REQUIRES:   <exact yes/no check that proves we're ready>                       [HARD]
-PRODUCES:          <output / now-true condition that feeds later milestones>
-DONE-WHEN:         <observable checkpoint proving this milestone succeeded>               [HARD]
-RECOVERS-BY:       <failure-prone / unattended milestones only — failure mode + ORDERED   [HARD when
+PRODUCES:          <output / now-true condition that feeds later phases>
+DONE-WHEN:         <observable checkpoint proving this phase succeeded>               [HARD]
+RECOVERS-BY:       <failure-prone / unattended phases only — failure mode + ORDERED   [HARD when
                    recovery: roll back partial write → re-assert precondition (re-run  applicable]
-                   this milestone's VERIFY-REQUIRES, not a new check) → invalidate
+                   this phase's VERIFY-REQUIRES, not a new check) → invalidate
                    downstream → resume. Proof: after injecting the named failure,
-                   the milestone still reaches its DONE-WHEN.>
+                   the phase still reaches its DONE-WHEN.>
 
 STEPS:             1. <action>   2. <action>   ...        (guidance — flexible)
 ```
 
-**When a milestone earns the phase layer**, replace its flat `STEPS` with named
-phases, each carrying its own checkpoint:
+**When a phase earns the milestone layer**, replace its flat `STEPS` with named
+milestones, each carrying its own checkpoint:
 
 ```
-  Phase N.1 — <waypoint name>
+  Milestone N.1 — <waypoint name>
         DONE-WHEN: <checkpoint for this waypoint>         [HARD]
         STEP: <action>   STEP: <action>
-  Phase N.2 — <waypoint name>
+  Milestone N.2 — <waypoint name>
         DONE-WHEN: <checkpoint>                           [HARD]
         STEP: <action>
 ```
 
 - **Hard vs flexible.** `REQUIRES`, `VERIFY-REQUIRES`, and every `DONE-WHEN`
-  (milestone- or phase-level) are the rails — crisp and checkable (an exit
+  (phase- or milestone-level) are the rails — crisp and checkable (an exit
   code, a file + size, a parseable assertion, a read screenshot). `STEP`s are
   guidance; `/auto` improvises the route between checkpoints. The blueprint pins
   the *where*, not the *how*.
-- **Setup is its own milestone.** Reaching a condition is always written as an
-  earlier milestone, never fixed inline. The first milestone(s) usually *establish the
-  testing conditions* (e.g. *get a logged-in account*); the milestones that need
+- **Setup is its own phase.** Reaching a condition is always written as an
+  earlier phase, never fixed inline. The first phase(s) usually *establish the
+  testing conditions* (e.g. *get a logged-in account*); the phases that need
   them list those conditions under `REQUIRES`.
 - **Source-of-condition tag.** Every `REQUIRES` line names its source:
-  `← from Milestone <X>` (an earlier milestone produces it — `/auto` can satisfy it) or
+  `← from Phase <X>` (an earlier phase produces it — `/auto` can satisfy it) or
   `← external: <how to obtain it>` (a human / a dropped-in file / another system
   supplies it — `/auto` cannot manufacture it, so the recipe is written right
   there). This is what lets `/auto` tell *"I'm stuck"* apart from *"I need
   accounts — here's how to get them."*
 - **More, smaller units = closer checkpoints = less drift.** Each `DONE-WHEN`
-  is a place `/auto` re-checks it's still on track; the phase layer exists
-  so a failure boxes into one waypoint instead of the whole milestone.
+  is a place `/auto` re-checks it's still on track; the milestone layer exists
+  so a failure boxes into one waypoint instead of the whole phase.
 - **Design the failure path, not just the happy path.** On a failure-prone or
-  unattended milestone, add `RECOVERS-BY`: name how it fails and the *ordered*
+  unattended phase, add `RECOVERS-BY`: name how it fails and the *ordered*
   recovery — roll back partial work → re-assert the precondition → invalidate
   downstream → resume — the planning-time form of `/auto`'s Re-entry hygiene.
   The happy-path `DONE-WHEN` proves it worked; `RECOVERS-BY` proves it survives
-  when it doesn't (proof: inject the named failure, confirm the milestone still
-  reaches its `DONE-WHEN`). When the milestone uses the phase layer, attach
-  `RECOVERS-BY` to whichever phase can leave partial state. Skip it on
-  milestones that can't leave partial state behind (KISS).
+  when it doesn't (proof: inject the named failure, confirm the phase still
+  reaches its `DONE-WHEN`). When the phase uses the milestone layer, attach
+  `RECOVERS-BY` to whichever milestone can leave partial state. Skip it on
+  phases that can't leave partial state behind (KISS).
 
 **Quality bar — a blueprint isn't done until it's airtight.** Do NOT consider
-the Milestones section complete while any HARD field is blank or hand-wavy (a
+the Phases section complete while any HARD field is blank or hand-wavy (a
 `REQUIRES`, `VERIFY-REQUIRES`, or `DONE-WHEN` that isn't concretely checkable,
-or a `REQUIRES` with no source tag). On a milestone flagged failure-prone or
+or a `REQUIRES` with no source tag). On a phase flagged failure-prone or
 unattended, a missing or hand-wavy `RECOVERS-BY` trips this bar too
-(HARD-when-applicable); on a happy-path milestone that can't leave partial state
+(HARD-when-applicable); on a happy-path phase that can't leave partial state
 it's simply absent, and that's fine. A vague field is exactly the gap `/auto`
 would improvise into — close it here, at planning time. A HARD check that
 cannot say NO — a `VERIFY-REQUIRES` or `DONE-WHEN` that would also pass in the
