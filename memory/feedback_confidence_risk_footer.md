@@ -1,14 +1,14 @@
 ---
 name: confidence-risk-footer
-description: "Footer v3.1 (8/27/26; v3 + a FEYNMAN line closing SUGGESTED ACTION): every /explain (master), /auto, /prep, /spec report ends with NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL (4 lenses) → SUGGESTED ACTION (PASTE THIS + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE (CONFIDENCE PERFECT/HIGH/MED/LOW + RISK); one blank line between every field, fixed labels, plain-language text; pending caps confidence below HIGH"
+description: "Footer v3.2 (8/28/26; v3.1 + a USER OPTION section above SUGGESTED ACTION): every /explain (master), /auto, /prep, /spec report ends with NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL (4 lenses) → USER OPTION (only on a fork: options with cost, balanced +/− pros and cons, a HOLDS UP durability read each, one ← RECOMMENDED, IF YOU SAY NOTHING + WHY THAT DEFAULT) → SUGGESTED ACTION (PASTE THIS echoes the ← RECOMMENDED option + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE (CONFIDENCE PERFECT/HIGH/MED/LOW + RISK); one blank line between every field, fixed labels, plain-language text; pending caps confidence below HIGH"
 metadata: 
   node_type: memory
   type: feedback
   originSessionId: ebc6e6ed-9992-4cc1-8fb3-8e137a5d94c3
-  modified: 2026-08-27T00:00:00.000Z
+  modified: 2026-08-28T00:00:00.000Z
 ---
 
-Every report from /explain (the master template), /auto, /prep, and /spec must END with this footer — v3.1, user-confirmed 8/27/26. ONE BLANK LINE between every field; labels fixed; the explaining text under each label is plain language (one everyday sentence, no jargon, no shorthand):
+Every report from /explain (the master template), /auto, /prep, and /spec must END with this footer — v3.2, user-confirmed 8/28/26. ONE BLANK LINE between every field; labels fixed; the explaining text under each label is plain language (one everyday sentence, no jargon, no shorthand):
 
 ```
 NET: <where things stand RIGHT NOW after this turn — result gap first, then gains/changes. Not a forecast.>
@@ -36,6 +36,25 @@ Heals: <how failures recover or surface themselves>
 Replaces: <whose job/attention the system deletes>
 
 Guarantees: <what wrongness is structurally impossible>
+
+**━━ USER OPTION ━━**  (ONLY when this turn puts a decision to the user — omit the whole block when there is no fork, never write "n/a")
+
+QUESTION: <the decision, one plain sentence>
+
+  1. <option in the user's terms>   (<cost>)
+
+     + <what it gets you>   + <what it gets you>
+     − <what it costs you>  − <what it costs you>   (balanced counts — more words about the favorite stacks the deck)
+
+     HOLDS UP: <the durability read: survives the NEXT run, on a DIFFERENT input, with NOBODY watching? what maintenance does it create? what breaks later because we picked it? band-aids NAMED as band-aids — "fixes tonight, recurs next batch">
+
+  <n>. <the option that holds up best>   (<cost>)   ← RECOMMENDED
+
+     + / − / HOLDS UP — same four fields, same order
+
+IF YOU SAY NOTHING: I take <n> and keep going.
+
+WHY THAT DEFAULT: <why it wins on STRUCTURE, not speed — what each losing option leaves broken, and why this one is the least maintenance and least likely to recur>
 
 **━━ SUGGESTED ACTION ━━**
 
@@ -65,6 +84,7 @@ RISK: HIGH | MEDIUM | LOW — <what's exposed if wrong; which parts are unproven
 - CURRENT STAGE: BEFORE/NOW/CHANGED are this turn's facts, CHANGED carries the WHY; NEXT is the milestone (old NEXT STEP folded in); MEANT TO = achieve + fix, always both; FEYNMAN = one analogy, zero jargon, names both the Heaven's Net fit and the goal fit (the *understand it* version — the arrows under SUGGESTED ACTION are the *check it* version; both stay).
 - SUGGESTED ACTION (v3, 8/22/26 — see [[paste-this-answers-the-question]]): PASTE THIS answers THIS TURN'S question — on a pick it IS the pick (+ one line why), the work-prompt waits for the next turn; on a do-it request it is the complete standalone work prompt (what / files / limits / corrected facts / show-or-ask before anything costly) — one move, not a menu. → TOWARD THE GOAL is a chain in plain words (move → concrete gain → which lens needs it and why, + cost of the rejected option), never a bare lens tag. → HEAVEN'S NET on a pick = seen evidence / what ruled the others out / how we'd know fast if wrong + bounded fallback, unchecked items named, never "n/a"; on a work step = the canonical section in ~/.claude/skills/error-recon/SKILL.md — if the action touches recovery logic, READ it before writing the line (see [[heavens-net]]).
 - SUGGESTED ACTION FEYNMAN (v3.1, 8/27/26 — user: "i think we also need a feynman for the suggested action part"): a SECOND Feynman line, last in the block, under the two arrows. It re-tells the CHOICE in kid words — ONE everyday analogy, zero jargon, three beats: (1) why THIS move won, (2) what we passed on instead, (3) what happens if it turns out wrong. User-picked shape from four variants ("why this, not that" beat the move-itself, paste-vs-don't, and one-breath-summary options): “Two doors. We rolled a test cart through one and it came out the far side in thirty seconds — so that’s our door. If it turns out to be a closet, nothing’s lost; we haven’t unpacked anything yet.” It is the plain-words twin of the two arrows — the arrows are the audit trail, this is the version the user can repeat back from memory. It must NOT repeat the CURRENT STAGE FEYNMAN: that one explains the milestone (NEXT), this one explains the decision. On a do-it request with no rival option, beat (2) is the obvious alternative not taken (patch it instead / wait / do it by hand) and why it loses. Goal reached or standalone question → "n/a — <why>", never skipped. Applied 8/27/26 to /explain (template + rule bullet + label list + final check), /auto (contract template + compass paragraph + all 3 inline DONE/PARTIAL/STUCK templates), /prep (verdict card + compass paragraph), /spec (block + paragraph), /principles (P13 + footer rule + checklist). Pre-v3.1 copies: ~/.claude/skills/_backups/footer-v3.1-20260827/.
+- USER OPTION (v3.2, 8/28/26 — user: "i want the User Option to be a section", then picked variant C1 of four printed shapes for being "the most reasoning"): a SECTION of its own, sitting directly ABOVE SUGGESTED ACTION, present ONLY when the turn genuinely puts a decision to the user (no fork → omit entirely, never "n/a"; SUGGESTED ACTION still stands alone as before). Four fields per option, always in order: the option line with its cost in parentheses, `+` pros, `−` cons, and HOLDS UP. **HOLDS UP is the field that earns the section** — it judges each option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching; what maintenance does it create; what breaks later because we chose it. That is [[structural-fix-vs-patch]] applied per option, so a band-aid is NAMED as a band-aid there and never softened. Consequence the user explicitly wanted: because HOLDS UP forces the durability question, **a structurally better option that was NOT on the original list must be written down and offered rather than quietly skipped** — if every listed option is a band-aid, that IS the finding. Exactly ONE option carries `← RECOMMENDED` on the option line itself, decided on the HOLDS UP reads FIRST and cost second (the fastest option wins only when it also holds up). `IF YOU SAY NOTHING: I take <n> and keep going` keeps an unattended run moving. `WHY THAT DEFAULT` argues on structure — "it's faster" is never sufficient. **ECHO RULE (hard, user-decided 8/28/26 when they asked whether SUGGESTED ACTION should decide independently):** PASTE THIS MUST name the option marked ← RECOMMENDED. One decision, two renderings — USER OPTION is where the decision gets MADE (menu + reasoning + durability), SUGGESTED ACTION is where it gets HANDED OVER (pasteable words + goal chain + Heaven's Net + Feynman). Two sections that both decide can disagree and leave the user to reconcile them; if they ever differ, the report is wrong — fix the reasoning above, never split the verdict. Applied 8/28/26 to /explain (template + full rules block + label list + final check), /auto (contract template + rules paragraph + all 3 inline DONE/PARTIAL/STUCK templates + echo note on each Paste-this line), /prep (verdict card rows + rules paragraph), /spec (block + rules paragraph), /principles (P13 + footer rule + audit checklist). Pre-v3.2 copies: ~/.claude/skills/_backups/useroption-v1-20260828/.
 - A bare grade with no evidence clause is invalid.
 - v3 SUGGESTED ACTION rules applied 8/22/26 to ALL FOUR: /explain (template + rules), /auto (report contract template + compass rule + all 3 inline DONE/PARTIAL/STUCK templates), /prep (FINAL VERDICT card + compass rule), /spec (footer block + compass paragraph). Pre-v3 copies of all four: ~/.claude/skills/_backups/footer-v3-20260822/.
 - Codified in (v2 applied 8/22/26, pristine pre-v2 copies in ~/.claude/skills/_backups/footer-v2-PRISTINE-20260822/): /principles P13 "The report grades itself" (the canonical RULE; template lives in /explain), /explain (the MASTER template: footer block + layout / CURRENT STAGE / SUGGESTED ACTION rules + final check), /auto (report contract + compass rules + all 3 inline DONE/PARTIAL/STUCK templates), /prep (FINAL VERDICT card rows + compass rules), /spec (footer block + compass paragraph). NET line rule itself lives in /personal-prefs.
