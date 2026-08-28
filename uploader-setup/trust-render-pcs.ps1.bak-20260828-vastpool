@@ -17,33 +17,6 @@ $RenderPCs = @(
     @{ Name = 'Render PC4'; Id = 'XSXJ73D-M4ZEYXP-3TMZGIX-5AQTZBP-47ZN2S2-C6PXQF4-6TAB5MV-VDUSJQE' },
     @{ Name = 'Render PC5'; Id = 'OBY47V5-FXCSZCM-2WQT55V-IHMJXJF-QKGUFXG-J6RONWC-UFMJKL7-EPWRFAG' }
 )
-
-# The rented-rig delivery pool (added 2026-08-28). Kept SEPARATE from $RenderPCs
-# above because those are physical machines with payload-sealed identities that must
-# stay in lockstep with setup.ps1; these 8 are fixed pool identities a vast.ai rig
-# assumes at boot (one per concurrent rig — core/vast.py:150 "uploader is told to
-# trust exactly these 8"). Same trust + same share, different provenance.
-#
-# INCIDENT that added them (2026-08-28, delivery-naming-193934): a rented rig rendered
-# a real 49.5 MB video and staged it under the exactly-correct filename, then sat in
-# "confirming delivery" for the full 1800s timeout (syncthing_delivery.py:448) and the
-# job raised. Zero completion lines in 30 minutes — the uploader had never trusted
-# PCvast-2, so it never connected. The rig did everything right; the last hop had no
-# door. Costed ~$0.16 of rented GPU per attempt to learn nothing new each time.
-$VastPCs = @(
-    @{ Name = 'PCvast-1'; Id = '6EKZ3ZM-42PKZRE-35RPCZG-OAB4YJM-HACLJKG-SJ3UO3O-I2ZIFXV-POLDEAE' },
-    @{ Name = 'PCvast-2'; Id = 'KNQDU33-KWGWB6U-V3TDO3K-AHH6FJG-NPJLSSH-UQ576QY-JDBIPH4-FJSWRQG' },
-    @{ Name = 'PCvast-3'; Id = '7RTASOV-YWMT4JU-62Z6QCZ-QED6DZC-4B7A6MR-OQAIBVR-5SWMTH6-2K3BGQ6' },
-    @{ Name = 'PCvast-4'; Id = '6OCVMHB-WWIKJV2-3K5ZD26-QSOFRW6-DS7ICMM-QWEAH42-S6SMCGX-MQ5VJAY' },
-    @{ Name = 'PCvast-5'; Id = 'YBKI7BS-QVTBWDL-HTH4XW7-63SL3FL-BDRQW2O-NLUB3XR-5LE6DK5-VLE3CA3' },
-    @{ Name = 'PCvast-6'; Id = 'X6QUUG7-QQM5245-4XJDUQH-UQ7TFCT-AKA6CAL-5HUUFJQ-3H3UZXA-K2NMWAK' },
-    @{ Name = 'PCvast-7'; Id = 'IXO5VVY-WTKVDWD-I4IXZTM-UJ3PYOF-EODKSAQ-MV243NF-2XMOAQZ-WXJYIAX' },
-    @{ Name = 'PCvast-8'; Id = 'KKEZOOY-PMFDNZ7-NIF34X7-AOAGOFI-DAAGPE3-WUOR373-VJSZSDN-XTZLMAX' }
-)
-
-# One list from here down — trust + share treat both kinds identically.
-$RenderPCs = $RenderPCs + $VastPCs
-
 $FolderId = 'jr-rendered'
 
 # Talk to the local Syncthing through its own REST API (no exe path guessing).
