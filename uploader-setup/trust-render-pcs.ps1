@@ -24,12 +24,23 @@ $RenderPCs = @(
 # assumes at boot (one per concurrent rig — core/vast.py:150 "uploader is told to
 # trust exactly these 8"). Same trust + same share, different provenance.
 #
-# INCIDENT that added them (2026-08-28, delivery-naming-193934): a rented rig rendered
-# a real 49.5 MB video and staged it under the exactly-correct filename, then sat in
-# "confirming delivery" for the full 1800s timeout (syncthing_delivery.py:448) and the
-# job raised. Zero completion lines in 30 minutes — the uploader had never trusted
-# PCvast-2, so it never connected. The rig did everything right; the last hop had no
-# door. Costed ~$0.16 of rented GPU per attempt to learn nothing new each time.
+# WHY THEY ARE HERE (2026-08-28): completeness, NOT a diagnosis. This list is the
+# durable roster; a future uploader rebuild would otherwise silently drop the 8 pool
+# identities. Adding them is idempotent and free.
+#
+# DO NOT READ THIS AS "the trust step was never run" — that was checked and is FALSE.
+# The vast-syncthing-delivery-003714 run records device-trust already done
+# (log.txt:615, 2026-08-25) and the folder-share half fixed 8/8 the same day
+# (log.txt:675), followed by a real DELIVERY_CONFIRMED via PCvast-1 (log.txt:690).
+# Delivery has been PROVEN working on this fleet.
+#
+# The still-open 2026-08-28 failure is therefore NOT this: a rented rig staged a real
+# 49.5 MB video under the exactly-correct filename, then sat in "confirming delivery"
+# for the full 1800s timeout with ZERO `[pcvast] completion(...)` lines — i.e.
+# connected_seen=False, the uploader never connected AS PCvast-2 in that window.
+# Proven on 08-25 with PCvast-1, failing on 08-28 as PCvast-2, so the cause is
+# something specific to that slot or to that moment (uploader offline / discovery /
+# a per-slot share gap), NOT a missing trust step. Diagnose before spending again.
 $VastPCs = @(
     @{ Name = 'PCvast-1'; Id = '6EKZ3ZM-42PKZRE-35RPCZG-OAB4YJM-HACLJKG-SJ3UO3O-I2ZIFXV-POLDEAE' },
     @{ Name = 'PCvast-2'; Id = 'KNQDU33-KWGWB6U-V3TDO3K-AHH6FJG-NPJLSSH-UQ576QY-JDBIPH4-FJSWRQG' },
