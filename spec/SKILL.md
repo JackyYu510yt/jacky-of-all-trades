@@ -17,7 +17,7 @@ Never write an assumption into the spec as if it were fact. **Success criteria**
 especially must be things you can *prove* — each one empirically checkable (a
 smoke test, a probe, a specialized test that hits the real condition, not a
 proxy). And they must name the **user-visible result** (the deliverable existing
-in the world), never machinery milestones ("the loop runs", "the fix is merged")
+in the world), never machinery waypoints ("the loop runs", "the fix is merged")
 — machinery belongs in phases; criteria phrased as sub-goals produce truthful
 "DONE" reports over undelivered results (P12, adopted 2026-08-12). When a Change Log or Findings entry claims something works, or explains
 *why*, it rests on observed evidence — a run, a probe, a test result — not on
@@ -289,12 +289,13 @@ time, plainly — then write the file:
    blank HARD field (quality bar). Skip this section only when the task has no
    real unknowns (KISS) — don't fabricate doubts for a trivial one-shot.
 
-6. **Phases / blueprint** — the **default** for any task beyond a trivial
+6. **Milestones / blueprint** — the **default** for any task beyond a trivial
    one-shot. Break the work into an ordered blueprint using the three-level
-   format below (PHASES ▸ MILESTONES ▸ STEPS — only as deep as the task needs).
-   This is the step-by-step plan `/auto` follows so it doesn't guess. Skip it
-   ONLY for a trivial single-action task (a rename, a config flip), where one
-   phase would just restate the success criteria.
+   format below (MILESTONES ▸ PHASES ▸ STEPS — only as deep as the task needs;
+   canonical vocabulary in `/principles` → Plan vocabulary). This is the
+   step-by-step plan `/auto` follows so it doesn't guess. Skip it ONLY for a
+   trivial single-action task (a rename, a config flip), where one milestone
+   would just restate the success criteria.
 
 Then Write `./SPEC.md` from this template (fill the sections; leave the Change
 Log empty):

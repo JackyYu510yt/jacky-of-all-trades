@@ -376,7 +376,7 @@ On a terminal verdict (DONE / STUCK-user / STUCK (stopped by user)), /auto delet
 
 ### Contract + Guardian (universal)
 
-Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `APPROACHES.md` + `PROGRESS.md` + `DIGEST.md` (the compact area — see Universal state files) for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
+Right after the slug is frozen, /auto pins the run's **contract** (Goal / Success / Circumstances / Never-do / Validation / False-pass / Run-start) into `./auto-runs/<slug>/GOAL.md`, and creates `BOARD.md` (the chronological milestone/phase board — see The Board) + `APPROACHES.md` + `PROGRESS.md` + `DIGEST.md` (the compact area — see Universal state files) for EVERY run, any pattern. The Goal-Guardian cron arms LAZILY — at the first moment the run would end a turn non-terminal. Full rules, tick protocol, checkpoint-writer, and terminals live in the **Goal-Guardian** section below; that section is canonical.
 
 ### Runbook file location
 
@@ -703,9 +703,9 @@ A self-derived runbook (sources 3–4) gets the same condition discipline a /spe
 
 3. **Gate each dependent step on a `pre-verify`** — run the readiness check BEFORE the action, not after. A step that needs a live session re-checks the session is live first.
 
-4. **On a failed `pre-verify`, branch on the source tag** (identical to Phase Blueprint Mode): `← from step X` → **STUCK** (the producing step under-delivered; don't fake the condition, don't test on a missing foundation); `← external` → **STOP and surface the how-to-get-it recipe**, resume once supplied (a Phase-0-style activation pause, not a STUCK — see Hard Invariant #1).
+4. **On a failed `pre-verify`, branch on the source tag** (identical to Milestone Blueprint Mode): `← from step X` → **STUCK** (the producing step under-delivered; don't fake the condition, don't test on a missing foundation); `← external` → **STOP and surface the how-to-get-it recipe**, resume once supplied (a Phase-0-style activation pause, not a STUCK — see Hard Invariant #1).
 
-Depth scales (KISS): a trivial one-shot needs no preconditions section — skip it. The win is that /auto stops testing on broken foundations whether or not a /spec blueprint was bound. Same machinery as Phase Blueprint Mode, applied to the plans /auto writes itself.
+Depth scales (KISS): a trivial one-shot needs no preconditions section — skip it. The win is that /auto stops testing on broken foundations whether or not a /spec blueprint was bound. Same machinery as Milestone Blueprint Mode, applied to the plans /auto writes itself.
 
 ### Stage-mode runbook (auto-detected for build tasks)
 
@@ -1154,6 +1154,11 @@ Ended:    <ISO timestamp>
 Status:   DONE | PARTIAL | STUCK
 Duration: <wall-clock from Started>
 
+### The board
+<paste ./auto-runs/<slug>/BOARD.md verbatim — the reader sees where the run
+got to before reading a word of prose. Runs that predate the board rule say
+"no board (run started before the board existed)" instead of inventing one.>
+
 ### Headline
 <one-paragraph plain-language summary of what landed>
 
@@ -1419,7 +1424,7 @@ These never bend.
    - A step is taking longer than expected (use Monitor, continue planning)
    - A choice has to be made about a default (timeout, retry count, format) — pick the modern reasonable default, log it, proceed
 
-   The ONLY exits from a /auto RUN: **DONE**, **STUCK-user** (genuinely blocked on something only the user can supply — including guardian round-cap exhaustion), **/auto stop**, or a Hard-Invariant trip in "Auto Does NOT Waive." A SESSION turn may end at `PARTIAL (checkpoint)` — that ends the turn, never the run: the Goal-Guardian cron carries the run onward. Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the **missing-external-condition stop** — whether from Phase Blueprint Mode or a condition-first self-derived runbook — which can fire mid-run at a phase/step boundary when an `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
+   The ONLY exits from a /auto RUN: **DONE**, **STUCK-user** (genuinely blocked on something only the user can supply — including guardian round-cap exhaustion), **/auto stop**, or a Hard-Invariant trip in "Auto Does NOT Waive." A SESSION turn may end at `PARTIAL (checkpoint)` — that ends the turn, never the run: the Goal-Guardian cron carries the run onward. Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the **missing-external-condition stop** — whether from Milestone Blueprint Mode or a condition-first self-derived runbook — which can fire mid-run at a phase/step boundary when an `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
 
 2. **Pre-action context, not pre-action gate.** Before doing something non-trivial, Claude states one or two sentences naming what it's about to do and why. This is for *user awareness*, not for *user approval*. There is no waiting period. Claude finishes the sentence and proceeds.
 
@@ -1564,6 +1569,10 @@ auto-runs/<slug>/GOAL.md       Frozen goal + success conditions
 auto-runs/<slug>/RUNBOOK.md    Step list + current state + mode
                           Updated after every step transition.
 
+auto-runs/<slug>/BOARD.md      Chronological milestone/phase to-do list.
+                          Rewritten on every phase transition; reprinted
+                          in every report. See The Board.
+
 auto-runs/<slug>/PROGRESS.md   Last-tick summary (what fired this tick,
                           what's next). Helps the next tick orient.
 
@@ -1653,7 +1662,8 @@ Tick fires → new TURN in this same session → /auto re-invoked by the pinned 
               Otherwise mark step DONE in runbook, append log line
        Fail → enter fix mode, /repair sub-loop, rotate up to 5x
   8. Update auto-runs/<slug>/RUNBOOK.md and auto-runs/<slug>/logs/run.log
-  9. Write auto-runs/<slug>/PROGRESS.md with one-line "this tick did X" summary
+  9. Rewrite auto-runs/<slug>/BOARD.md if any phase changed mark this tick,
+     then write auto-runs/<slug>/PROGRESS.md with one-line "this tick did X" summary
  10. CHECKPOINT-EXIT: write all state atomically, set Status:
      PARTIAL (checkpoint), end the turn. Next tick fires N min
      later and flips it back to active.
@@ -2409,6 +2419,9 @@ Run-start:     <ISO timestamp — the provenance anchor>
                 Functions block lines — see FnReview)
      Turn-end rule: checkpoint = Status: PARTIAL (checkpoint);
                 STUCK only when user-blocked
+./auto-runs/<slug>/BOARD.md          chronological milestone/phase board
+     — rewritten on every phase transition, reprinted in every
+     checkpoint report (see The Board)
 ./auto-runs/<slug>/APPROACHES.md     append-only approach history
 ./auto-runs/<slug>/PROGRESS.md       last-tick summary + deliverable
      artifact BASELINE (paths/sizes/mtimes at arming) + MIRRORS of

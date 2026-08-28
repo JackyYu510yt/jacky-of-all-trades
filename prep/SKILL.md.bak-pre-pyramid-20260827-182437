@@ -124,7 +124,7 @@ If the answer is "no, it'll ask me something at hour 3," the design has failed t
 | Confirm a destructive action mid-run | Resolved at startup as `--yes` flag or config policy |
 | Wait for an external system? | Monitor + retry with timeout, then fail-fast or skip |
 
-**Boundary check during planning.** Every function spec must declare which **region** of the script it lives in (region, not PHASE — this is a different axis from the plan pyramid in `/principles` → Plan vocabulary):
+**Boundary check during planning.** Every function spec must declare which phase it lives in:
 
 - **Startup-gate function** — runs once before the engine fires. May ask the user. Returns a config object the engine consumes.
 - **Engine function** — runs inside the autonomous loop. May NOT ask the user. All inputs come from the startup-gate config or computed state.
@@ -727,7 +727,7 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                              resolve every decision without asking
                              a human mid-pipeline?
 
-                             Region: STARTUP-GATE | ENGINE
+                             Phase: STARTUP-GATE | ENGINE
                                     - STARTUP-GATE — runs once
                                       before the engine fires; may
                                       ask the user. Optional —

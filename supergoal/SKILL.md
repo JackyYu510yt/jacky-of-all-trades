@@ -41,13 +41,13 @@ Supergoal has a **PLAN** half (you review once) and a **BUILD** half (hands-off)
 
 **Stage 3 — Risks + best practices** for this specific task.
 
-**Stage 4 — Decompose into N phases** (adaptive — no fixed count). Each phase = one clear job with an observable verify check. (Mirrors `/prep`'s function/phase breakdown, which `/auto` later turns into runbook steps.)
+**Stage 4 — Decompose into MILESTONES, then PHASES** (adaptive — no fixed count). Use the shared plan vocabulary (`/principles` → Plan vocabulary): a **MILESTONE** is a named chunk of the goal; a **PHASE** is an ordered waypoint inside it with its own observable checkpoint; a **STEP** is a single action. Most jobs are one milestone with 3–6 phases; only a goal with several distinct deliverables earns more than one milestone. (Mirrors `/prep`'s function breakdown, which `/auto` later turns into a runbook and a board.)
 
 **Stage 5 — Write the plan as a /prep plan file.** Produce `./prep-<slug>.txt` in `/prep`'s own format (the per-phase cards: goal, RED/GREEN/REAL/AUDIT for risky pieces, verify checks, cleanliness grep). **This file is the single contract `/auto` consumes.** Do NOT hand-write `/auto`'s runbook or its `GOAL.md`/`RUNBOOK.md` state files — `/auto` Phase 0 reads the prep file and generates the runbook itself, including its own verify-check sanity pass. (You may also print a short human-readable summary for the Stage-7 review, but the prep file is what gets executed.)
 
 **Stage 6 — Self-critique + plan review.** Run `/prep`'s independent AUDITOR second-brain on the written prep file — a fresh agent that reads it and re-derives risk. Fold its findings back; revise Stages 4–5 if it flags blockers (the "Revise" loop).
 
-**Stage 6.5 — Pre-flight smoke check.** Confirm the plan is actually runnable before committing: tools present, paths exist, and each phase's verify check is well-formed — could it pass while the goal is still unmet? Red → back to Stage 6. Green → Stage 7.
+**Stage 6.5 — Pre-flight smoke check.** Confirm the plan is actually runnable before committing: tools present, paths exist, and each phase's checkpoint is well-formed — could it pass while the goal is still unmet? Red → back to Stage 6. Green → Stage 7.
 
 **Stage 7 — Print the ready-to-paste handoff.** Show a short plan summary + the exact command:
 
@@ -61,7 +61,7 @@ Plain `/auto`. Its Phase 0 auto-detects `./prep-<slug>.txt` as the plan source (
 
 When the user runs `/auto`, it reads the prep file supergoal wrote, generates the runbook, and executes it:
 
-- read each phase → do the work → verify (incl. the cleanliness grep) → write memory → mark DONE.
+- read each phase → do the work → verify (incl. the cleanliness grep) → write memory → mark the phase green on the board → mark DONE.
 - failure → `/auto`'s approach rotation (up to 5 distinct approaches; `/repair` sub-loop) then **park-don't-halt**.
 - stalls, visual checkpoints, disk-is-truth — all of `/auto`'s operational hardening applies.
 - FINAL AUDIT = `/auto`'s **Terminal Refuter Gate**: a fresh agent tries to prove it is NOT done and is given a baseline to diff the deliverables against; the final report shows **coverage %**.

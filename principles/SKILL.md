@@ -52,6 +52,41 @@ Linux    →  /home/<your-username>
 
 `========================================`
 
+## Plan vocabulary — one pyramid, all skills (canonical, added 2026-08-27)
+
+Every skill that breaks work into pieces uses these three words, in this order,
+with no synonyms and no reordering. This section is the source of truth; `/auto`,
+`/spec`, and `/supergoal` follow it.
+
+```
+MILESTONE    the biggest unit — a named chunk of the goal, in the user's own
+             words, with its own checkpoint. Most jobs have exactly ONE.
+
+  PHASE      an ordered waypoint inside a milestone, with its own observable
+             DONE-WHEN checkpoint. Typically 3–6 per milestone.
+
+    STEP     a single action. The flexible layer — the plan pins WHERE the
+             checkpoints are, not HOW to reach them.
+```
+
+**Milestone is the top of the chain because it is the biggest.** A phase is
+part of a milestone, never the other way around.
+
+**The one collision to know about.** `/auto` and `/prep` number their OWN
+internal procedure steps as "Phase −1 / Phase 0 / Phase 8". Those are the
+skill's machinery, not the user's work plan, and they are NOT part of this
+pyramid — do not rename them and do not confuse them with a work PHASE. When
+ambiguity is possible, write *"Phase 3 · transcribe"* (work, always named) vs
+*"Phase 0"* (machinery, always a bare number).
+
+**Legacy specs.** `SPEC.md` files written before 2026-08-27 use a `## Phases`
+heading with the old PHASE ▸ MILESTONE ▸ STEP order. Read them with the two
+upper layers renamed in place (top-level blocks are milestones, inner waypoints
+are phases). Never mix the two vocabularies inside one run.
+
+**Depth scales (P5 — KISS).** A one-line fix is one milestone and one phase, and
+the board is three lines. Structure is always present; size is not.
+
 ## Principles Index
 
 1. **Test the condition, not the label** — the test must place the system in the exact condition being verified; setting a value is not the same as exercising it.
