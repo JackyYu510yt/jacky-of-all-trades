@@ -397,11 +397,6 @@ Log empty):
 | `SPEC.md` | <the shared/original scope> | <DONE date / ACTIVE / PARKED> |
 | `SPEC-<slug>.md` | <one line -- what problem this spec exists to solve> | <status> |
 
-**READER: `/auto` Step 0.5.1 — Prior work in this project**, at Phase 0.5, before the
-runbook is written. It reads this table by `grep -n` + `sed -n` of THIS BLOCK ONLY,
-never a whole-file read. A section with a writer and no named reader is INCOMPLETE:
-adding one is not optional, and this line is what makes the section finished.
-
 **Why this section exists (added 2026-08-28).** A project accumulates specs, and
 without a list a new spec re-solves what an old one finished. The `see:` pointers in
 the Change Log are a TIMELINE of changes; they answer "what happened lately", never
@@ -421,12 +416,6 @@ the whole value of the row).
 | Date | Run folder | Goal (one line) | Verdict |
 |---|---|---|---|
 | <YYYY-MM-DD> | `auto-runs/<slug>/` | <the run's pinned goal, one line> | <DONE / PARTIAL / STUCK / running> |
-
-**READER: `/auto` Step 0.5.1 — Prior work in this project**, at Phase 0.5, before the
-runbook is written — but this table is the SOFT source. Step 0.5.1 reads
-`ls -1d ./auto-runs/*/` FIRST (the hard source: the folders themselves) and treats these
-rows as corroboration, so a lost, deleted, or rolled-back row degrades the record
-rather than erasing it.
 
 **Why this section exists (added 2026-08-28).** Run folders are never deleted, so a
 run's full `notes.md` survives forever -- but nothing points at it, so a later session

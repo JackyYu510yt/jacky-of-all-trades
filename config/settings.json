@@ -14,6 +14,35 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/skills/hooks/spec-collect.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/skills/auto/hooks/auto-log-hook.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/Shadow/AppData/Local/Programs/Python/Python311/python.exe\" \"C:/Users/Shadow/.claude/skills/spec/spec_digest.py\""
+          }
+        ]
+      }
     ]
   },
   "effortLevel": "high",

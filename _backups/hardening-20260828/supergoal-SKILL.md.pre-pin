@@ -69,46 +69,12 @@ Supergoal has a **PLAN** half (you review once) and a **BUILD** half (hands-off)
 **Stage 0 — Load memory + detect/preload tools.** Load `/principles` and project memory; preload the tools the run will need. (Both `/prep` and `/auto` open with this kind of preload.)
 
 **Stage 1 — Greenfield or brownfield? Derive first, ask only what clears the Gate.**
-- **Greenfield** (nothing exists yet): the intake checklist is a list of things to
-  *establish*, NOT a list of questions to ask. It splits into two fixed halves.
-
-  **PINNED — always ask, never derive.** These three are the user's intent. They are
-  not derivable in principle: nothing on disk knows them, and a wrong guess here
-  produces a confidently-built wrong thing.
-
-  ```
-  SCOPE         what's in, what's out, what we are NOT building
-  AUDIENCE      who uses it -- just you, a team, a client, the public
-  GOOD ENOUGH   what "finished" means, and what quality bar it must clear
-  ```
-
-  They are asked EVERY greenfield run, batched into ONE offer, even when the answer
-  feels obvious — "obvious to me" is exactly how a wrong scope gets built. Each carries
-  a recommendation and a stated default, so answering is optional and silence still
-  moves (P13 / P14). What is NOT permitted is skipping the ask.
-
-  **DERIVED — establish from evidence, state for veto.** Platform, stack, design,
-  integrations, and anything else the checklist names. Derive from the invocation, the
-  folder, and the user's existing tools — then state each as a decision **with the
-  evidence it came from, named**, one line each:
-
-  ```
-  Platform: Windows          <- the CWD path and the shell in use
-  Stack: Python + ffmpeg     <- ffmpeg on PATH, existing .py files in the folder
-  Storage: plain text log    <- no database anywhere in the project
-  ```
-
-  **The evidence clause is mandatory, not decoration.** A derived item without the
-  thing it was derived FROM is a guess wearing a decision's clothes — and a guess
-  buried in prose is one the user skims past and finds out about after it is built.
-  With the evidence attached, a wrong item is spottable at a glance instead of trusted.
-  Cannot name the evidence? Then it was not derived — ask it, or probe for it.
-
-  _(PINNED/DERIVED split added 2026-08-28. This paragraph previously said "typically
-  only intent items survive Gate 4", and the user caught it: "typically" is guidance,
-  not a rule — it holds when the run is careful and slips when it isn't, which fails
-  the nobody-watching clause. The three intent items are now named, and everything
-  else owes its evidence.)_
+- **Greenfield** (nothing exists yet): the intake checklist — platform, stack, design,
+  integrations, scope, audience — is a list of things to *establish*, NOT a list of
+  questions to ask. Derive every item you can from the invocation, the folder, and the
+  user's existing tools; state each as a decision with its reason. Typically only intent
+  items survive Gate 4: what it's for, who uses it, what "good enough" means. Batch those
+  into ONE offer.
 - **Brownfield** (building on existing code): ask nothing here. Stage 2 recon answers it.
   Anything still open after recon goes into Stage 7's offer, not a prompt now.
 

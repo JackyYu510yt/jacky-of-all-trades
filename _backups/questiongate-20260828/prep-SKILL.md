@@ -1,6 +1,6 @@
 ---
 name: prep
-description: Interactively plan, prototype, and pentest a new script from scratch. Captures the end goal, breaks it into specifics, derives the preferences it can and states them for veto rather than interviewing, proposes a plain-language structure, surfaces only the risky-function choices that are genuinely the user's to make (irreversible actions, budget, risk appetite) as one batched offer, drafts a full plan, runs an independent AUDITOR second-brain review and iterates on its feedback, then builds a first prototype and pentests each part. Use when the user says "let's plan X", "prep a new script", "help me design Y", "plan a project", or wants a collaborative plan + auditor-review + build + test loop. Every artifact this skill produces must be smooth, consistent, reliable, self-healing, and optimized for speed.
+description: Interactively plan, prototype, and pentest a new script from scratch. Captures the end goal, breaks it into specifics, asks the user broad preferences, proposes a plain-language structure, interviews the user on risky or high-impact functions, drafts a full plan, runs an independent AUDITOR second-brain review and iterates on its feedback, then builds a first prototype and pentests each part. Use when the user says "let's plan X", "prep a new script", "help me design Y", "plan a project", or wants a collaborative plan + auditor-review + build + test loop. Every artifact this skill produces must be smooth, consistent, reliable, self-healing, and optimized for speed.
 ---
 
 # Prep
@@ -200,70 +200,6 @@ HIGH     Destructive, irreversible, or affects shared state.
 - **HIGH** → always gates. Both-sides consequences spelled out (what's lost on yes, what's lost on no). Never bundled with other actions.
 
 
-## The Question Gate — what a question must pass before it reaches the user
-
-_(Added 2026-08-28 by user directive: "one test a question has to pass before it
-reaches me." The existing "don't ask" material is a LIST OF EXAMPLES, which only
-catches questions somebody already thought of. Field incident that forced this: a
-run finished a folder cutover correctly, then handed the user "Stage 1 — retire the
-gate or rewrite it?" and "Stage 4 — your call." Neither was the user's decision;
-both were stale-checklist findings dressed up as forks. The user's words afterward:
-"there was no user decision needed... i'm getting asked questions i dont know how to
-answer, or just irrelevant answers that make me end up in a loop." A list could not
-have caught those. A test does.)_
-
-Before ANY question reaches the user — mid-run, in a report, or inside a USER OPTION
-block — it must pass **all four**. Fail even one and it is not a question: decide it,
-log the decision in ONE line, keep going.
-
-```
-1. DECISION-CHANGING   The answer changes what I DO next, not what I write
-                       down. If both answers lead to the same next action,
-                       it is not a question.
-
-2. UNGETTABLE          I cannot get the answer myself — not from a file, a
-                       command, a log, the plan, or a cheap probe. If a probe
-                       would answer it, RUN THE PROBE. "I didn't check" is
-                       never a reason to ask.
-
-3. COSTLY TO GUESS     Being wrong is irreversible, burns the run, spends
-                       money, or reaches outside this machine. If wrong just
-                       means redoing a step → decide, log, continue.
-
-4. THEIRS TO ANSWER    It is about WHAT the user wants — intent, scope, taste,
-                       budget, risk appetite, outside consequences. Not HOW to
-                       build it. An implementation question is MINE, always,
-                       including when I am genuinely unsure.
-```
-
-**Test 4 fires most often.** The questions that waste the user's time are HOW
-questions wearing a WHAT costume: *"retire this gate or rewrite it?"*, *"retry or
-fail fast?"*, *"text log or database?"*, *"should I investigate or try a
-workaround?"* Every one of those is mine to answer. Being unsure is not a transfer
-of ownership — it is the job.
-
-**Test 2 is the one to run before test 4.** Most borderline questions dissolve into
-a single command. Reach for the probe before reaching for the user.
-
-### A stale checklist item is a FACT, not a fork
-
-When a written plan and reality disagree, that is a **finding to report**, not a
-decision to hand over. "Stage 1's check can no longer run — the folder it compared
-against was moved" is a sentence in the report. Reshaping it into "do you want to
-retire it or rewrite it?" manufactures a decision the user never needed, cannot
-evaluate, and did not ask for.
-
-State the mismatch. State what you did about it. Move on.
-
-### If it passes, it arrives fully loaded
-
-A question that clears all four gates is never asked bare. It goes into a USER
-OPTION block — each option with its cost, balanced `+`/`−`, a `HOLDS UP` durability
-read, exactly one `← RECOMMENDED`, and `IF YOU SAY NOTHING` naming the default.
-
-**Silence must always be a valid answer.** A question the user can stall on without
-stalling the work is the only kind allowed to exist.
-
 ### Default to Action, Not Menu
 
 Pick the obvious next move and state it in one line. Only show a menu when there are **genuinely competing directions** the user needs to choose between — and include a confident lean.
@@ -355,9 +291,7 @@ Same rule applies to any permanent system state: scheduled tasks, registry keys,
 
 ## Runtime Workflow
 
-Follow these phases in order. Do not skip.
-
-**Every phase below that asks the user anything is subordinate to The Question Gate.** `AskUserQuestion` is how a Gate-passing decision gets RENDERED — it is not permission to generate one. A decision that fails any of the four gates is derived, stated in one line with its reason, and left for the user to veto. Where a phase says "ask", read it as "ask what clears the Gate, batched".
+Follow these phases in order. Do not skip. Use `AskUserQuestion` for every user-facing decision so choices are explicit.
 
 ## Autonomous Mode (when /auto invokes /prep, or user opts in)
 
@@ -378,9 +312,8 @@ Activate autonomous mode when ANY of these hold:
 
 ```
 Phase 1 (4-condition intake)
-  Normal:  Derive what's derivable (workflow, testing conditions);
-           ONE batched offer for what clears the Gate (usually the
-           end goal + the success bar — the user's intent).
+  Normal:  AskUserQuestion for each of goal / workflow / testing /
+           success conditions.
   Auto:    Derive all four from the invocation message, recent context,
            and any code or files visible in CWD. Log each derivation
            as a one-liner in the ASSUMPTIONS & FORKS card with the
@@ -393,9 +326,7 @@ Phase 4 (structure proposal)
            Skip the iterate-until-agreement gate.
 
 Phase 5 (risky-function interviews)
-  Normal:  Gate each risky function first. Derive what's derivable and
-           state it for veto; ONE batched offer for whatever clears
-           the Gate (usually irreversible actions + risk appetite).
+  Normal:  AskUserQuestion per risky function with 2-4 options.
   Auto:    For every risky function, auto-pick "I don't know —
            recommend something" and apply the documented default
            (smooth → consistent → reliable → self-healing → optimized
@@ -449,7 +380,7 @@ This mirrors /auto's activation gate. Without observable criteria, "done" is opi
 
 P2 (figure out the conditions upfront) requires three condition types nailed down before any work starts. Plus the end goal itself. Four answers, four cards in the plan file.
 
-In **interactive mode**, derive first, then ask what is left — in ONE batched offer, not four prompts in a row. The end goal and the success bar usually clear Gate 4 (they are the user's intent, and nothing on disk can supply them). Workflow and testing conditions are usually derivable from the invocation, the files present, and how the user's existing tools behave — derive those, state each as a decision with its reason, and let the user veto. Four prompts where one offer would do is the interview this skill no longer runs.
+In **interactive mode**, ask each in turn — one question at a time, `AskUserQuestion` for each so the answer is explicit and traceable.
 
 In **autonomous mode**, derive all four from invocation + context in one pass. Log each derivation in the ASSUMPTIONS & FORKS card. Continue without asking.
 
@@ -495,55 +426,16 @@ Example:
 >
 > Which of these are right? Anything missing? Anything I should drop?
 
-### Phase 3 — Preferences: DERIVE first, ask only what clears the Gate
+### Phase 3 — Broad preferences (one question per specific)
 
-_(Rewritten 2026-08-28. This phase used to read "for each confirmed specific, ask one
-broad preference question" — an interview, N specifics producing N prompts. The three
-examples it shipped with were all **implementation** questions, which the Question Gate
-now assigns to me. This phase was the single biggest source of the loop the user
-described: "i'm getting asked questions i dont know how to answer.")_
+For each confirmed specific, ask one **broad** preference question. Not implementation details — preferences. Use `AskUserQuestion` with 2–4 options each.
 
-Every preference question must clear all four gates in **The Question Gate** above.
-Most do not — retry policy, log format, GPU vs CPU are HOW questions, and HOW is mine.
+Examples:
+- "For the upload step — do you want it to retry on network flakiness, or fail fast and let you handle it?"
+- "For tracking already-done files — a simple text log, or a small database file?"
+- "For the re-encode — speed-priority (GPU, some quality loss), quality-priority (CPU, slower, better), or whichever is idle?"
 
-So this is no longer an interview. For each specific:
-
-```
-1. DERIVE   Answer it from what is already known — the goal, the files on
-            disk, how the user's existing tools behave, what the plan needs.
-
-2. STATE    Write it as a decision already made. One line. With the reason,
-            so the user can spot a wrong one at a glance.
-
-3. ASK      Only what genuinely clears the Gate. Batch it into ONE offer at
-            the end of the phase — never one prompt per specific.
-```
-
-**Old shape — an interview. Do not do this:**
-
-```
-"For the upload step — retry on network flakiness, or fail fast?"
-"For tracking already-done files — a text log, or a small database?"
-"For the re-encode — speed-priority, quality-priority, or whichever's idle?"
-```
-
-**New shape — derived, stated, vetoable:**
-
-```
-Upload retries on network errors — 3 attempts, backing off. The box runs
-  unattended, so failing fast would need a human who isn't there.
-Done-files tracked in a plain text log — a few thousand rows, nothing queries it.
-Re-encode on GPU — ffmpeg is already on PATH with NVENC, so it's free speed.
-
-Any of those wrong? Say so. Otherwise I'm building on them.
-```
-
-Three questions became zero, the user still vetoes anything, and nothing waits on a
-reply. That is the bar: **a derived default the user can overturn beats a question
-the user has to answer.**
-
-A specific you genuinely cannot derive is a Gate-passing question — it goes in the
-single batched offer with a recommendation and a stated default, never bare.
+Keep each question to one decision. Do not stack.
 
 ### Phase 4 — Propose a simple structure
 
@@ -568,22 +460,7 @@ A **risky function** is one that affects one or more of these:
 - Reliability (likely failure points).
 - Data loss (anything that deletes, overwrites, or uploads).
 
-From the function list in Phase 4, mark each function as **risky** or **safe**.
-
-**Run every risky function through The Question Gate first — do not prompt by default.**
-Risky does NOT mean unanswerable. Most risky functions still have a derivable
-behavior: the goal implies it, the existing tools show it, or one cheap probe settles
-it. Derive those, state them the Phase 3 way (decision + reason, vetoable), and move on.
-
-What survives the Gate here is real and worth the user's attention — usually Gate 3
-(irreversible: it deletes, overwrites, uploads, or spends money) or Gate 4 (their risk
-appetite, their budget, their audience). Those are genuinely theirs.
-
-**Batch what survives.** One offer covering every Gate-passing function, at the end of
-the phase — not one prompt per function. A five-risky-function plan that produces five
-separate prompts is the interview this skill no longer runs.
-
-For each function that DID clear the Gate, the offer carries:
+From the function list in Phase 4, mark each function as **risky** or **safe**. For each risky function, run one `AskUserQuestion` block:
 
 - Header: the function name.
 - Question: "How should `<function_name>` behave?"
@@ -676,18 +553,6 @@ The audit is run in-house by an **AUDITOR** — a fresh, independent reviewer pa
 
 **How to run the AUDITOR (in priority order):**
 
-**Model routing — these dispatches KEEP Opus. Leave `model:` unset.**
-_(Added 2026-08-30 during a cost review of `/auto`, which found that skill naming
-no model on any dispatch and paying Opus for a per-tick Navigator whose job is
-reading files. The same sweep checked `/prep` and `/audit` and found NO cheap-tier
-dispatch here at all: every subagent this skill spawns is the AUDITOR, the RED-TEAM
-or the FnReview, each once per run. There is no volume to cut — and these are the
-three that FIND things. Measured the same day, on one run: the plan-stage AUDITOR
-caught a design that would have shipped a write-only index and a FALSE evidence
-claim by the author; the plan-stage RED-TEAM MEASURED a 27% concurrent data loss
-that the whole final design was then built around. Downgrading either to save
-tokens buys nothing here and costs exactly the findings the skill exists for.)_
-
 1. **Preferred — dispatch an independent reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available) with the full plan file contents and the audit brief below. A subagent has none of your plan-authoring context, so its read is genuinely independent. Wait for its findings.
 
 2. **Fallback — if subagents are unavailable**, perform the audit yourself, but explicitly switch voice: open a section headed `=== AUDITOR ===`, drop the author's stance, and adopt a skeptic whose success metric is finding holes. List concrete defects, not reassurance.
@@ -729,8 +594,7 @@ For each: what's wrong, why it bites, and the concrete fix.
 
 When the findings come back (AUDITOR + RED-TEAM), integrate each item explicitly with the user — RED-TEAM **BREAKS** items first:
 
-- **Gate every finding before it reaches the user.** Most AUDITOR findings are HOW problems — a weak check, a missing rollback, an unbounded retry — and Gate 4 makes those MINE: fix them in the plan and list what was fixed. A finding reaches the user only when it clears the Gate: it changes scope, costs money, risks something irreversible, or turns on their risk appetite.
-- What clears the Gate goes in ONE batched offer (RED-TEAM **BREAKS** first), each item carrying a recommendation and a stated default — not a separate Accept/Reject/Modify prompt per finding.
+- For each point: restate it, show the user, and ask `AskUserQuestion` with options: "Accept", "Reject (reason)", "Modify (how)".
 - Update the plan file with every accepted change, noted with a `> [AUDITOR]` or `> [RED-TEAM]` callout so edits are traceable.
 - A RED-TEAM **UNKNOWN** on a load-bearing scenario becomes an open-questions item carrying the cheapest probe that would resolve it.
 
@@ -1094,9 +958,7 @@ Pull each item from the TESTING CONDITIONS card and run it:
 
 A prototype is not shippable while any MUST-hold or end-state check is red, regardless of how many SHOULD-hold items pass.
 
-## Offer Template — how a Gate-passing question is RENDERED (phases 3 and 5)
-
-_(Renamed 2026-08-28: this was the "Interview Template", back when phases 3 and 5 ran interviews. It is a rendering format, not a licence to ask — a question reaches this template only after clearing all four gates in **The Question Gate**, and Gate-passing questions from one phase are batched into a single offer, never one call per specific or per function.)_
+## Interview Template (reuse across phases 3 and 5)
 
 ```
 AskUserQuestion(

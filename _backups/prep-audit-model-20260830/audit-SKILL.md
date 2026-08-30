@@ -144,16 +144,6 @@ Flag each concrete regression risk. If the answer is "probably fine," say "proba
 
 This is the heart of the audit. Phases 1–5 are *your* pass — the same brain that proposed the change. Now hand it to brains that didn't. Two independent agents, two different jobs: the **AUDITOR** re-derives scope / reversibility / assumptions / regressions; the **RED-TEAM** invents hostile scenarios and walks each one through the change until something breaks. When both apply, dispatch them IN PARALLEL — one message, two `Agent` calls.
 
-**Model routing — both reviewers KEEP Opus. Leave `model:` unset.**
-_(Added 2026-08-30 during a cost review. `/auto` was found naming no model on any
-dispatch and paying Opus for a per-tick Navigator that only reads files — a real
-waste, now fixed there. This skill has the opposite shape: its only subagents are
-the two below, each dispatched once, and they are the ones that find what the
-author's own brain cannot. On the run that prompted this review the pair returned
-6 blockers and a measured 27% data-loss figure that reshaped the design. A future
-cost pass will be tempted to downgrade them; this note is here to say the volume
-problem was never here, so the saving is not here either.)_
-
 **Dispatch the AUDITOR (in priority order):**
 
 1. **Preferred — a fresh reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available). Give it ONLY:

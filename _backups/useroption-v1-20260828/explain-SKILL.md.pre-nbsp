@@ -172,8 +172,6 @@ RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and w
 
 - **Because HOLDS UP forces the durability question, a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped.** If every option on the list is a band-aid, that IS the finding — say so, and add the option that isn't. This is the main reason the section exists: without it the report offers three patches and recommends the fastest.
 
-- **The option menu renders inside a fenced code block**, exactly as the template above shows it — monospace, real spaces, alignment preserved. Do not rebuild it as bolded prose with entity-padded indents; that is what broke on 8/28/26. Bold headings live outside the block.
-
 - Exactly ONE option carries `← RECOMMENDED`, on the option line itself so it is visible at a glance. The pick is decided on the HOLDS UP reads FIRST and cost second — the fastest option wins only when it also holds up.
 
 - Pros and cons stay balanced in count. Two pros against one con stacks the deck by writing more about the favorite; the reasoning has to survive equal space.
@@ -336,8 +334,6 @@ The session does not end until you've verified the user has **demonstrated** und
 - No walls of text. One thought per line, blank lines between items.
 
 - No padding ("great question!", "let me explain…"). Just deliver.
-
-- **No HTML in the output — ever.** `&nbsp;`, `<br>`, `&amp;` and friends do NOT render in the terminal; they print literally and shred the block. Indent with a fenced code block or with real leading spaces in a markdown list. This killed the USER OPTION menu on 8/28/26 — every option line showed as `&nbsp;&nbsp;1.` instead of an indent.
 
 - No forced quiz in quick mode. Deep teach only happens when asked.
 

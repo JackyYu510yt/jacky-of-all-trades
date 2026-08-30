@@ -24,42 +24,6 @@ It does NOT reimplement them. It runs `/prep`'s planning discipline, writes the 
 
 **Rule of thumb:** big/fuzzy → `/supergoal`; small/known → `/auto`.
 
-## The Question Gate — applies to EVERY stage below
-
-_(Added 2026-08-28. `/supergoal` was the only skill carrying none of the
-conversation-hygiene conventions — no gate, no USER OPTION block, no footer — while
-being the command most likely to become a user's single front door. Canonical
-statement: `/principles` → **Principle 14**. Restated here in operative form because
-a wrapper that only inherits its rules is a wrapper that loses them the moment
-Stage 0 is skipped.)_
-
-Every stage below that would ask the user anything runs the question through four
-tests first. **Fail one and it is not a question** — decide it, log the decision in
-one line, keep going.
-
-```
-1. DECISION-CHANGING   The answer changes what I DO next, not what I write
-                       down. Same next action either way -> not a question.
-
-2. UNGETTABLE          I cannot get it myself from a file, a command, a log,
-                       or a cheap probe. Stage 2 recon exists to answer these
-                       -- RUN THE RECON before asking.
-
-3. COSTLY TO GUESS     Wrong is irreversible, spends money, or burns the run.
-                       Wrong just means revising the plan -> decide, log, go.
-
-4. THEIRS TO ANSWER    It is about WHAT the user wants -- intent, scope, taste,
-                       budget, risk appetite, audience. Not HOW to build it.
-                       HOW is mine, including when I am unsure.
-```
-
-Gate 2 does the heavy lifting here specifically: `/supergoal` has a whole recon stage
-whose job is answering questions from the codebase. **A question recon could have
-answered is a recon failure, not a question.**
-
-What clears the Gate is batched into ONE offer per stage — never one prompt per
-item — and rendered as a USER OPTION block with a stated default.
-
 ## The two halves
 
 Supergoal has a **PLAN** half (you review once) and a **BUILD** half (hands-off). A single review gate sits between them — the one and only pause.
@@ -68,54 +32,10 @@ Supergoal has a **PLAN** half (you review once) and a **BUILD** half (hands-off)
 
 **Stage 0 — Load memory + detect/preload tools.** Load `/principles` and project memory; preload the tools the run will need. (Both `/prep` and `/auto` open with this kind of preload.)
 
-**Stage 1 — Greenfield or brownfield? Derive first, ask only what clears the Gate.**
-- **Greenfield** (nothing exists yet): the intake checklist is a list of things to
-  *establish*, NOT a list of questions to ask. It splits into two fixed halves.
-
-  **PINNED — always ask, never derive.** These three are the user's intent. They are
-  not derivable in principle: nothing on disk knows them, and a wrong guess here
-  produces a confidently-built wrong thing.
-
-  ```
-  SCOPE         what's in, what's out, what we are NOT building
-  AUDIENCE      who uses it -- just you, a team, a client, the public
-  GOOD ENOUGH   what "finished" means, and what quality bar it must clear
-  ```
-
-  They are asked EVERY greenfield run, batched into ONE offer, even when the answer
-  feels obvious — "obvious to me" is exactly how a wrong scope gets built. Each carries
-  a recommendation and a stated default, so answering is optional and silence still
-  moves (P13 / P14). What is NOT permitted is skipping the ask.
-
-  **DERIVED — establish from evidence, state for veto.** Platform, stack, design,
-  integrations, and anything else the checklist names. Derive from the invocation, the
-  folder, and the user's existing tools — then state each as a decision **with the
-  evidence it came from, named**, one line each:
-
-  ```
-  Platform: Windows          <- the CWD path and the shell in use
-  Stack: Python + ffmpeg     <- ffmpeg on PATH, existing .py files in the folder
-  Storage: plain text log    <- no database anywhere in the project
-  ```
-
-  **The evidence clause is mandatory, not decoration.** A derived item without the
-  thing it was derived FROM is a guess wearing a decision's clothes — and a guess
-  buried in prose is one the user skims past and finds out about after it is built.
-  With the evidence attached, a wrong item is spottable at a glance instead of trusted.
-  Cannot name the evidence? Then it was not derived — ask it, or probe for it.
-
-  _(PINNED/DERIVED split added 2026-08-28. This paragraph previously said "typically
-  only intent items survive Gate 4", and the user caught it: "typically" is guidance,
-  not a rule — it holds when the run is careful and slips when it isn't, which fails
-  the nobody-watching clause. The three intent items are now named, and everything
-  else owes its evidence.)_
-- **Brownfield** (building on existing code): ask nothing here. Stage 2 recon answers it.
-  Anything still open after recon goes into Stage 7's offer, not a prompt now.
-
-_(Rewritten 2026-08-28. This read "walk the full intake checklist", which is an
-interview — six prompts before a single file gets read, and five of the six are
-answerable from disk. It already pointed at `/prep` Phase 1's "derive, don't ask";
-now it says so in its own words.)_
+**Stage 1 — Greenfield or brownfield?**
+- Greenfield (nothing exists yet): walk the full intake checklist — platform, stack, design, integrations, scope, audience.
+- Brownfield (building on existing code): ask 0–2 questions; recon answers the rest.
+(= `/prep` Phase 1 interview, "derive, don't ask".)
 
 **Stage 2 — Recon (parallel).** Read the relevant files/subsystems to ground the plan. Fan out with sub-agents (per `/auto`'s fan-out + context-offload rules) so the driver stays lean.
 
@@ -135,31 +55,7 @@ now it says so in its own words.)_
 /auto
 ```
 
-Plain `/auto`. Its Phase 0 auto-detects `./prep-<slug>.txt` as the plan source (prep file = runbook source #1), generates + sanity-checks the runbook, and executes. This is `/auto`'s own documented `/prep → /auto` contract — supergoal just produced the prep file.
-
-**This stop carries a DEFAULT — it is not a blocking gate.** _(Added 2026-08-28. It
-used to read "the user reads the plan, then pastes `/auto`" with no default, which
-makes it the one place in the whole toolchain where silence stalls the work — and it
-asks the user to review a plan they may not be equipped to evaluate.)_ The handoff
-ends with, verbatim in shape:
-
-```
-IF YOU SAY NOTHING: the plan stands as written and /auto runs it.
-```
-
-Anything genuinely open at Stage 7 — a Gate-passing fork the recon could not settle —
-goes in a **USER OPTION** block above the handoff, in the canonical shape (`/principles`
-→ P13): each option with its cost, balanced `+`/`−`, a `HOLDS UP` durability read,
-exactly one `← RECOMMENDED`, then `IF YOU SAY NOTHING` and `WHY THAT DEFAULT`. No open
-fork → omit the block entirely; never write "n/a".
-
-**Render the plan summary and any option menu inside a fenced code block** — real
-spaces, never HTML entities. `&nbsp;` does not render in the terminal; it prints
-literally and shreds the layout (observed 8/28/26).
-
-The Stage-7 output closes with the standard footer (NET → CURRENT STAGE → ULTIMATE
-GOAL → USER OPTION if a fork exists → SUGGESTED ACTION → GRADE). `PASTE THIS` is
-`/auto` when nothing is open, and the `← RECOMMENDED` option when something is.
+Plain `/auto`. Its Phase 0 auto-detects `./prep-<slug>.txt` as the plan source (prep file = runbook source #1), generates + sanity-checks the runbook, and executes. This is `/auto`'s own documented `/prep → /auto` contract — supergoal just produced the prep file. This is the one review gate: the user reads the plan, then pastes `/auto` once to start the build.
 
 ### BUILD — the autonomous half (IS /auto)
 
@@ -179,9 +75,7 @@ If supergoal drew its own execution loop, it would have to re-implement stall ha
 
 ## The one gate
 
-Supergoal pauses exactly once — at Stage 7 — so you *can* review the plan before a long build spends real time. **It is a checkpoint, not a blocker:** it states a default (`IF YOU SAY NOTHING: the plan stands and /auto runs it`), so a user who cannot evaluate the plan is never stuck holding it. Reviewing is an option, not a toll.
-
-After you paste `/auto`, there are no more gates (that's `/auto`'s "invocation is authorization"). For a small/known task even this one checkpoint is overhead — which is why small/known work should skip supergoal and go straight to `/auto`.
+Supergoal pauses exactly once — at Stage 7 — so you can review the plan before a long build spends real time. After you paste `/auto`, there are no more gates (that's `/auto`'s "invocation is authorization"). For a small/known task even this one gate is overhead — which is why small/known work should skip supergoal and go straight to `/auto`.
 
 ## Composition
 

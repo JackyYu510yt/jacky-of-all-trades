@@ -254,18 +254,6 @@ spec so "the spec" is never ambiguous and log blocks land in the right file.
    file exists). Ask the user which this session is — or whether to create a
    new specialized spec (run the INIT interview, but Write it as
    `SPEC-<short-slug>.md` instead of `SPEC.md`).
-
-   **Naming is load-bearing, not cosmetic.** The glob above is `SPEC-*.md`. A file
-   named `<slug>-SPEC.md` is INVISIBLE to it — verified 2026-08-28 in a real project
-   where three specialized specs (`function-review-SPEC.md`, `options-SPEC.md`,
-   `screenshot-smoke-SPEC.md`) had never once been seen by this step, so no pointer
-   had ever been written and the shared spec had no idea they existed. They were
-   renamed to `SPEC-<slug>.md` that day. Write new ones the right way round.
-
-   **On creating a specialized spec, write its row into the shared `SPEC.md`'s
-   `## Specs in this project` table in the SAME action** — not afterwards, not as a
-   follow-up. Creating the file and indexing it is one step, so there is no window
-   where the spec exists and its row does not. Create the section if it is absent.
 2. Bind: `python spec_tool.py bind SPEC-<slug>.md --sid <sid>`
    (unbind: `bind --clear --sid <sid>`).
 3. From then on, LOG blocks from this session go to the bound spec's Change
@@ -385,58 +373,6 @@ Log empty):
 
 - **<thing>** — KILLED <date>. Learned: <what evidence killed it>. Cost: <what
   it took to find out>. Instead: <what we do now, or "nothing — accepted gap">.
-
-## Specs in this project
-<!-- REQUIRED once a second spec exists. One row per spec file. A row is written by
-     /spec at the moment a specialized spec is CREATED (see BIND), never by hand
-     afterwards -- an index maintained from memory goes stale exactly when the
-     project is busiest, and a stale index is worse than none because it is trusted. -->
-
-| Spec | What it covers | Status |
-|---|---|---|
-| `SPEC.md` | <the shared/original scope> | <DONE date / ACTIVE / PARKED> |
-| `SPEC-<slug>.md` | <one line -- what problem this spec exists to solve> | <status> |
-
-**READER: `/auto` Step 0.5.1 — Prior work in this project**, at Phase 0.5, before the
-runbook is written. It reads this table by `grep -n` + `sed -n` of THIS BLOCK ONLY,
-never a whole-file read. A section with a writer and no named reader is INCOMPLETE:
-adding one is not optional, and this line is what makes the section finished.
-
-**Why this section exists (added 2026-08-28).** A project accumulates specs, and
-without a list a new spec re-solves what an old one finished. The `see:` pointers in
-the Change Log are a TIMELINE of changes; they answer "what happened lately", never
-"has this already been solved". Those are different questions and need different
-sections.
-
-**Status vocabulary:** `ACTIVE` (being worked now) / `DONE <date>` (finished, do not
-re-open without reason) / `PARKED <date> <D> <why>` (stopped deliberately; the why is
-the whole value of the row).
-
-## Runs in this project
-<!-- REQUIRED once any /auto run has happened here. One row per run. Written by
-     /auto at slug freeze with verdict `running`, updated to its terminal verdict.
-     The run FOLDER holds the detail; this row exists so someone knows the folder
-     is worth opening. -->
-
-| Date | Run folder | Goal (one line) | Verdict |
-|---|---|---|---|
-| <YYYY-MM-DD> | `auto-runs/<slug>/` | <the run's pinned goal, one line> | <DONE / PARTIAL / STUCK / running> |
-
-**READER: `/auto` Step 0.5.1 — Prior work in this project**, at Phase 0.5, before the
-runbook is written — but this table is the SOFT source. Step 0.5.1 reads
-`ls -1d ./auto-runs/*/` FIRST (the hard source: the folders themselves) and treats these
-rows as corroboration, so a lost, deleted, or rolled-back row degrades the record
-rather than erasing it.
-
-**Why this section exists (added 2026-08-28).** Run folders are never deleted, so a
-run's full `notes.md` survives forever -- but nothing points at it, so a later session
-cannot know the ground was already covered. Nothing was ever LOST; it was unfindable.
-
-**This is what demotes the keeper judgement.** `/auto` decides which findings promote
-into the Change Log. Before this section, a wrong call meant the detail was
-effectively gone. With it, a wrong call costs a quote, not the evidence -- the folder
-is one line away. Judgement about what to QUOTE is survivable; judgement about what
-SURVIVES is not.
 
 ## Logic / How it works
 <logic>

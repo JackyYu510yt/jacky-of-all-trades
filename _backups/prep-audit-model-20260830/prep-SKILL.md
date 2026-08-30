@@ -676,18 +676,6 @@ The audit is run in-house by an **AUDITOR** — a fresh, independent reviewer pa
 
 **How to run the AUDITOR (in priority order):**
 
-**Model routing — these dispatches KEEP Opus. Leave `model:` unset.**
-_(Added 2026-08-30 during a cost review of `/auto`, which found that skill naming
-no model on any dispatch and paying Opus for a per-tick Navigator whose job is
-reading files. The same sweep checked `/prep` and `/audit` and found NO cheap-tier
-dispatch here at all: every subagent this skill spawns is the AUDITOR, the RED-TEAM
-or the FnReview, each once per run. There is no volume to cut — and these are the
-three that FIND things. Measured the same day, on one run: the plan-stage AUDITOR
-caught a design that would have shipped a write-only index and a FALSE evidence
-claim by the author; the plan-stage RED-TEAM MEASURED a 27% concurrent data loss
-that the whole final design was then built around. Downgrading either to save
-tokens buys nothing here and costs exactly the findings the skill exists for.)_
-
 1. **Preferred — dispatch an independent reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available) with the full plan file contents and the audit brief below. A subagent has none of your plan-authoring context, so its read is genuinely independent. Wait for its findings.
 
 2. **Fallback — if subagents are unavailable**, perform the audit yourself, but explicitly switch voice: open a section headed `=== AUDITOR ===`, drop the author's stance, and adopt a skeptic whose success metric is finding holes. List concrete defects, not reassurance.
