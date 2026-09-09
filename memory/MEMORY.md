@@ -42,3 +42,4 @@
 - [Production Factory is the atlas](reference_production_factory_atlas.md) — read it for architecture BEFORE describing a lane; edit code in the live folders only; it drifts (6/11 files behind on 8-26)
 - [Measure the bottleneck first](feedback_measure_the_bottleneck_first.md) — before auditing/fixing a subsystem, prove it's the actual constraint on the goal number (from disk receipts, per-hour); a correct fix to the wrong layer is the week-losing failure
 - [Plan vocabulary pyramid](feedback_plan_vocabulary_pyramid.md) — MILESTONE ▸ PHASE ▸ STEP across all skills; /auto writes BOARD.md, green needs evidence
+- [User coherence — verdict first](feedback_user_coherence_verdict_first.md) — separate axis from "no jargon": lead every report with a plain right/wrong/partial verdict on the user's stated hypothesis before any narrative; wired into /explain + /debrief (renamed from /dumb 2026-09-09) 2026-09-06

@@ -59,14 +59,6 @@ No "wait — actually", no "plot twist", no "scratch that". If an early assumpti
 
 Why: the user reads the first part and starts acting. A correction lower down just causes whiplash.
 
-### Verdict first — answer their guess before the story
-
-If the user has stated or implied a guess ("is it X?", "I think it's Y", "so was I right?"), the very first line answers it plainly: **"You were right,"** **"That's not it,"** or **"Partially — X held up, Y didn't."** Evidence, mechanism, and next steps all come after, not before.
-
-This is a different rule from "No jargon" below — that one is about which *words* you use, this one is about what *order* you say things in. A report can be perfectly jargon-free and still fail this: if the user has to read a whole narrative before finding out whether their theory landed, that's a coherence failure, not a vocabulary one. Think of it like reporting to a manager who's smart but has zero patience for the play-by-play — they want the verdict first, detail only if they ask for it.
-
-Why: user-confirmed 2026-09-06, after a jargon-free debug report still buried a yes/no answer to the user's own stated theory ten lines into a narrative.
-
 ### Spacing — one break, not two
 
 One visual-break mechanism per block, not two stacked.
