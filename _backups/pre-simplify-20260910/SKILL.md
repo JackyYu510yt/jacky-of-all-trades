@@ -123,13 +123,9 @@ under 24h → do NOT touch that scope. Park the overlapping steps, surface the
 overlap in the runbook, continue with the rest. A row stale >24h may be
 treated as released (the board's own protocol).
 
-**Write discipline (the #1 red-team break — lost updates).** This is a rule about a
-CLASS, not about this one file: it governs **any file /auto writes a row into that a
-concurrent /auto run may also be writing** — `ACTIVE-LANES.md` here, and `SPEC.md`'s
-`## Runs in this project` table at Phase 0.5 (same shape, same race, previously
-unguarded).
+**Write discipline (the #1 red-team break — lost updates):**
 - ONLY Edit-tool operations on YOUR OWN row. NEVER Write/rewrite the whole
-  file.
+  board file.
 - Your Edit fails because your row vanished (another chat's collision) →
   re-add just your row with one Edit — never reconstruct the table.
 - The board file itself is NEVER claimable scope for any /auto lane.
@@ -624,9 +620,17 @@ Status:
                      project when the run started. `found: <n>` | `none`
                      (only when the listing is genuinely empty) |
                      `unavailable: <reason>`.
-                     **A reporting obligation, not a machine gate** — see
-                     Step 0.5.1 for why enforcement was built and removed.
-                     Do not re-add a gate here without new evidence.>
+                     **A reporting obligation, not a machine gate.** A
+                     fail-closed Stop-hook gate for this field was built and
+                     then REMOVED on 2026-08-29: three refuter rounds found
+                     3, 6 and 7 blockers against it, and the last round showed
+                     quoted prior-run text could satisfy the gate while this
+                     run's own field sat empty — the fence made that possible.
+                     A gate with a known bypass invites trust it has not
+                     earned; an honest unenforced line does not. If this rule
+                     turns out to be ignored in practice, THAT is the evidence
+                     that justifies enforcement — and the next attempt should
+                     start from why the last one failed, not from scratch.>
   Refuter:           n/a   (judgment-based goals: pending | clean | <n> BLOCKERs | round 1|2)
   RedTeam:           n/a   (fires on deliverable NATURE or ≥1 guardian tick: pending | clean | <n> BREAKS | round 1|2)
   Classified:        n/a   (build tasks: pending | clean | checklist-only)
@@ -641,8 +645,6 @@ Status:
   Board:             ./auto-runs/<slug>/BOARD.md — <k> of <N> phases green
   Turn-end rule:     checkpoint = Status: PARTIAL (checkpoint); STUCK only when user-blocked
 ```
-
-**Switch note, stated once and relied on everywhere below:** every "…unless a FnReview line reads `open` / a fix-trigger function is `unreviewed`" override in this file is **inert unless `REVIEW.txt` reads `full`** — under `note` and `off` no FnReview is ever dispatched, so no such line can exist and the override can never fire. The other sites state the override without repeating this; they mean it as written here.
 
 `Refuter` rides in the runbook (the file the Stop hook reads) — not just in prose — so the "refute before DONE" rule survives context compaction. On a judgment-based goal it starts `pending` and the terminal `Status: DONE` MUST NOT be written until it reads `clean`. On a machine-checked goal it stays `n/a` (the verify check is the oracle; see Terminal Refuter Gate) — unless a FnReview `open` line or a fix-trigger `unreviewed` stamp forces the refuter, then `n/a → pending` (see FnReview). `RedTeam` rides the same way for the RED-TEAM rider: on an unattended / stateful deliverable it starts `pending` — regardless of whether the goal is machine-checked — and `Status: DONE` MUST NOT be written until it reads `clean`; on an attended one-shot it stays `n/a` (see RED-TEAM rider under Terminal Refuter Gate). `Principles:` rides the same way for code deliverables — the principles-sweep (Goal-Guardian section) stamps it mid-run; only its appended violation STEPS gate DONE (via all-steps-verified), never the field itself.
 
@@ -908,9 +910,13 @@ If a step's verify can't be expressed as an observable check, the step is not at
 
 A self-derived runbook (sources 3–4) gets the same condition discipline a /spec blueprint carries — this is the front half a bare step list usually omits, and the gap that lets /auto test on a broken foundation (the logged-out-account confusion). When generating the runbook for a non-trivial task:
 
-**Apply Milestone Blueprint Mode's per-milestone precondition mechanism, self-derived instead of blueprint-derived** — source-tag each condition (`← from step X` / `← external: <recipe>`), make establishing it its own early step with its own verify, gate every dependent step on a `pre-verify` run BEFORE the action, and on a failed `pre-verify` branch on the source tag (`← from step X` → STUCK; `← external` → STOP and surface the recipe, resume once supplied). That section is canonical for the branch logic; do not re-derive it here.
+1. **Name the preconditions first.** Before listing actions, ask what must already be true for the task to be testable — the *testing conditions* (a live logged-in account, seeded data, a reachable service, a built artifact). Tag each with its source: `← from step X` (an earlier step produces it) or `← external: <how to obtain it>` (a human / a dropped-in file / another system supplies it).
 
-**The one rule that is local to self-derived runbooks:** the setup step must **establish** the condition on whatever input it is given — never satisfy a precondition by picking only inputs that already have it (already-logged-in, already-warm, already-built). That is the band-aid shape HI #14 forbids, and it fails the moment the pre-qualified pool runs dry.
+2. **Make establishing each condition its own early step** — never fold "log in an account" into the step that tests the login. Setup is its own step, with its own verify (the condition is now true). And the step **establishes** the condition on whatever input it's given — it never satisfies a precondition by picking only inputs that already have it (already-logged-in, already-warm, already-built); that's the band-aid shape HI #14 forbids, and it fails the moment the pre-qualified pool runs dry.
+
+3. **Gate each dependent step on a `pre-verify`** — run the readiness check BEFORE the action, not after. A step that needs a live session re-checks the session is live first.
+
+4. **On a failed `pre-verify`, branch on the source tag** (identical to Milestone Blueprint Mode): `← from step X` → **STUCK** (the producing step under-delivered; don't fake the condition, don't test on a missing foundation); `← external` → **STOP and surface the how-to-get-it recipe**, resume once supplied (a Phase-0-style activation pause, not a STUCK — see Hard Invariant #1).
 
 Depth scales (KISS): a trivial one-shot needs no preconditions section — skip it. The win is that /auto stops testing on broken foundations whether or not a /spec blueprint was bound. Same machinery as Milestone Blueprint Mode, applied to the plans /auto writes itself.
 
@@ -1652,7 +1658,7 @@ The user's standard invocation pattern is:
 /principles  →  /auto (or /prep or /repair)  →  proceed
 ```
 
-`/principles` is run first to load all **fourteen** principles into context (P1 test-at-scale, P2 conditions-upfront, P3 end-goal-in-sight, P4 audit-before-handback, P5 KISS, P6 think-before-coding, P7 surgical-changes, P8 goal-driven-execution, P9 build-for-the-real-run, P10 see-it-before-you-call-it, P11 pin-the-cause-before-the-fix, P12 completed-means-delivered, P13 the-report-grades-itself, P14 a-question-must-earn-its-way-to-the-user). This file cites P11–P14 throughout; `/principles` is canonical for all fourteen. Then the action skill runs with the principles already active as standing checkpoints. Then `proceed` is the standing authorization.
+`/principles` is run first to load all ten principles into context (P1 test-at-scale, P2 conditions-upfront, P3 end-goal-in-sight, P4 audit-before-handback, P5 KISS, P6 think-before-coding, P7 surgical-changes, P8 goal-driven-execution, P9 build-for-the-real-run, P10 see-it-before-you-call-it). Then the action skill runs with the principles already active as standing checkpoints. Then `proceed` is the standing authorization.
 
 When this pattern is detected (recent `/principles` skill invocation OR principle keywords in recent context), /auto skips re-reminding the user about principles and proceeds straight into Phase 0 plan ingestion + activation gate. The principles are already loaded; don't restate them.
 
@@ -1828,7 +1834,7 @@ These never bend.
    - A step is taking longer than expected (use Monitor, continue planning)
    - A choice has to be made about a default (timeout, retry count, format) — pick the modern reasonable default, log it, proceed
 
-   **This exit list is SWITCH-DEPENDENT — read `GUARDIAN.txt` before applying it.** With the guardian `on`, the ONLY exits from a /auto RUN are: **DONE**, **STUCK-user** (genuinely blocked on something only the user can supply — including guardian round-cap exhaustion), **/auto stop**, or a Hard-Invariant trip in "Auto Does NOT Waive"; a SESSION turn may end at `PARTIAL (checkpoint)`, which ends the turn, never the run, because the Goal-Guardian cron carries the run onward. **With the switch `off`, `PARTIAL (checkpoint)` is added to that exit list as a legal terminal ending** — there is no cron to carry anything onward, so the turn ending IS the run ending (Goal-Guardian is canonical for this override). Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the **missing-external-condition stop** — whether from Milestone Blueprint Mode or a condition-first self-derived runbook — which can fire mid-run at a phase/step boundary when an `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
+   The ONLY exits from a /auto RUN: **DONE**, **STUCK-user** (genuinely blocked on something only the user can supply — including guardian round-cap exhaustion), **/auto stop**, or a Hard-Invariant trip in "Auto Does NOT Waive." A SESSION turn may end at `PARTIAL (checkpoint)` — that ends the turn, never the run: the Goal-Guardian cron carries the run onward. Two activation-class exceptions pause without ending the run: (a) the Phase 0 activation gate, which fires before /auto activates; and (b) the **missing-external-condition stop** — whether from Milestone Blueprint Mode or a condition-first self-derived runbook — which can fire mid-run at a phase/step boundary when an `← external` precondition isn't met — /auto pauses because it genuinely cannot manufacture that condition, surfaces the how-to-get-it recipe, and resumes once it's supplied. Both are foundations-/auto-can't-build pauses, not approvals.
 
 2. **Pre-action context, not pre-action gate.** Before doing something non-trivial, Claude states one or two sentences naming what it's about to do and why. This is for *user awareness*, not for *user approval*. There is no waiting period. Claude finishes the sentence and proceeds.
 
@@ -1852,7 +1858,7 @@ These never bend.
    - Invoking /repair as a sub-loop
    - Mode transition (NORMAL → DIAGNOSING → ROTATING)
    - Starting a new runbook step
-   - Every 5 tool calls since last re-read (compression hedge) — **skip when nothing has been written since the last re-read.** The hedge exists to catch drift after a compaction, and drift can only come from a state change; if no state-changing tool has fired and the log has not grown, the files are byte-identical to what is already in context and the re-read is pure cost. On a 50-call run this trigger fires ~10× and each firing pulls the runbook + BOARD.md + the notes slice + the WHOLE log — the growth check removes the majority of those without weakening the hedge. Every other trigger in this list is unconditional.
+   - Every 5 tool calls since last re-read (compression hedge)
    - First action of every cron tick (Pattern 3 — mandatory)
 
    Re-read scope: `./auto-runs/<slug>/runbook.txt` (state) OR `./auto-runs/<slug>/RUNBOOK.md` (Pattern 3), the matching `./prep-<slug>.txt` (goal + specs), **the ENTIRE** `./auto-runs/<slug>/log.txt` (see below — changed 2026-08-28 from the last ~30 lines), and a BOUNDED slice of the two files that carry the run's reasoning:
@@ -1922,7 +1928,7 @@ If the files disagree with conversation memory, trust the files and acknowledge 
 
 11. **See it before you call it — a visual verify is not PASS until the shot is read.** When a verify/smoke step decides pass/fail on a visual surface (a browser, a GUI window, a rendered frame), its screenshot is captured *inside the test* at each state-change + assertion, and /auto MUST read the relevant shot (assertion + final + any failure shot) before recording PASS/FAIL. A passing exit code or a matched log string is necessary but NOT sufficient on a visual surface — a signed-out page prints a prompt box and exits 0 just like a signed-in one (the account-95 miss: a captured-but-unread shot plus a weak text assertion produced a confident wrong verdict). So a visual verify is treated as judgment-shaped: the Terminal Refuter Gate does NOT skip it (this overrides the machine-check exemption in #9 for that step), and a missing / black / unread assertion shot makes the verify INCONCLUSIVE → the step goes BLOCKED/PARKED, never PASS. The stall-detection fallback ("shot unavailable → artifact probes") is for watching long jobs, NOT for clearing a visual verify. See the "Smoke-test / verify capture" subsection under Visual Checkpoints.
 
-12. **Restore the precondition before any retry.** Never re-attempt a step on top of the prior attempt's residue. **Canonical: the "Re-entry hygiene" section** — it owns the list of recovery doors and the `rollback:` → re-assert `pre-verify` → invalidate-downstream restore sequence, in that order. Do not re-enumerate them here; a second copy of that list is how the two drift. Re-entry that skips the restore ships a stale foundation.
+12. **Restore the precondition before any retry.** Never re-attempt a step on top of the prior attempt's residue. At every recovery door — approach rotation, resume / cron-tick pickup of an IN-PROGRESS step, a refuter re-opening a DONE step, a guardian un-park, and a FnReview finding re-opening a producing step — run the step's `rollback:`, re-assert its `pre-verify`, and invalidate any downstream step whose foundation actually changed (checksum differs), BEFORE re-running. Re-entry that skips this ships a stale foundation. A step left `VERIFIED (FnReview pending)` is NOT an IN-PROGRESS pickup: its action already succeeded — hash-check it against its pending stamp and resume at the dispatch; only a hash mismatch or a finding opens the restore. See "Re-entry hygiene."
 
 13. **No premature convergence — probes must discriminate, alternatives must be ruled out.** (Always cite as "HI #13" — heuristic #13 is a different rule.) In fix mode and on any judgment-shaped verdict, do not prematurely converge on the current hypothesis. The pre-registered probe must be a **discriminating test** — its CONFIRMS / DISPROVES outcomes must separate the leading hypothesis from its ranked rivals, not merely confirm the current assumption (a probe both hypotheses would pass discriminates nothing). Avoid **search-space neglect** and **anchoring bias** by actively checking plausible alternatives: DONE is not written simply because the initial hypothesis appears correct — the conclusion must be supported by evidence with the relevant alternatives investigated or explicitly ruled out (the hypothesis list + probe log is that evidence). This sharpens HI #10: #10 says manufacture the signal; this says the signal must be able to say NO to the favorite.
 
@@ -1990,15 +1996,6 @@ This is the right default for most /auto invocations. Use the Monitor tool to wa
 
 ### Pattern 3 — CronCreate + Monitor + Bash (default for build pipelines and unattended work)
 
-> **GATED BY `GUARDIAN.txt` — read the switch before choosing this pattern.** The
-> Goal-Guardian **IS** this cron (see the CronCreate box below: "one cron per run,
-> ever"). When the switch reads `off`, the Goal-Guardian section forbids arming it —
-> *"Never `CronCreate` a guardian. No tick loop… None of it arms."* — so **Pattern 3
-> has no heartbeat and cannot run as written.** Unattended work falls back to Pattern 2
-> (background + Monitor) for the life of the session, and `PARTIAL (checkpoint)` is a
-> legal terminal ending. Do not invest in the tick machinery below without checking the
-> switch first.
-
 Use whenever the work needs the heartbeat + stateless tick architecture: build pipelines (every `/prep + /auto` run qualifies), multi-hour data jobs, overnight unattended runs, or any task where survivability across chat-session idleness or context compression matters.
 
 **The architecture is in-session — Claude Code itself is the executor.** Pattern 3 uses three claude code tools coordinating around state files on disk:
@@ -2035,19 +2032,60 @@ Trigger conditions (any of these → Pattern 3):
 ```
 
 State files (created by /auto on Pattern 3 setup) — **read triggers live in the
-State files (created by /auto on Pattern 3 setup). **This is the LAYOUT only —
-purpose, writer and READ TRIGGER for every one of these live in the ARTIFACT LEDGER
-below, which is canonical.** Per-item descriptions were removed from this list on
-2026-09-10: it carried the same 12-artifact inventory in a second shape, which is the
-exact two-lists-disagree problem the LEDGER was created to end.
+canonical ARTIFACT LEDGER below; this list is the layout, not the authority:**
 
 ```
-auto-runs/<slug>/GOAL.md         RUNBOOK.md       BOARD.md
-                 PROGRESS.md     DIGEST.md        APPROACHES.md
-                 notes.md        log.txt
-                 VERDICT_DONE    VERDICT_STUCK
-                 logs/           logs/run.log     logs/tick-<ISO>.log
-                 logs/cron.log   shots/
+auto-runs/<slug>/GOAL.md       Frozen goal + success conditions
+                          Written once at setup. Never modified.
+
+auto-runs/<slug>/RUNBOOK.md    Step list + current state + mode
+                          Updated after every step transition.
+
+auto-runs/<slug>/BOARD.md      Chronological milestone/phase to-do list.
+                          Rewritten on every phase transition; reprinted
+                          in every report. See The Board.
+
+auto-runs/<slug>/PROGRESS.md   Last-tick summary (what fired this tick,
+                          what's next). Helps the next tick orient.
+
+auto-runs/<slug>/DIGEST.md     The compact area — bounded running brief
+                          (context, never evidence). See Universal
+                          state files under Goal-Guardian (canonical).
+
+auto-runs/<slug>/APPROACHES.md Append-only retry log — every approach
+                          tried for every step, with the reason it
+                          failed.
+
+auto-runs/<slug>/log.txt       Append-only activity log (also lives at
+                          auto-runs/<slug>/logs/run.log under Pattern 3
+                          for per-tick separation).
+
+auto-runs/<slug>/VERDICT_DONE  Touched on terminal success.
+                          On detection at start of any tick,
+                          /auto invokes CronDelete and exits.
+                          NEVER written at PARTIAL (checkpoints
+                          write no VERDICT file).
+
+auto-runs/<slug>/VERDICT_STUCK Touched ONLY on STUCK-user or
+                          STUCK (stopped by user). A legacy
+                          VERDICT_STUCK carrying the old all-
+                          parked/machine-retryable meaning is
+                          treated as a CHECKPOINT, not a
+                          terminus (Goal-Guardian rule).
+
+auto-runs/<slug>/logs/         Per-tick logs:
+  tick-<ISO>.log          One file per cron tick.
+                          READ TRIGGER: **WRITE-ONLY BY DESIGN** — human
+                          forensics after a run; no /auto path reads it.
+                          `logs/run.log` is the one the re-read scope loads.
+                          Tagged 2026-08-28: an AUDITOR found this name appears
+                          exactly ONCE in a 3,331-line file. Honest tag beats a
+                          silent gap — but it is NOT a reader.
+  cron.log                Append-only summary of every tick start/end.
+                          READ TRIGGER: **WRITE-ONLY BY DESIGN** — same as above.
+
+auto-runs/<slug>/shots/        Visual checkpoints — one PNG per capture
+                          (see Visual Checkpoints).
 ```
 
 ### ARTIFACT LEDGER — canonical. Every artifact, its writer, its READ TRIGGER.
@@ -2111,20 +2149,65 @@ this?" A ledger row with a mandatory trigger column asks it every time._
 
 ### How a cron tick actually flows
 
-**Canonical: `guardian.md` → "The tick protocol (guardian-tick) — strict order".**
-That file is loaded only when `GUARDIAN.txt` reads `on` — which is also the only
-state in which a tick can fire at all. The 10-step protocol is NOT restated here:
-the version that used to sit in this block already deferred to guardian.md at six
-of its own steps ("see Goal-Guardian tick step 4 — canonical"), so it was a
-half-copy that could only drift.
+```
+Tick fires → new TURN in this same session → /auto re-invoked by the pinned prompt
 
-The two properties worth knowing without opening that file:
+  1. Read auto-runs/<slug>/RUNBOOK.md (state, current step, mode)
+  2. Read auto-runs/<slug>/GOAL.md (frozen goal — never trust memory)
+  3. Read tail of auto-runs/<slug>/logs/run.log (~30 lines of recent history)
+  4. Check for auto-runs/<slug>/VERDICT_DONE or auto-runs/<slug>/VERDICT_STUCK
+       If either exists → CronDelete + exit (loop self-uninstalls)
+  4b. OWN-JOBS CHECK (replaces the retired TICK_LOCK — same-session
+      turns serialize, so no lock file is needed): read the runbook's
+      Jobs: field (never conversation memory). Any of this run's
+      background jobs alive → no success probe, no reviewer-step
+      execution this tick; task-alive OUTRANKS artifact-flat (see
+      Goal-Guardian tick step 4 — canonical).
+  4c. If the runbook shows a long step IN PROGRESS with a visual
+      surface → capture + read a visual checkpoint (see Visual
+      Checkpoints). Job surface identical to the previous tick's shot
+      AND the heuristic #8 artifact probe shows no growth → treat the
+      step as STALLED (heuristic #13). Background jobs with no window:
+      frame-grab the output artifact instead of the desktop.
+  4d. NAVIGATOR — per Goal-Guardian tick step 4.6 (canonical):
+      dispatch the analysis subagent, write DIGEST.md + the
+      Navigator: field; an approved NEXT-ACTION substitutes for the
+      step picked at 5-6 and runs as that one action.
+  5. Pick first non-DONE / non-PARKED step from runbook
+       (if none and success unmet → NOT a terminus: increment Round,
+        dispatch the blocker-review subagent, act on its verdict via
+        the constraint compass — Goal-Guardian tick step 8. Round
+        cap exhausted → STUCK-user with the ledger. PARTIAL is only
+        ever a checkpoint; no VERDICT file is written at PARTIAL)
+  6. Execute that step (if it was left IN PROGRESS by a dead tick, restore its
+     precondition first — Re-entry hygiene; if it was left VERIFIED (FnReview
+     pending) do NOT re-execute: hash-check vs the pending stamp and resume at
+     the FnReview dispatch — and if that review is carried/in flight, it does
+     NOT occupy the tick: pick the next runnable step that does not consume
+     the reviewed functions; an IN PROGRESS step found alongside gets its
+     door-2 restore in the same pass):
+       - Bash for direct commands
+       - Bash with run_in_background=true for long ones
+       - Monitor on the log to wait for completion signal
+  7. Verify: run the step's verify check
+       Pass → if the step wrote or rewrote any function (Option B; the
+              fix-trigger adds the fix packet; on /prep runbooks suppressed
+              at Implement/REAL — it fires at the AUDIT step, where the
+              review IS the verify and is dispatched at step entry) →
+              VERIFIED, dispatch one reviewer per function in parallel;
+              DONE only when every function's verdict is clean / unreviewed
+              / WAIVED (a finding → BLOCKED on the producing step, fix mode).
+              Otherwise mark step DONE in runbook, append log line
+       Fail → enter fix mode, /repair sub-loop, rotate up to 5x
+  8. Update auto-runs/<slug>/RUNBOOK.md and auto-runs/<slug>/logs/run.log
+  9. Rewrite auto-runs/<slug>/BOARD.md if any phase changed mark this tick,
+     then write auto-runs/<slug>/PROGRESS.md with one-line "this tick did X" summary
+ 10. CHECKPOINT-EXIT: write all state atomically, set Status:
+     PARTIAL (checkpoint), end the turn. Next tick fires N min
+     later and flips it back to active.
+```
 
-- Each tick is a fresh TURN in the same session that **trusts files over memory** —
-  every state file is re-read at tick start (HI #8), so the architecture survives
-  context compression and chat idleness.
-- The session closing ends the crons. Resume is then explicit:
-  `/auto resume slug=<slug>`.
+Each tick **trusts files over memory** — every state file is re-read at tick start (HI #8), so the architecture survives context compression and chat idleness. (Ticks fire in the SAME session and may retain conversation context — but they never rely on it; the files are the truth. The session closing ends the crons: resume then needs `/auto resume slug=<slug>`.)
 
 ### Cron interval rule of thumb
 
@@ -2548,11 +2631,7 @@ Never restart the farmer / vendor / database / host as a first move. That's the 
 
 ### 14. Heaven's Net — recovery you BUILD keys to failure classes, not symptoms
 
-Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work.
-
-**The mechanism is NOT restated here.** Read the canonical definition — the failure classes, the recovery shape, the STRICT evidence rule, and the Proportion / HOLD / cheapest-first-verify / environment-given-numbers guardrails — in `/error-recon` ("Heaven's Net" section) **before designing any recovery. Never run it from memory, and never paraphrase it from this line** (a paraphrase here silently goes stale the moment /error-recon gains a guardrail, and the last one had already dropped the multi-match rule). Trigger phrase: the user saying "heaven's net" invokes it explicitly.
-
-The one-line shape, for recognition only — never as a substitute for the read: recovery keys to an evidence-mapped failure CLASS plus the state the operation requires, never to a symptom string; unmatched signal = unknown → capture, park, stop loud. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
+Heuristics #10–#13 govern how /auto handles ITS OWN stalls; this one governs the error handling /auto writes INTO a deliverable (stage-mode recovery, retry wrappers, healing code). Never "error string X → do Y": handlers key to a failure class (navigation / auth-session / element / timing / network / resource / unknown) and recover toward the state the operation requires — diagnose actual state → classify → recover by class → verify the invariant restored with evidence → bounded escalate, fail loud. Heuristic #12's worked example (extending a rotation trigger from two error codes to the whole timeout class) is this principle already at work. STRICT evidence caveats, non-negotiable: a runtime class comes ONLY from a matched, evidence-backed map entry — a new symptom joins a class via a new map entry, never by resemblance (unmatched = unknown: capture, park, stop loud); confidence tiers still gate which entries may run a chain; and a job-level recovery budget bounds the whole item, not just each chain. Proportion (a guardrail in that same canonical section): the SIZE of a recovery that rests/retires capacity or pulls a pool — cooldown, bench length, share of a pool — comes from an observed recovery measurement or a bounded ≥×2 smallest-first ladder, never a constant picked by feel; under-sized (hammer) and over-sized (retire healthy) are equal failures. Three companions in the same section: restored must HOLD (a recurrence inside the hold-window — floored at the 15-min probe ceiling — is a failed recovery, not a fresh success; counters continue); verify cheapest-first (a lighter probe may only fail the gate; the first consuming success is the verdict — heuristic #13 applied to built recovery); and environment-given numbers (retry-after, quota, ETA, reset boundary) are the first rung, never overridden by a constant. Trigger phrase: the user saying "heaven's net" invokes this shape explicitly — read the canonical definition + guardrails in /error-recon ("Heaven's Net" section) before designing recovery; never run it from memory. KISS: 1–2 failure modes need no taxonomy; the third symptom-specific handler in the SAME class forces the refactor.
 
 
 ## Auto Does NOT Waive
@@ -2826,7 +2905,7 @@ Write `on` into `GUARDIAN.txt`. Nothing else changes anywhere.
 - **No silently advancing on bad output.** If a step failed, say so and rotate the approach.
 - **No declaring DONE without evidence.** "I think it worked" is not done.
 - **No standing down before the goal.** The guardian cron is deleted ONLY on DONE, STUCK-user, or /auto stop. (The old "cron is for overnight jobs only" rule is retired 2026-08-15 by user directive — any run that pauses unfinished is armed; instant-finish runs never arm, so trivial tasks stay free.)
-- **No treating PARTIAL as an ending — ONLY WHILE `GUARDIAN.txt` READS `on`.** With the guardian armed, PARTIAL is a checkpoint the guardian pushes past and the run doesn't end there. **With the switch `off`, `PARTIAL (checkpoint)` is a LEGAL TERMINAL ENDING** and this Hard NO does not apply — see Goal-Guardian. Read the switch; never assume which half you are in.
+- **No treating PARTIAL as an ending.** PARTIAL is a checkpoint the guardian pushes past — a report may say PARTIAL, the run doesn't end there.
 - **No burning past 5 failed approaches without declaring STUCK.** The whole point is bounded autonomy. (A FnReview finding opens a fresh 5-approach budget for that review round — ≤2 rounds per guardian pass, ≤24 review rounds per step worst case; still bounded. See FnReview.)
 
 
@@ -3090,24 +3169,17 @@ Navigator: n/a (no tick yet) | <verdict> — <one-line why>   (last tick's analy
 
 ## TL;DR
 
-> **READ THE TWO SWITCHES BEFORE TRUSTING THIS SUMMARY.** Several bullets below
-> describe guardian-on / review-full behaviour. `cat GUARDIAN.txt` → `on | off` and
-> `cat REVIEW.txt` → `note | full | off` in this skill folder decide which of them are
-> live. Bullets marked **[guardian on]** or **[review full]** do not apply when their
-> switch is off — and when the guardian is off, `PARTIAL (checkpoint)` is a legal
-> terminal ending, no cron ever arms, and Pattern 3 has no heartbeat.
-
 - /auto = behavior mode, not pipeline architecture.
 - Invocation is authorization. Zero follow-up gates.
-- Inline shape is the default. **[guardian on]** any run that would pause unfinished arms the Goal-Guardian cron (session-lifetime, lazy, one per run) — nothing pauses unfinished unguarded. **[guardian off]** nothing arms; unattended work runs under Pattern 2 and a checkpoint ends the run.
-- The goal is a pinned CONTRACT (success + circumstances + never-do, frozen in GOAL.md); no step may win by cheating it. **[guardian on]** PARTIAL is a checkpoint, never an ending.
-- Every non-terminal turn ends with Status: PARTIAL (checkpoint). **[guardian on]** ticks flip it active and back, and only DONE (validated + provenance-checked) or STUCK-user ends a run. **[guardian off]** that PARTIAL is itself terminal. `/auto stop slug=<x>` is the kill switch either way.
-- Diagnose, rotate approaches, never advance on lies. **[guardian on]** parked steps get up to 3 guardian re-attack rounds via the fresh-eyes blocker-review subagent (citations required); **[guardian off]** a parked step is reported open in the final report instead, named out loud.
-- **[guardian on]** Navigator (2026-08-24): every guardian tick hands the contract + DIGEST.md (a bounded one-page compact brief of significant findings / implementations / errors / trajectory — context, never evidence) + log tail to a fresh subagent that analyzes what just happened and recommends the ONE next move; the driver compass-checks it, books it to APPROACHES.md, and executes it AS step 7, surfacing the reasoning in every checkpoint report. No citations or a dead dispatch → that tick falls back to the plain ladder. Blocker-review is this same shape carrying the stuck packet (leaner, digest-free).
+- Inline shape is the default; any run that would pause unfinished arms the Goal-Guardian cron (session-lifetime, lazy, one per run) — nothing pauses unfinished unguarded.
+- The goal is a pinned CONTRACT (success + circumstances + never-do, frozen in GOAL.md); no step may win by cheating it; PARTIAL is a checkpoint, never an ending.
+- Every non-terminal turn ends with Status: PARTIAL (checkpoint); ticks flip it active and back. Only DONE (validated + provenance-checked) or STUCK-user ends a run; /auto stop slug=<x> is the kill switch.
+- Diagnose, rotate approaches, never advance on lies; parked steps get up to 3 guardian re-attack rounds via the fresh-eyes blocker-review subagent (citations required).
+- Navigator (2026-08-24): every guardian tick hands the contract + DIGEST.md (a bounded one-page compact brief of significant findings / implementations / errors / trajectory — context, never evidence) + log tail to a fresh subagent that analyzes what just happened and recommends the ONE next move; the driver compass-checks it, books it to APPROACHES.md, and executes it AS step 7, surfacing the reasoning in every checkpoint report. No citations or a dead dispatch → that tick falls back to the plain ladder. Blocker-review is this same shape carrying the stuck packet (leaner, digest-free).
 - One-line "[auto] doing X — why" heads-up before non-trivial actions, then proceed.
 - Final report is honest with numbers, not vibes — and ends with Confidence + Risk grades tied to evidence; anything pending/unverified caps Confidence below HIGH. PERFECT = all angles tested + refuter-clean + tests named; the only grade licensing zero-human-input runs.
-- On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it — **[review full]** unless a FnReview line is `open` or a fix-trigger function is `unreviewed`, which force it. Under `note`/`off` that override cannot fire, because no FnReview line is ever written.
-- **[review full]** FnReview: EVERY function written or rewritten (and every function-level fix — fix mode OR a rewritten pre-existing def — with the fix packet) gets a fresh-eyes reviewer at its verify PASS, fanned out in parallel per function, non-blocking for independent steps — 5 principles + goal-trace + 4 "complete, not band-aid" items; a finding blocks the producing step and re-enters fix mode; ≤2 rounds per step per guardian pass; stamps on the Functions block (content-hash); a pending review is never DONE; an open finding is a DONE gate. In-turn dispatch, not a second cron.
+- On judgment-based goals, an independent refuter must fail to break it before DONE (bounded 2 rounds → PARTIAL; BLOCKER-only re-entry). Machine-checked goals skip it — unless a FnReview line is `open` or a fix-trigger function is `unreviewed`, which force it.
+- FnReview: EVERY function written or rewritten (and every function-level fix — fix mode OR a rewritten pre-existing def — with the fix packet) gets a fresh-eyes reviewer at its verify PASS, fanned out in parallel per function, non-blocking for independent steps — 5 principles + goal-trace + 4 "complete, not band-aid" items; a finding blocks the producing step and re-enters fix mode; ≤2 rounds per step per guardian pass; stamps on the Functions block (content-hash); a pending review is never DONE; an open finding is a DONE gate. In-turn dispatch, not a second cron.
 - Fan out same-check × N-item steps to capped sub-agents; offload heavy reads to throwaway sub-agents to keep the driver's context lean.
 - Visual checkpoints: screenshot major events + ~10-min intervals on long visual steps, READ every shot; two identical job-surface shots + a flat artifact probe = STALLED.
 - Operational heuristics #8-14: disk-is-truth, cite-the-incident, hand-test-before-coding, name-this-run-vs-next-run, adjacent-issue-radar, escalation-tree, heavens-net-class-recovery.
