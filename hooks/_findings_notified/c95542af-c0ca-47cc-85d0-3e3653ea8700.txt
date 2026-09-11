@@ -4,3 +4,5 @@ mutate.py
 p4.py
 finding1.txt
 wardrobe_test.py
+repair.py
+rebuild_common.py
