@@ -1,6 +1,17 @@
 {
-  "model": "opus",
+  "model": "sonnet",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/hooks/findings-session-start.py\""
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
@@ -40,6 +51,15 @@
           {
             "type": "command",
             "command": "\"C:/Users/Shadow/AppData/Local/Programs/Python/Python311/python.exe\" \"C:/Users/Shadow/.claude/skills/spec/spec_digest.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Users/Shadow/.claude/hooks/findings-point-of-need.py\""
           }
         ]
       }
