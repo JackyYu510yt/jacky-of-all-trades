@@ -162,7 +162,7 @@ PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next mes
 
 → HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) SEEN evidence the pick stands on, (2) what the other options were ruled out on (same evidence), (3) how we'd know fast if wrong + bounded fallback; unchecked things NAMED — never "n/a" on a pick. On a WORK STEP: how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
 
-FEYNMAN: <the CHOICE in kid words — ONE everyday analogy, zero jargon, three beats: why THIS move won, what we passed on instead, and what happens if it turns out wrong. The plain-words twin of the two arrows above; never a repeat of the CURRENT STAGE FEYNMAN (that one explains the milestone, this one explains the decision). "n/a — <why>" only when there is no action (goal reached / standalone question)>
+FEYNMAN: <the CHOICE in kid words — ONE everyday analogy, zero jargon, four beats: why THIS move won, HOW IT PUSHES TOWARD THE FINISH LINE (the plain-words version of → TOWARD THE GOAL, said outright, not left implicit), what we passed on instead, and what happens if it turns out wrong. The plain-words twin of the two arrows above; never a repeat of the CURRENT STAGE FEYNMAN (that one explains the milestone, this one explains the decision). "n/a — <why>" only when there is no action (goal reached / standalone question)>
 
 **━━ GRADE ━━**
 
@@ -210,13 +210,17 @@ we'd know fast if wrong and the bounded fallback, unchecked items named, never "
 on a work step it follows the canonical error-recon definition (class-keyed recovery,
 evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work
 step has no recovery logic). FEYNMAN (8/27/26) re-tells the CHOICE in kid words — one
-everyday analogy, zero jargon, three beats: why THIS move won, what we passed on
-instead, and what happens if it turns out wrong. It is the plain-words twin of the two
-arrows (they are the audit trail; this is the version the user can repeat back), and it
-must NOT repeat the CURRENT STAGE FEYNMAN — that one explains the milestone, this one
-explains the decision. On a do-it request with no rival option, beat two is the obvious
-alternative we are not taking and why it loses. Goal fully reached → NEXT "none",
-PASTE THIS "nothing — goal reached", FEYNMAN "n/a — goal reached".
+everyday analogy, zero jargon, four beats: why THIS move won, how it pushes toward the
+finish line (the plain-words version of → TOWARD THE GOAL, said outright — added
+2026-09-11 after the user caught that this line was called the arrow's "twin" without
+ever being required to actually restate it, so the goal-connection lived only in the
+technical line and the plain explanation could skip it), what we passed on instead, and
+what happens if it turns out wrong. It is the plain-words twin of the two arrows (they
+are the audit trail; this is the version the user can repeat back, goal-connection
+included), and it must NOT repeat the CURRENT STAGE FEYNMAN — that one explains the
+milestone, this one explains the decision. On a do-it request with no rival option, beat
+three is the obvious alternative we are not taking and why it loses. Goal fully reached
+→ NEXT "none", PASTE THIS "nothing — goal reached", FEYNMAN "n/a — goal reached".
 
 Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed
 full-autopilot grade — every angle empirically tested (happy AND failure paths,

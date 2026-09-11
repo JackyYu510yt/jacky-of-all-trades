@@ -288,12 +288,35 @@ USER OPTION  (omit entirely if this turn has no real fork)
 SUGGESTED ACTION
   Paste this:     <answers this turn's actual question>
   Toward goal:    <this move -> concrete gain -> why the goal needs it>
+  Heaven's net:   <why we can proceed with confidence -- on a pick: SEEN
+                  evidence it stands on + what ruled the other option(s)
+                  out (same evidence) + how we'd know fast if wrong and
+                  the bounded fallback, unchecked things named, never
+                  "n/a" on a pick. On a work step touching recovery
+                  logic: class-keyed recovery, evidence-only detection,
+                  bounded tries, fail-loud -- or "n/a -- no recovery
+                  logic in this step">
+  Feynman:        <the choice in kid words, one everyday analogy, zero
+                  jargon, four beats: why this move won, how it pushes
+                  toward the finish line (plain-words version of
+                  "Toward goal", said outright), what we passed on
+                  instead, what happens if it turns out wrong. "n/a --
+                  <why>" only when there's no action (goal reached)>
   Confidence/Risk: <PERFECT|HIGH|MEDIUM|LOW -- <what's verified vs assumed>>
 ```
 
 `(judgment)` for the prose fields; the Criteria block and `check_exit:` line
 are copied straight from RUN.md and check_exit.py's own output — never
 re-typed, never summarized into something check_exit didn't say.
+
+**Added 2026-09-11.** `Heaven's net` and `Feynman` were absent from this
+block — a leftover from when it reported once per guardian tick and stayed
+terse on purpose. The guardian cron is gone (see "What changed" below); this
+report now fires once per checkpoint/exit, the same shape as `/explain` and
+`/spec`'s `SUGGESTED ACTION`, so the reason to skip them no longer holds.
+Same rules as those two skills: `Heaven's net` never reads "n/a" on a pick,
+and `Feynman` must state the goal-connection outright as its own beat, not
+leave it implied by the `Toward goal` line above it.
 
 ## Sub-agent fan-out (unchanged, kept minimal)
 
