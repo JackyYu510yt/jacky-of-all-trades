@@ -7,3 +7,4 @@ wardrobe_test.py
 repair.py
 rebuild_common.py
 fix3.py
+finding2.txt
