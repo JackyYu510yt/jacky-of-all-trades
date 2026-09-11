@@ -414,6 +414,7 @@ Good evidence:
 - A variable value printed from a probe that matches the failure condition.
 - A specific branch of code proven to execute via instrumentation.
 - A standalone that fails every run on the current codebase and passes every run after the fix.
+- **A mutation test**: on a copy, take the fix back OUT and re-run the same test — it must now FAIL. A test that still passes with the fix reverted doesn't discriminate; it would have passed either way, so its earlier PASS proved nothing. This is the reverse-direction twin of the bullet above (RED-before-fix proves the bug existed; this proves the test would have caught its return) — the cheapest of the two when the fix already landed and there's no un-fixed environment left to reproduce against.
 - A query plan that shows the index isn't being used.
 - A network trace that shows the request shape mismatch.
 - A screenshot of the broken UI alongside the rendered DOM.

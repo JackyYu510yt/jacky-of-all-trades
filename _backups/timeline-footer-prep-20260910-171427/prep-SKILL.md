@@ -415,7 +415,7 @@ Phase 7 (AUDITOR audit + RED-TEAM)
 Phase 8 (per-function approval)
   Normal:  Ask "does this match what you pictured?" after each
            function clears AUDIT.
-  Auto:    Drop that gate. The Red → Green → Mutate → Real → Audit cycle IS
+  Auto:    Drop that gate. The Red → Green → Real → Audit cycle IS
            the verify; AUDIT pass = function done. Update the BUILD
            STATUS card and move to the next function.
 ```
@@ -425,7 +425,7 @@ Phase 8 (per-function approval)
 These remain mandatory regardless of mode:
 
 - The four condition cards (END GOAL / WORKFLOW / TESTING / SUCCESS) — they're derived, not skipped
-- The Red → Green → Mutate → Real → Audit cycle for every RISKY function
+- The Red → Green → Real → Audit cycle for every RISKY function
 - The P7 guards in Phase 8 (per-function isolation, spec-broadening-stop, style-locks-after-2)
 - The BUILD STATUS card live updates
 - The FINAL VERDICT card as a P4 block
@@ -645,20 +645,20 @@ The `Result` is the proven part; the `Suspected verdict` is always flagged as a 
 
 ### BUILD STATUS card format
 
-Phase 6 emits this card with all phases unchecked. Phase 8 updates it after each cycle phase (RED / GREEN / MUTATE / REAL / AUDIT) clears.
+Phase 6 emits this card with all phases unchecked. Phase 8 updates it after each cycle phase (RED / GREEN / REAL / AUDIT) clears.
 
 ```
 ╭─ BUILD STATUS ──────────────────────────────────────────────╮
 │                                                              │
 │  Mode:      NORMAL | DIAGNOSING | ROTATING                  │
 │                                                              │
-│  Progress per function — columns [R][G][M][L][A] =           │
-│    Red, Green, Mutate, reaL, Audit                            │
-│  (SAFE rows show only [G][A]; RISKY rows show all five)      │
+│  Progress per function — columns [R][G][L][A] =              │
+│    Red, Green, reaL, Audit                                   │
+│  (SAFE rows show only [G][A]; RISKY rows show all four)      │
 │                                                              │
-│    [ ] [ ] [ ] [ ] [ ]   <function_1>        (RISKY/SAFE)    │
-│    [ ] [ ] [ ] [ ] [ ]   <function_2>        (RISKY/SAFE)    │
-│    [ ] [ ] [ ] [ ] [ ]   <function_3>        (RISKY/SAFE)    │
+│    [ ] [ ] [ ] [ ]   <function_1>            (RISKY/SAFE)    │
+│    [ ] [ ] [ ] [ ]   <function_2>            (RISKY/SAFE)    │
+│    [ ] [ ] [ ] [ ]   <function_3>            (RISKY/SAFE)    │
 │    ...                                                       │
 │                                                              │
 │  Current function:                <name or "—" if not started>│
@@ -849,13 +849,6 @@ Safe functions get a one-line summary. Only risky ones get the full spec.
                                      can clear the cycle. Pulls
                                      from field 0.
 
-                             (A 5th cycle step, MUTATE, runs between
-                             GREEN and REAL at BUILD time — see Phase
-                             8. It isn't pre-written here because what
-                             to mutate isn't known until the function
-                             exists; the AUDITOR still expects its
-                             proof to be pasted alongside RED/GREEN.)
-
 14. KISS check               What I deliberately did NOT add,
                              and why a future reader might be
                              tempted to add it anyway.
@@ -931,7 +924,7 @@ Append the 17-field block to the plan file. Phase 7.5 ends when every risky func
 
 Build one function at a time. Each function goes through a tiered cycle keyed off its Phase 5 risk tag.
 
-**RISKY function — full Red → Green → Mutate → Real → Audit cycle**
+**RISKY function — full Red → Green → Real → Audit cycle**
 
 ```
 RED      Write the test FIRST. Run it. Watch it fail.
@@ -944,59 +937,6 @@ GREEN    Write the function. Run the test. Watch it pass.
          that too. Function-then-test makes it too easy to
          tailor the test to whatever the function happens
          to do — this ordering blocks that.
-
-MUTATE   Prove the test discriminates, not just confirms
-         (2026-09-10, user directive: "make sure everything
-         is literally evidence-backed"). RED only proved the
-         test fails when the function is ABSENT; that is not
-         the same claim GREEN just made. On a copy, break the
-         function's own logic — revert to a stub, flip the
-         key condition, hardcode a wrong value — and re-run
-         the SAME test. It must now FAIL. A test that still
-         passes against a broken function proves nothing: it
-         would have passed whether the function worked or not,
-         which means GREEN's earlier pass was never evidence.
-         Paste the mutation + the failure it produced as the
-         proof; then revert the mutation before REAL. This is
-         the concrete, mechanical form of the discriminating-
-         probe principle (P11/HI #13) applied to the test
-         itself rather than to a diagnosis.
-
-         CARVE-OUT — when re-running the test is itself the
-         risk. MUTATE means running GREEN's test a SECOND
-         time, on top of the first. If that test's own body
-         triggers a real costly or irreversible effect (spends
-         money, sends a real message/email, writes to shared
-         or production state, hits a rate-limited API), running
-         it twice doubles that effect — the safety net becomes
-         the hazard. Two legal outs, in order of preference:
-           (a) STUB THE LEAF for the mutation run only — same
-               principle as Scale-Soak's "real logic, stubbed
-               leaf": everything up to the outermost paid/
-               irreversible call runs real and gets mutated;
-               that one call is faked for this run alone. Proves
-               the function's own logic discriminates without
-               spending/sending twice.
-           (b) SKIP explicitly, same shape as the RED-TEAM
-               carve-out above: `MUTATE: skipped — <the real
-               effect a second run would cause>`. A skipped
-               MUTATE is a named gap, not a silent one — the
-               AUDIT card inherits the risk and the AUDITOR
-               sees the skip reason.
-         Never mutate-and-rerun against a real paid/irreversible
-         call "just this once" to save the trouble of stubbing —
-         that is exactly the case this carve-out exists for.
-
-         SECOND CARVE-OUT — genuine nondeterminism (the function
-         calls an LLM, relies on timing, or draws from randomness
-         the test doesn't seed). A single mutated run can pass or
-         fail by chance either way, so one result isn't proof by
-         itself. Seed what can be seeded (same discipline as
-         Scale-Soak's "deterministic where possible"); what's left
-         genuinely random gets a small ensemble (2-3 runs) instead
-         of one, with the verdict stated as "N/M mutated runs
-         failed" rather than a bare pass/fail. Don't fabricate
-         precision a nondeterministic function can't offer.
 
 REAL     Run the function in production-shape — the
          conditions named in the TESTING CONDITIONS card.
@@ -1089,7 +1029,6 @@ Phase 8 keeps the BUILD STATUS card (Phase 6 card 16) live. Update it after ever
 
 - After RED clears for a function → check the `[R]` column
 - After GREEN clears → check `[G]`
-- After MUTATE clears (the broken-function re-run FAILED as required) → check `[M]` (RISKY only — SAFE rows never show this column). A named skip (the carve-out above) marks `[M]` as `[s]` with the reason in Sibling notes, never left blank — blank would read as "not attempted yet," not "deliberately skipped."
 - After REAL clears → check `[L]`
 - After AUDIT clears → check `[A]`, set Current function to next, reset Approaches counter
 - On entering DIAGNOSING / ROTATING (verify failed, picking new approach) → update Mode
@@ -1102,7 +1041,7 @@ The BUILD STATUS card is also the file `/auto` reads when running on top of `/pr
 
 ### Phase 9 — Pentest the integrated system
 
-By the time Phase 9 starts, every RISKY function has already cleared its own Red → Green → Mutate → Real → Audit cycle in Phase 8. Per-function correctness is proven. Phase 9 proves the functions **compose** — that the integrated system survives the production-shape conditions named in the TESTING CONDITIONS card.
+By the time Phase 9 starts, every RISKY function has already cleared its own Red → Green → Real → Audit cycle in Phase 8. Per-function correctness is proven. Phase 9 proves the functions **compose** — that the integrated system survives the production-shape conditions named in the TESTING CONDITIONS card.
 
 Phase 9 has one job: source its checks directly from the TESTING CONDITIONS card. Nothing here is invented fresh — if a check isn't in that card, it doesn't run. This keeps Phase 9 from drifting into "tests I felt like writing."
 
@@ -1281,16 +1220,6 @@ P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card t
 │  Risk: <HIGH/MED/LOW> — <what's exposed if this verdict is   │
 │        wrong; which parts are unproven on real inputs>       │
 │                                                              │
-│  Timeline: (debrief-style staged timeline, whole project —   │
-│    see debrief skill / TIMELINE rules in the explain skill)  │
-│    <STAGE>                                                   │
-│    1. <milestone already done>                               │
-│    THIS SESSION                                              │
-│    2. <this session's step>              ← YOU ARE HERE      │
-│    WHAT'S LEFT                                                │
-│    3. <next milestone>                                        │
-│    4. <finish line>                                           │
-│                                                              │
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
@@ -1301,14 +1230,6 @@ The headline contrasts current state with the END GOAL card, not with a sub-step
 **`User option` rules (added 8/28/26 — user-designed, C1 shape):** the block sits directly ABOVE `Suggested action` and appears ONLY when this turn genuinely puts a decision to the user — no fork → omit the whole block (never "n/a"), and `Suggested action` stands alone as before. Every option carries FOUR fields in order: the option line with its cost, `+` pros, `−` cons, and `Holds up`. **`Holds up` is the field that earns the section** — it judges the option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching; what maintenance does it create; what breaks later because we chose it. That is the structural-fix bar applied per option, so a band-aid is NAMED as a band-aid there, never softened. Because `Holds up` forces the durability question, **a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped** — if every listed option is a band-aid, that IS the finding: say so and add the option that isn't. Exactly ONE option carries `← RECOMMENDED` on the option line, decided on the `Holds up` reads FIRST and cost second. Pros and cons stay balanced in count. `If you say nothing` names the option taken when the user never answers. `Why that default` argues on STRUCTURE, never on speed alone. **ECHO RULE (hard):** `Paste this` MUST name the option marked `← RECOMMENDED` — one decision, two renderings; if they differ the card is wrong, so fix the reasoning above rather than splitting the verdict.
 
 **Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — PERFECT is the 100%-guaranteed, full-autopilot grade: every angle tested empirically (happy path AND failure paths, real inputs at real scale), every result directly observed, zero pending items, the independent AUDITOR/pentest tried to break it and found nothing, AND the autopilot itself was proven — the script ran (and recovered) end-to-end with no human thought, no human decision, no human intervention, and no Claude in the loop (structural-fix bar: next run, different input, nobody watching, still works) — the evidence clause must name the tests per angle including the unattended-run proof; one untested angle → HIGH at best. HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read) but not every angle was adversarially tested; anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH (and PERFECT is unreachable). A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
-
-**`Timeline` rules (added 2026-09-10 — pulled from the debrief skill's staged timeline, reused here to show progress rather than mechanism):** reuses debrief's format exactly — numbered steps top to bottom, whole numbers, grouped into short ALL-CAPS stages, one blank line before each label. Read the debrief skill's timeline rules before writing one — don't reinvent the shape. Scope is the WHOLE project, not this session: `Current stage` above is this session's move, `Timeline` is the zoomed-out version — every milestone from where the project started to the finish line, this session's step marked in place among them.
-
-**The finish line is resolved, never invented.** For `/prep` this is almost always trivial — the finish line IS the **END GOAL** card, already pinned before Phase 8 build cycles start. If a project is somehow mid-build with no END GOAL card yet (should not happen post-Phase-6, but if it does): fall back to the same resolution order as `/explain` — an open `SPEC.md`'s `## Goal` section, then a stated goal already given this conversation — and if none of those exist either, stop and ask the user directly what the finish line is, one plain question, no guessing. Once resolved, it is FROZEN for the rest of the build, exactly like `Ultimate goal`.
-
-**Stages mesh with the MILESTONE ▸ PHASE ▸ STEP pyramid** (canonical definition in `/principles` → "Plan vocabulary"). `/prep` almost always has this structure already — the plan's own PHASEs and the BUILD STATUS card (Phase 6 card 16). `Timeline`'s stage labels ARE those phase names, in the plan's own order, and its numbered steps are that phase's real steps — this card renders the plan's existing structure, it does not invent a second one alongside it. Only a project with genuinely no phase breakdown yet falls back to free-form stages (what's done / THIS SESSION / what's left) — and even then the last step is still the resolved finish line, not a guess.
-
-Exactly one step carries `← YOU ARE HERE` — the step this session's work belongs to; steps already done get no marker, steps not yet started get no marker either. The last numbered step is always the finish line — the same end-state as `Ultimate goal`'s `Delivers` line, phrased as the final milestone. Goal fully reached → every step reads as done and the last one carries `← YOU ARE HERE`, or write one line: "finish line reached — see Ultimate goal above."
 
 ### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
 

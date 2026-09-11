@@ -52,32 +52,6 @@ from pathlib import Path
 GLOBAL_INDEX = Path.home() / ".claude" / "FINDINGS.md"
 RECORD_NAME = "FINDINGS.md"
 
-# Sidecar index for findings tagged `scope: universal` in their body -- a
-# lesson that holds for a project that does not exist yet (names no project
-# file). Additive only: it is never a substitute for the record/index above,
-# and existing entries are never rewritten to add this tag retroactively --
-# see UNIVERSAL_RE and cmd_universal. Auto-rebuild M1, prep-auto-rebuild.txt
-# Phase 1.1 Step 1, decided 2026-09-10.
-UNIVERSAL_INDEX = Path.home() / ".claude" / "UNIVERSAL_FINDINGS.md"
-
-UNIVERSAL_HEADER = """# UNIVERSAL FINDINGS — travel to every project, regardless of folder
-
-One line per finding whose lesson holds for a project that does not exist
-yet (it names no project file). Populated two ways: (1) automatically, when
-a finding's body contains a `scope: universal` line, at note-write time;
-(2) by hand, for pre-existing findings backfilled once on 2026-09-10 (see
-that date's entries below and Skills/FINDINGS.md id 7d123949 for the method).
-Never edited by hand after that -- only appended, under the same lock as the
-global index.
-
-    python ~/.claude/skills/spec/note.py --universal   <- read THIS file
-"""
-
-# A `scope:` field line in a finding body, same shape as `context:` / `why:`.
-# Only "universal" is ever written to the sidecar; "local" (or an absent
-# field) is the default and needs no entry anywhere.
-SCOPE_RE = re.compile(r"^scope:\s*(universal|local)\s*$", re.IGNORECASE | re.MULTILINE)
-
 # The mutex byte. Far past any real EOF, so it is a pure rendezvous point that
 # no reader ever touches. Writers agree on it; that is all a mutex needs.
 LOCK_BYTE = 1 << 40
@@ -414,63 +388,6 @@ def _index_append(project: Path, eid: str, summary: str, dedupe: bool = False,
         return True
 
 
-def _universal_has(project: Path, eid: str) -> bool:
-    if not UNIVERSAL_INDEX.is_file():
-        return False
-    needle = f"| {project} | {eid} |"
-    return any(needle in line
-               for line in UNIVERSAL_INDEX.read_text(encoding="utf-8", errors="replace").splitlines())
-
-
-def _universal_append(project: Path, eid: str, summary: str, ts: str | None = None) -> bool:
-    """Append one row. Dedupe check happens INSIDE the lock -- same race as _index_append."""
-    UNIVERSAL_INDEX.parent.mkdir(parents=True, exist_ok=True)
-    with _Lock(UNIVERSAL_INDEX) as lk:
-        if _universal_has(project, eid):
-            return False
-        need_header = os.fstat(lk.fd).st_size == 0
-        lk.append(("" if need_header else "\n").join(
-            ([UNIVERSAL_HEADER] if need_header else [""])
-            + [f"- {ts or _now()} | {project} | {eid} | {summary}"]) + "\n")
-        return True
-
-
-def cmd_universal() -> int:
-    if not UNIVERSAL_INDEX.is_file():
-        print(f"no universal findings yet: {UNIVERSAL_INDEX}")
-        return 0
-    text = UNIVERSAL_INDEX.read_text(encoding="utf-8", errors="replace")
-    rows = [ln for ln in text.splitlines() if ln.startswith("- ")]
-    print(f"{len(rows)} universal finding(s)  ({UNIVERSAL_INDEX})")
-    for row in rows:
-        print(row)
-    return 0
-
-
-def cmd_tag_universal(eid: str, target_dir: str) -> int:
-    """Backfill: mark an EXISTING finding as scope:universal without touching its body.
-
-    The original entry in <project>/FINDINGS.md is never rewritten -- this only
-    appends a row to the sidecar (UNIVERSAL_INDEX). A human confirms each id
-    before tagging (prep-auto-rebuild.txt Phase 1.1 Step 2): the any/every/all
-    pattern in a context: line finds CANDIDATES, not answers -- several here
-    read general but name project-specific files once the body is actually read.
-    """
-    project = _resolve_dir(target_dir)
-    entries = _read_entries(project / RECORD_NAME)
-    match = next((e for e in entries if e["id"] == eid), None)
-    if match is None:
-        raise ValueError(f"no finding with id {eid} in {project / RECORD_NAME}")
-    if match["retracted_by"]:
-        raise ValueError(f"{eid} is retracted; refusing to tag a dead finding as universal")
-    summary = _summary("\n".join(match["body"]))
-    if _universal_append(project, eid, summary, ts=match["ts"]):
-        print(f"tagged universal: {eid} -> {UNIVERSAL_INDEX}")
-    else:
-        print(f"already tagged universal: {eid}")
-    return 0
-
-
 def cmd_note(target_dir: str, file_path: str) -> int:
     project = _resolve_dir(target_dir)
     src = Path(file_path)
@@ -521,16 +438,6 @@ def cmd_note(target_dir: str, file_path: str) -> int:
             f"record WRITTEN ({eid} in {record}) but the global index failed: {exc}. "
             "Retry with the SAME --file to repair the index; do not reword."
         ) from None
-    scope_match = SCOPE_RE.search(body)
-    if scope_match and scope_match.group(1).lower() == "universal":
-        try:
-            _universal_append(project, eid, _summary(body))
-            print(f"noted {eid} -> {record}  (also tagged universal)")
-        except OSError as exc:
-            # The finding is already safely recorded+indexed above; the
-            # universal tag is a convenience, never a reason to fail the note.
-            print(f"noted {eid} -> {record}  (universal tag deferred: {exc})")
-        return 0
     print(f"noted {eid} -> {record}")
     return 0
 
@@ -758,14 +665,11 @@ def _arg(argv: list[str], flag: str, default: str | None = None) -> str | None:
 
 USAGE = (
     "usage:\n"
-    "  note.py --dir <ABS project> --file <finding.txt>   (--file may include a\n"
-    "                                    'scope: universal' line -- see below)\n"
+    "  note.py --dir <ABS project> --file <finding.txt>\n"
     "  note.py --recent <ABS project> [--limit N]\n"
     "  note.py --index [--limit N]\n"
     "  note.py --retract <id> --dir <ABS project> --reason \"<why>\"\n"
     "  note.py --for <path to a file> [--limit N]\n"
-    "  note.py --universal                                (read the universal sidecar)\n"
-    "  note.py --tag-universal <id> --dir <ABS project>    (backfill an existing finding)\n"
 )
 
 
@@ -788,10 +692,6 @@ def main(argv: list[str]) -> int:
         if "--retract" in argv:
             return cmd_retract(_arg(argv, "--retract"), _arg(argv, "--dir"),
                                _arg(argv, "--reason", ""))
-        if "--universal" in argv:
-            return cmd_universal()
-        if "--tag-universal" in argv:
-            return cmd_tag_universal(_arg(argv, "--tag-universal"), _arg(argv, "--dir"))
         target, src = _arg(argv, "--dir"), _arg(argv, "--file")
         if not target or not src:
             print(USAGE, file=sys.stderr)

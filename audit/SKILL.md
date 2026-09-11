@@ -1,11 +1,11 @@
 ---
 name: audit
-description: Review proposed changes one last time before they're applied, using an independent AUDITOR second-brain (a fresh reviewer subagent that re-derives risk from the actual files, not the same context that proposed the change) plus a dedicated RED-TEAM attacker subagent that invents hostile scenarios (mid-operation resource death, races, half-done re-entry, poison pills, lying success signals) and walks each through the change to a HANDLED/DEGRADES/BREAKS/UNKNOWN verdict. Lists every change, checks scope match to the discussed intent, flags destructive or irreversible actions, surfaces silent assumptions and regression risks, and presents a final go/revise/stop verdict. Use right before executing any non-trivial change — edits to multiple files, deletions, refactors, config changes, git operations, external API calls, or any action the user might regret. Acts as a safety gate between "plan" and "execute". Use when the user says "audit this", "before you do that", "double check", "what are you about to do", "hold on — review first", or any pause-before-action prompt.
+description: Review proposed changes one last time before they're applied. First scopes the scene — recons the relevant files/subsystems the change actually sits inside (fanned out to sub-agents for a real area, mirroring supergoal's Stage 2 recon), then checks prior findings/SPEC.md for what recon turned up (via note.py) so nothing re-discovers something already on record. States the plain facts of what's about to happen, then hands those facts — plus the real target files — to an independent AUDITOR second-brain subagent (a fresh reviewer that did not author the plan) that does a full scope/reversibility/assumptions/regressions pass internally but must compress it to a strong, unhedged YES or NO on "should this proceed?" — a finding only drives NO if it's both likely-to-happen and consequential AND backed by real evidence or stated high-confidence reasoning, so trivial or unverified edge cases can't false-block. No BLOCKER/CONCERN scoring, no scenario tables — one question, one clean answer, then the user's own go/no-go. Use right before executing any non-trivial change — edits to multiple files, deletions, refactors, config changes, git operations, external API calls, or any action the user might regret. Acts as a safety gate between "plan" and "execute". Use when the user says "audit this", "before you do that", "double check", "what are you about to do", "hold on — review first", or any pause-before-action prompt.
 ---
 
 # Audit
 
-Last-chance safety gate. Before any non-trivial change is applied, enumerate exactly what is about to happen and measure it against what the user actually asked for. Prove understanding before acting.
+Last-chance safety gate. Scope the scene, check what's already known, state the facts, ask one question, get one strong answer. No essay, no scoring rubric.
 
 
 ## When to Use This Skill
@@ -26,303 +26,197 @@ Last-chance safety gate. Before any non-trivial change is applied, enumerate exa
 
 ## Core Principle
 
-**Before you apply, prove you understood.** Audit forces an explicit enumeration of every change and a deliberate match-check against the user's stated goal. No "trust me, I got it." No silent side effects. No surprises.
+**Ground it, then facts, then one question, then one strong answer.** Audit is not an essay contest. It grounds itself in the real surrounding code first, states exactly what's about to happen in plain lines, then asks exactly one thing — *should this proceed?* — and refuses to accept a hedge as the answer.
 
-**The second-brain rule.** The brain that proposed the change is the wrong brain to clear it — it shares every blind spot that produced the plan. So the core review is run by an **independent AUDITOR**: a fresh reviewer subagent that did NOT author the plan, is handed only the stated goal + the enumerated changes, and **reads the actual target files itself** to re-derive scope, reversibility, assumptions, and regressions from source. Same-context "re-reading" is not an audit — it's the same brain agreeing with itself.
+**The second-brain rule.** The brain that proposed the change is the wrong brain to clear it — it shares every blind spot that produced the plan. So the answer comes from an **independent AUDITOR**: a fresh reviewer subagent that did NOT author the plan, is handed only the stated facts, and **reads the actual target files itself** before answering. Same-context "re-reading" is not an audit — it's the same brain agreeing with itself.
 
-Three questions every proposed change must answer truthfully:
-
-- **Scope** — is this exactly what was discussed, nothing more and nothing less?
-
-- **Reversibility** — if this turns out wrong, how easy is it to undo?
-
-- **Assumptions** — what are we treating as true that we haven't actually verified?
+**No hedging.** "Probably fine," "mostly OK," "yes, but…" are not answers. If there's a real caveat, the caveat makes it **NO** — and the caveat becomes the one sentence of why.
 
 
 ## Runtime Workflow
 
-Seven phases. Run them all before executing. Do not skip.
-
-
-`========================================`
-
-### Phase 1: Enumerate the Proposed Changes
-
-List every single change about to happen. Be explicit:
-
-- **Files to edit** — full path + what's changing (line range or summary).
-
-- **Files to create** — full path + purpose.
-
-- **Files to delete** — full path + why.
-
-- **Commands to run** — exact command string.
-
-- **External calls** — API endpoints, services to hit.
-
-- **State to modify** — git operations, config changes, credential operations, env vars.
-
-If the list is empty, there's nothing to audit — let the user know and exit.
+Six steps. Do not skip any of them.
 
 `========================================`
 
-### Phase 2: Scope Match Check
+### Step 1: Scope the Scene (Recon)
 
-For each proposed change, check it against the user's stated goal:
+Before anything else, ground yourself in what's actually there — the same move `supergoal`'s Stage 2 recon makes before it plans: read the relevant files/subsystems the change actually sits inside, not just the literal files being edited.
 
-- **In scope** — directly asked for or a necessary consequence.
+- Identify what surrounds the change: callers, adjacent modules, the conventions already in use, anything that explains *why* the current code looks the way it does.
+- If it's a real area (multiple files/subsystems, not a one-liner), fan out with `Agent` sub-agents in parallel to read it — same fan-out-and-offload rule `/auto` and `supergoal` use, so the driver stays lean instead of reading everything itself serially.
+- For a genuinely small, self-contained change (one file, no callers, nothing adjacent), this step is quick — say "scene is just this file, nothing adjacent" and move on. Don't manufacture recon for a one-liner.
 
-- **Incidental** — not asked for but small and obviously needed (e.g., adding an import that a new call requires). Flag it as incidental but usually OK.
-
-- **Out of scope** — not asked for and not necessary. Flag loudly. Almost always should be removed from the plan.
-
-The bias: if in doubt, it's out of scope. The user can always ask for more after the main change is applied.
+Output: a short grounding note — what's actually there, in plain lines. This is what Step 3's facts get checked against, and what Step 2's findings lookup runs over (recon may surface adjacent files worth checking too, not just the ones named in the original ask).
 
 `========================================`
 
-### Phase 3: Classify Risk Per Change
+### Step 2: Check What's Already Known
 
-Tag each proposed change with one of these labels:
+Before stating anything, check whether this exact ground has already been covered — the whole point is to stop re-discovering (and re-spending a day on) something that's already on record.
 
-- **Safe** — reversible via undo / git revert, affects only local files, no external state.
+For every file that matters — the target files AND anything Step 1's recon surfaced as relevant — plus the project as a whole, run:
 
-- **Reversible with effort** — deletions, large renames, moving files between dirs. Recoverable from git but requires work.
+```
+python "C:\Users\Shadow\.claude\skills\spec\note.py" --for "<ABS path to file>"
+python "C:\Users\Shadow\.claude\skills\spec\note.py" --recent "<ABS project dir>"
+```
 
-- **Irreversible local** — deletions outside git, removing tracked-but-uncommitted files, truncating log files, rm -rf.
+Also read the project's `SPEC.md` if one exists — specifically the `Assumptions & Unknowns` section and the Change Log — for any decision or open question that bears on this change.
 
-- **External** — API calls, emails, PR creation, push to remote, deploying, messages to chat platforms. Once sent, cannot be unsent.
+If something surfaces that already answers, decides, or warns about part of what's about to happen: **that finding goes straight into the facts list as its own line, verbatim (with its id/date)**, and it is decisive — the plan doesn't get to silently re-derive something already on record. If a finding was retracted, say so and say what replaced it (the retraction body, not just "it's dead").
 
-- **Destructive on third parties** — dropping database tables, canceling orders, revoking credentials others depend on, force-pushing to shared branches.
-
-Higher-risk categories get more scrutiny and more explicit user confirmation.
-
-`========================================`
-
-### Phase 4: Check Silent Assumptions
-
-Look at the proposed changes and ask: what does this plan assume is true, that we haven't actually verified?
-
-Typical assumptions to flag:
-
-- **File exists / has expected content** — did we read it recently?
-
-- **Function signature matches** — are we calling it the way it's defined right now?
-
-- **Dependency is installed** — `import X` works in this env?
-
-- **Permissions / credentials** — does the user have access to what we're touching?
-
-- **No one else is editing** — shared systems can change under us.
-
-- **Assumed env var is set** — PATH, API_KEY, etc.
-
-- **Assumed tool version** — behavior differs between versions.
-
-For each assumption, either verify it now or explicitly flag it as an unchecked assumption in the audit report.
+If nothing surfaces, say so in one line ("no prior findings on these files/project") and move on — this step isn't meant to manufacture busywork, only to catch the expensive case.
 
 `========================================`
 
-### Phase 5: Regression Risk
+### Step 3: State the Facts
 
-What currently works that could break as a result of this change?
+Plainly, in a flat list — no analysis, no framing, just what is true right now. **Every fact carries its evidence, named** — same rule `supergoal` uses for derived items: "the evidence clause is mandatory, not decoration." A fact without the thing it came from is a guess wearing a fact's clothes.
 
-- **Callers of modified functions** — does the signature / behavior change break any caller?
+- **What's changing** — each file/command/external call, one line: path + what changes (or command string, or endpoint hit). Evidence: you're about to make this change — no citation needed, it's the proposal itself.
+- **Why (this change)** — the one-sentence goal this specific change serves, in the user's own words if possible.
+- **End goal (the actual finish line)** — the project's pinned goal, not just this change's excuse for existing. Pull SPEC.md's `## Goal` section if one exists (quote it); otherwise the user's stated end objective for this session/thread, in their words. This is what tells the auditor whether the change is a step toward the real target or a local fix that misses it — a change can pass every other check and still not be what the finish line needs.
+- **What already works that this touches** — from Step 1's recon: name it if there's anything, or say "nothing existing." Evidence: `<file:line you read it at>`, or the recon sub-agent's finding.
+- **What's unverified** — at most the handful of things the plan is trusting without having checked. Labeling something "unverified" IS its evidence tag — that's the honest alternative to a fact you can't back.
+- **Prior findings/decisions (Step 2)** — anything that surfaced, verbatim (finding id/date is its own evidence), or "none found."
 
-- **Tests that might now fail** — existing tests that exercise the changed area.
-
-- **Adjacent features** — features that share code with the changed area.
-
-- **Config consumers** — if config changes, who reads it and with what expectations?
-
-- **Downstream systems** — for external calls, is the downstream prepared for this?
-
-Flag each concrete regression risk. If the answer is "probably fine," say "probably fine" — don't pretend there's no risk when there is.
+Each fact is either **empirical** (you read it, ran it, or a finding/spec states it — cite where) or **explicitly unverified** — never a bare assertion presented as settled. If you can't name where a "fact" came from, either verify it now (a quick read/run) or move it to the unverified line. This replaces any separate scope/risk/assumption/regression writeup — those belong in this one list, stated plainly with evidence, not scored or categorized. If the list is empty, there's nothing to audit — say so and exit.
 
 `========================================`
 
-### Phase 5.5: Dispatch the Independent Reviewers (Second Brain + Red Team)
+### Step 4: Ask the Independent Auditor
 
-This is the heart of the audit. Phases 1–5 are *your* pass — the same brain that proposed the change. Now hand it to brains that didn't. Two independent agents, two different jobs: the **AUDITOR** re-derives scope / reversibility / assumptions / regressions; the **RED-TEAM** invents hostile scenarios and walks each one through the change until something breaks. When both apply, dispatch them IN PARALLEL — one message, two `Agent` calls.
+Dispatch a fresh reviewer subagent (`Agent` tool, `subagent_type: general-purpose`, or `code-reviewer` if available — model unset, keep Opus). Give it ONLY:
 
-**Model routing — both reviewers KEEP Opus. Leave `model:` unset.**
-_(Added 2026-08-30 during a cost review. `/auto` was found naming no model on any
-dispatch and paying Opus for a per-tick Navigator that only reads files — a real
-waste, now fixed there. This skill has the opposite shape: its only subagents are
-the two below, each dispatched once, and they are the ones that find what the
-author's own brain cannot. On the run that prompted this review the pair returned
-6 blockers and a measured 27% data-loss figure that reshaped the design. A future
-cost pass will be tempted to downgrade them; this note is here to say the volume
-problem was never here, so the saving is not here either.)_
+- the Step 3 facts, verbatim (including anything that surfaced in Steps 1-2),
+- the real file paths to read (target files + whatever Step 1 identified as adjacent),
+- the brief below.
 
-**Dispatch the AUDITOR (in priority order):**
+Do **not** feed it your own opinion of whether it should proceed — that's what it must derive itself from the facts and the actual files.
 
-1. **Preferred — a fresh reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available). Give it ONLY:
-   - the user's stated goal, in the user's own words (not your paraphrase),
-   - the enumerated list of proposed changes (Phase 1) — the *what*, with exact file paths and commands,
-   - the explicit instruction below.
-
-   Crucially, do **not** feed it your scope/assumption/regression conclusions — those are what you want it to re-derive independently. It must form its own view.
-
-2. **Fallback — only if subagents are unavailable.** Open a section headed `=== AUDITOR (second brain) ===`, drop the author's stance, and review as a skeptic whose job is to catch what the author missed. Run the RED-TEAM the same way — a second section headed `=== RED-TEAM (fallback) ===` walking the scenario categories below. State clearly that this was a same-context fallback, not a true independent pass.
-
-**The brief handed to the reviewer:**
+**The brief:**
 
 ```
 You are the AUDITOR — an independent reviewer. You did NOT write this
-plan and must not assume it is correct. Below is a user's stated goal
-and a list of changes someone is about to apply.
+plan. Below are the stated facts of a change about to be applied,
+including recon of the surrounding code and any prior findings/
+decisions that already surfaced.
 
-Your job:
-1. READ each target file yourself (current state on disk) before
-   judging — do not trust the change descriptions.
-2. SCOPE — does each change trace to the stated goal? Flag anything
-   out of scope or missing.
-3. REVERSIBILITY — classify each change's blast radius (safe /
-   reversible / irreversible-local / external / destructive).
-4. ASSUMPTIONS — what is the plan treating as true that the files
-   don't actually support right now? (stale reads, wrong signatures,
-   missing deps, unset env, wrong paths.)
-5. REGRESSIONS — what currently works that this could break? Name
-   concrete callers / tests / consumers.
-Return ranked findings (BLOCKER / CONCERN / NOTE), each with the
-evidence you found in the files. Do not rubber-stamp.
+Before answering, actually do the work — this is not a rubber stamp:
+1. READ the actual target files yourself (current state on disk). Do
+   not trust the facts' description of them blindly. If prior findings
+   were handed to you, independently check whether THIS change is the
+   thing they already cover, or something genuinely new.
+2. SCOPE — two separate checks, don't collapse them:
+   a. does each change trace to the stated goal FOR THIS CHANGE? Anything
+      extra riding along that wasn't asked for?
+   b. does it actually serve the END GOAL (the project's real finish
+      line, given below)? A change can be perfectly in-scope for its
+      own stated purpose and still be the wrong move for where the
+      project is actually trying to end up — flag that mismatch if you
+      see it.
+3. REVERSIBILITY — if this is wrong, how bad and how hard to undo?
+4. ASSUMPTIONS — what is the plan treating as true that the files on
+   disk don't actually support right now (stale read, wrong signature,
+   missing dependency, unset env, wrong path)?
+5. REGRESSIONS — name concrete callers / tests / consumers of what's
+   being changed that could break.
 
-Stated goal: <verbatim>
-Proposed changes: <Phase 1 enumeration>
+That analysis is real work you must do — but it is NOT what you hand
+back. Compress it into exactly ONE question and answer it:
+SHOULD THIS PROCEED?
+
+6. MATERIALITY FILTER — before anything from steps 2-5 gets to drive
+   your answer, it must clear BOTH bars:
+     - LIKELY: this would actually happen on a normal run, not just
+       "technically possible in some contrived case."
+     - CONSEQUENTIAL: if it happened, the outcome would actually be
+       bad (data loss, wrong result, broken caller, silent corruption)
+       — not cosmetic, not "slightly less elegant," not a style
+       preference.
+   A finding that fails either bar gets NOTED, never gets to cause a
+   NO. Do not manufacture a hypothetical just to have found something
+   — "nothing material" is a legitimate, complete result of steps 2-5,
+   and should produce a YES. You are not scored on finding problems;
+   you are scored on being RIGHT about whether this specific change,
+   as it will actually run, is safe.
+
+7. EVIDENCE CHECK — the decisive fact behind your answer must be one
+   of:
+     - EMPIRICAL — something you actually verified: read it in the
+       file, ran it, found it in a prior finding/spec. Cite where.
+     - HIGH-CONFIDENCE LOGIC — no direct evidence exists, but you can
+       state the reasoning chain in one clause and would stake real
+       confidence on it (not "seems fine," not a vibe, not "probably
+       works like similar code elsewhere").
+   If a claim driving your answer is neither — you didn't check and
+   can't reason it through with confidence — that claim doesn't get to
+   decide the answer. Either verify it now (re-read the file, run the
+   check) or fall back to the next-most-decisive claim that IS backed.
+
+Answer format — first line is a single word, YES or NO. Second line is
+exactly one sentence of why, naming the SPECIFIC fact from your
+analysis that decided it (a concrete file/line/caller, not a category
+label like "regression risk"), including why it clears both materiality
+bars above (or, on YES, that nothing found cleared them) and whether
+it's empirical or high-confidence logic.
+
+No hedging. "Probably", "mostly", "with caveats", "yes but" are not
+valid first words. Only a caveat that clears BOTH materiality bars AND
+the evidence check makes the answer NO — an unlikely, trivial, or
+unverified-and-unreasoned caveat does not, even if it's real.
+
+If asked to elaborate afterward, you must be able to produce the full
+scope/reversibility/assumptions/regressions findings from steps 2-5 —
+so keep that work, don't discard it once you've compressed to one line.
+
+Facts: <Step 3 facts, verbatim>
+Files to read: <paths>
 ```
 
-**When the RED-TEAM is mandatory vs skippable.** Mandatory whenever the change touches anything unattended, long-running, stateful, or concurrent — pipelines, cron jobs, helper daemons, fallback/routing logic, queues, anything that writes checkpoints or gets retried without a human watching. For a plainly attended one-shot (a config flip, a rename the user watches happen), it may be skipped — but the Phase 6 report must then carry the explicit line `RED-TEAM: skipped — not unattended/stateful`. Silence is not a skip.
+If subagents are genuinely unavailable, answer this yourself under a heading `=== AUDITOR (fallback, same-context) ===`, state plainly that it's a same-context fallback and not independent, and hold yourself to the same YES/NO-plus-one-sentence format.
 
-**The brief handed to the RED-TEAM:**
+**If the auditor hedges anyway:** send the brief back once — "Answer YES or NO only, first word." A second hedge does not get a third try; treat it as **NO** (unresolved risk defaults to no-go) and say so in the report.
 
-```
-You are the RED-TEAM — an independent attacker reviewing a change you
-did NOT write. Your ONLY success metric is breaking it with concrete
-scenarios. Scope, style, and regressions are the AUDITOR's job — do
-not spend words there.
-
-1. READ the actual target files (and plan, if given) yourself first.
-2. GENERATE at least one concrete hostile scenario per category below —
-   two for any category the change touches directly. Skipping a
-   category requires writing "N/A — <why it cannot apply>".
-   C1  MID-OP DEATH        a resource (credits/quota/disk/network) dies
-                           HALFWAY through an operation, not before it
-   C2  CHECK-THEN-ACT      state flips between the decision and the act
-   C3  HALF-DONE RE-ENTRY  process killed mid-write — what does the
-                           NEXT run find on disk, and what does it do
-                           with the partial?
-   C4  FLAPPING            fail → recover → fail again inside one poll
-                           window
-   C5  TWO ACTORS          a human or a second process acts
-                           mid-automation
-   C6  BOUNDARIES          0 items, 1 item, exactly-at-cap,
-                           empty/missing file
-   C7  TIME WINDOWS        poll interval straddles a batch boundary;
-                           restart mid-window; long stall then burst
-   C8  RECOVERY FAILS      the recovery path itself errors (probe
-                           passes but the real call fails; flag delete
-                           fails; rollback interrupted)
-   C9  POISON PILL         one item that LOOKS valid but fails every
-                           retry, re-enters the queue each run, and
-                           starves everything behind it
-   C10 LYING SUCCESS       exit 0 / plausible artifact that is wrong
-                           (black frames, a signed-out page saved as
-                           valid HTML) — attack the success check
-                           itself
-3. WALK each scenario through the real code/plan step by step to its
-   end-state — cite the exact line/step where the outcome is decided.
-4. VERDICT each scenario:
-   HANDLED  — cite the line/mechanism that absorbs it
-   DEGRADES — bounded loss; name the cost out loud
-   BREAKS   — name the concrete bad END-STATE (data loss, wedge,
-              duplicate output, silent stop), not just the trigger
-   UNKNOWN  — the artifact doesn't contain enough to trace the
-              outcome; say exactly what's missing. Never guess a
-              verdict.
-Return the scenario table, BREAKS first, then UNKNOWN, then DEGRADES,
-then HANDLED. Do not manufacture findings to look busy — but if every
-row came back HANDLED, re-check that you walked each scenario to its
-actual end-state instead of trusting the change's own description.
-
-Stated goal: <verbatim>
-Target files / plan: <paths, or plan contents>
-```
-
-**Reconcile.** When the reviewers return, merge their findings with your own Phase 1–5 pass — the RED-TEAM's scenario table goes into the report verbatim. Anything a reviewer flagged that you missed is exactly the value of the second brain — surface it prominently. Disagreements — yours vs a reviewer's, or AUDITOR vs RED-TEAM — get shown to the user, not silently resolved.
+**Detail on demand.** The one-sentence answer is the default surface, not the ceiling. If the user asks "why" / "what did it find" / "show your work," relay the auditor's full scope/reversibility/assumptions/regressions findings — they did that analysis, it isn't thrown away, it's just not dumped unprompted.
 
 `========================================`
 
-### Phase 6: Present the Verdict
-
-Emit a structured audit report. Template:
+### Step 5: Present the Verdict
 
 ```
-=== AUDIT REPORT ===
+=== AUDIT ===
 
-Stated goal: <one-sentence restatement of what the user asked for>
+Scene: pipeline.py calls into jobs/retry.py; config.json is read once at startup, no live reload.
 
-Proposed changes (N):
- 1. [SAFE]           pipeline.py:45 — rename variable foo → bar
- 2. [REVERSIBLE]     config.json — add retry_count=3 key
- 3. [EXTERNAL]       git push origin main
- 4. [IRREVERSIBLE]   delete old_backups/*.log
+Facts:
+ - pipeline.py:45 — rename variable foo -> bar               [the proposal itself]
+ - config.json — add retry_count=3 key                        [the proposal itself]
+ - git push origin main                                       [the proposal itself]
+ - goal (this change): <one sentence, user's words>
+ - end goal (project): <quoted from SPEC.md ## Goal, or user's stated finish line> [SPEC.md / session]
+ - touches: retry logic in jobs/                               [read jobs/retry.py:12-30]
+ - unverified: assuming config.json hasn't changed since last read
 
-Scope check:
- - In scope (3): 1, 2, 3
- - Incidental (0): —
- - Out of scope (1): 4 — user didn't ask for log cleanup
+Auditor: NO — config.json already sets retry_count=5 at line 12, so this would silently overwrite a real setting.
 
-Unchecked assumptions (2):
- - Assuming pipeline.py has not been modified since we last read it
- - Assuming git remote 'origin' still points at the expected repo
-
-Regression risk (1):
- - retry_count key added — no existing code reads this key, so no behavior changes for existing runs. Probably fine.
-
-Independent reviewer (second brain):
- - [BLOCKER] config.json already has retry_count=5 at line 12 — item 2
-   would overwrite a real setting (the author's pass missed this).
- - [CONCERN] item 1 rename: 3 callers in jobs/ reference `foo`.
- - Agreed with author on items 3, 4.
- - (or: "fallback same-context review — no subagent available")
-
-Scenario attack (RED-TEAM):
- #   Cat  Scenario                                    Verdict
- 1   C1   engine cap dies at item 3 of 8, mid-write   HANDLED — requeued next batch (helper.py:214)
- 2   C2   flag deleted between check and dispatch     DEGRADES — ≤1 batch on wrong engine
- 3   C3   killed mid-folder-write                     BREAKS — next run ships the half-written folder
- ... (all 10 categories covered or explicitly N/A)
- (or: "RED-TEAM: skipped — not unattended/stateful")
-
-Verdict: NEEDS REVISION
-Recommendation: drop item 4 (out of scope); reviewer found item 2
-clobbers an existing key — re-check before applying; update the 3
-callers for item 1. Then re-audit.
+Your call: blocked on the auditor's NO — fix the conflicting key before proceeding, or tell me to override.
 ```
 
-Verdict options:
-
-- **GO** — safe to apply as-is. Still requires user's explicit "yes" before executing.
-
-- **PROCEED WITH CAUTION** — apply-able, but user should know about the risks listed. Requires explicit "yes".
-
-- **NEEDS REVISION** — something is out of scope, or an unchecked assumption is too important to skip. Revise the plan and re-audit.
-
-- **STOP** — a destructive or cross-user action that should not happen without deeper review. Back to planning phase.
-
-**Hard rule:** any RED-TEAM scenario with verdict **BREAKS** caps the verdict at **NEEDS REVISION** (or **STOP** if the broken end-state is destructive or external). BREAKS is never "noted and passed." A load-bearing **UNKNOWN** doesn't block on its own, but must appear under unchecked assumptions with the cheapest probe that would resolve it.
+On a **YES**, the line reads `Your call: auditor cleared it — still need your go-ahead to execute.`
 
 `========================================`
 
-### Phase 7: Wait for User Go
+### Step 6: Wait for User Go
 
-After the verdict is presented, do not execute. Wait for the user to say one of:
+Never execute on a YES alone, and never execute past a NO. After the verdict is presented, wait for the user to say one of:
 
-- **"go"** / **"proceed"** / **"yes"** — apply all proposed changes.
+- **"go" / "proceed" / "yes"** — apply all proposed changes (only meaningful after a YES, or as an explicit override of a NO — if it's an override, say so out loud before acting).
 
-- **"fix X and re-audit"** — adjust the plan, re-run audit from Phase 1.
+- **"fix X and re-audit"** — adjust the plan, re-run from Step 1.
 
-- **"stop"** / **"rethink"** — abandon the plan, return to discussion.
+- **"stop" / "rethink"** — abandon the plan, return to discussion.
 
 If the user's response is ambiguous, ask one clarifying AskUserQuestion instead of guessing.
 
@@ -334,48 +228,50 @@ If the user's response is ambiguous, ask one clarifying AskUserQuestion instead 
 Audit is not required for:
 
 - Single-line fixes you just discussed with the user.
-
 - Read-only operations (ls, cat, grep, diff).
-
 - One-shot file reads.
-
 - Running a test suite or linter.
 
 Audit IS required for:
 
 - Touching 3+ files.
-
 - Any delete, overwrite, or rename of existing code / config.
-
 - Any git operation with remote side effects.
-
 - Any external API call with side effects.
-
 - Refactors or restructures, even "small" ones.
-
 - Anything the user specifically asked to audit.
 
 
 ## Hard NOs
 
-- Do not skip audit because "the changes are obvious."
+- Do not skip Step 1's recon and plan off the literal edit targets alone — the change sits inside a system, and the auditor's regression check is only as good as what got read.
 
-- Do not skip the independent reviewer (Phase 5.5) and call your own Phase 1–5 pass "the audit." The author brain re-reading its own plan is not a second brain. If a subagent truly can't run, say so explicitly and mark the review as a same-context fallback.
+- Do not skip the prior-findings check (Step 2) to save time — that's the step that catches "we already spent a day on this."
 
-- Do not skip the RED-TEAM scenario attack on anything unattended, long-running, stateful, or concurrent — and never accept a scenario table that drops a category without an explicit N/A reason, or a skip without the explicit `RED-TEAM: skipped` line in the report.
+- Do not skip stating the facts, even for a change that "looks obvious."
 
-- Do not approve-and-proceed in the same breath — the user gets to see the audit and decide.
+- Do not skip the independent AUDITOR call (Step 4) and call your own Step 1-3 pass "the audit." The author brain re-reading its own facts is not a second brain. If a subagent truly can't run, say so explicitly and mark the answer as a same-context fallback.
 
-- Do not continue past a NEEDS REVISION verdict without the user's explicit acknowledgement.
+- Do not accept a hedged answer as final — one resend, then a second hedge counts as NO.
 
-- Do not treat audit as a formality — if any phase surfaces a real concern, it matters.
+- Do not let the auditor block on something that fails the materiality filter (unlikely or trivial) or the evidence check (unverified and not high-confidence reasoned) — that's re-manufacturing the old "bullshit edge case" problem this rewrite exists to kill.
 
-- Do not summarize away the details — every proposed change must appear individually in the report, not bundled.
+- Do not proceed past a NO without the user explicitly overriding it, out loud.
+
+- Do not approve-and-proceed in the same breath — the user gets to see the verdict and decide, even on YES.
+
+- Do not pad the facts list with categorized scoring, scenario tables, or risk labels — that's exactly the essay this workflow replaced. Facts stay flat lines.
+
+- Do not turn Step 1's recon into busywork on a genuinely trivial, self-contained change — state "nothing adjacent" and move on.
+
+- Do not state a Step 3 fact without its evidence tag — a fact with no citation and no "unverified" label is a guess presented as settled, and it poisons the auditor's answer downstream since the auditor trusts these facts as the starting frame.
 
 
 ## Relationship to Other Skills
 
-- **`prep`** — plans new work from scratch, runs an independent AUDITOR second-brain review before execution. `audit` is the inline equivalent, run right before executing any non-trivial plan — and both use the same independent AUDITOR + RED-TEAM pair (Phase 5.5 holds the canonical RED-TEAM brief that `prep` and `auto` reference).
+- **`supergoal`** — Step 1's recon mirrors `supergoal`'s Stage 2 (parallel recon before planning) and its fan-out-and-offload rule. `audit` runs a scaled-down version of the same move right before execution, instead of at the start of a whole build.
+
+- **`prep`** — plans new work from scratch, and can hand its plan to `audit` before execution. `audit` is the inline last-chance gate; both lean on the same independent-AUDITOR principle, kept as simple as this file describes.
 
 - **`repair`** — after a failure. `audit` is before an execution. Opposite ends of the same principle: prove what you think is true.
 
@@ -387,11 +283,13 @@ Audit IS required for:
 ## TL;DR
 
 - **Pre-execution gate** — runs right before any non-trivial change is applied.
-- **Independent second brain** — a fresh reviewer subagent reads the real files and re-derives the risks, so the audit isn't the same brain agreeing with itself.
-- **Scenario attack** — a dedicated RED-TEAM agent invents hostile scenarios across 10 attack categories (mid-op death, races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walks each through the change to HANDLED / DEGRADES / BREAKS / UNKNOWN; any BREAKS blocks GO.
-- **Lists every change** — files, commands, external calls, state modifications.
-- **Checks scope** — match to what the user actually asked for, flag out-of-scope.
-- **Classifies risk** — safe, reversible, irreversible, external, destructive.
-- **Surfaces assumptions** — what we're treating as true without checking.
-- **Spots regressions** — what currently works that could break.
-- **Waits for go-ahead** — never executes without explicit user approval.
+- **Scopes the scene first** — recons the relevant surrounding files/subsystems (fanned out to sub-agents for a real area), same move `supergoal` makes before planning — so the audit is grounded in the real system, not just the literal edit targets.
+- **Checks what's already known** — `note.py --for`/`--recent` + SPEC.md, over both the target files and whatever recon surfaced, so nothing re-discovers (and re-burns a day on) a finding already on record.
+- **Facts, not essays** — a flat list of what's changing, why, the project's real end goal (SPEC.md's `## Goal` or the user's stated finish line, not just this change's local excuse), what it touches, what's unverified, each carrying its own evidence tag (where it was read/run, or explicitly "unverified"). No scope tables, no risk labels, no scenario categories.
+- **End-goal aware** — the auditor checks scope against BOTH this change's stated purpose AND the actual finish line, so a change can't pass just for being locally consistent while missing what the project is really for.
+- **Evidence-first end to end** — not just the auditor's final call: the facts it's handed already have to be empirical or explicitly flagged unverified, so nothing downstream is fact-checking an unbacked assertion.
+- **One question** — "should this proceed?" — handed to an independent AUDITOR subagent that reads the real files itself and does the full scope/reversibility/assumptions/regressions pass internally.
+- **Materiality + evidence gates** — a finding only gets to drive NO if it's likely AND consequential, AND backed by something actually verified or a stated high-confidence reasoning chain. Kills the "bullshit edge case" false-block problem.
+- **One strong answer** — YES or NO, first word, one sentence why. Hedges get sent back once, then default to NO.
+- **NO blocks** — no proceeding past it without an explicit user override, said out loud.
+- **User still decides** — even a YES needs the user's own go-ahead before anything executes.

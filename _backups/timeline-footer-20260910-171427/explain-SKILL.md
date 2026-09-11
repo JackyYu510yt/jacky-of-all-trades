@@ -148,10 +148,6 @@ FEYNMAN: <the CHOICE re-told to a smart 12-year-old with ONE everyday analogy an
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what I actually verified vs what I'm inferring or assuming>
 
 RISK: HIGH | MEDIUM | LOW — <what it costs you if this reading is wrong, and which parts are still unproven>
-
-**━━ TIMELINE ━━**
-
-<the debrief-style staged numbered timeline (see debrief skill) for the WHOLE project, start to finish line — not just this turn. Group into named stages same as debrief: what's already done, THIS TURN (the step this turn's work belongs to, marked `← YOU ARE HERE`), and what's left before the finish line. Ends on the finish line itself as the last numbered step.>
 ```
 
 **Layout rules (user-confirmed 8/22/26):**
@@ -229,24 +225,6 @@ The scale is about **verification, not vibes**:
 **Hard cap:** if the answer contains anything pending, queued, retrying, waiting, expected, or "should" — CONFIDENCE cannot be HIGH, and the RISK line must name exactly which part is unproven. A cheerful summary with a hidden unverified core is the failure mode this footer exists to kill: the user acts on the NET line, so the footer is where false confidence gets caught before they close the chat.
 
 Never write a bare grade. "HIGH" alone is banned — the dash and the evidence are mandatory.
-
-**TIMELINE rules (added 2026-09-10 — pulled from the debrief skill's staged timeline, reused here to show progress rather than mechanism):**
-
-- **Reuses debrief's format exactly**: numbered steps top to bottom, whole numbers, grouped into short ALL-CAPS stages with one blank line before each label, rendered inside a fenced code block so alignment survives the terminal. Read the debrief skill's timeline rules (numbering, stage grouping, `→` for branches, `N.1` notes, the ~14-step cap) before writing one — don't reinvent the shape.
-
-- **Scope is the whole project, not this turn.** CURRENT STAGE (above) is about this turn's move; TIMELINE is the zoomed-out version — every milestone from where the project started to the finish line, this turn's step marked in place among them.
-
-- **The finish line is resolved, never invented (added 2026-09-10).** Before writing TIMELINE, find the finish line in this order and use the first one that exists: (1) an open project's `SPEC.md` — the `## Goal` section; (2) a `/prep` plan file (`prep-*.txt`) — the END GOAL card; (3) an active `/auto` run — the pinned contract / milestone success condition (`BOARD.md`'s milestone); (4) a goal the user has already stated plainly in this conversation. **If none of those exist, stop and ask the user directly what the finish line is** — one plain question, no guessing, no inventing a placeholder goal to fill the slot. Once answered, treat it as FROZEN for the rest of the conversation (same rule as ULTIMATE GOAL below) — don't re-ask, and don't quietly reword it toward whatever ends up getting done.
-
-- **Stages mesh with the MILESTONE ▸ PHASE ▸ STEP pyramid** (canonical definition in `/principles` → "Plan vocabulary"). When the project already has milestones/phases — an `/auto` `BOARD.md`, a `/prep` plan, a `SPEC.md` with phases — TIMELINE's stage labels ARE those phase names, in the plan's own order, and the numbered steps under each stage are that phase's real steps. Don't invent a second, parallel stage scheme next to the plan's own; TIMELINE is a rendering of the existing phases, not a competing breakdown. Only when there is genuinely no plan/board yet — a standalone question with no active project structure — does TIMELINE fall back to free-form stage labels (what's done / THIS TURN / what's left), and even then the last step must still be the resolved finish line, not a guess.
-
-- **Exactly one step carries `← YOU ARE HERE`** — the step this turn's work belongs to. Steps already done get no marker (they read as plainly finished); steps not yet started get no marker either. Never mark more than one step, and never mark a step that's already fully done.
-
-- **The last numbered step is always the finish line** — the resolved finish line from the rule above, phrased as the final milestone, the same end-state as ULTIMATE GOAL's `Delivers` line — not restated as a lens.
-
-- Goal fully reached → the timeline still renders, but every step reads as done and the last step (the finish line) carries `← YOU ARE HERE` alongside its normal marker-free "done" reading, OR write a single line: "finish line reached — see ULTIMATE GOAL above." Standalone question with a genuinely no finish line to resolve and the user declines to give one → "none — no finish line given", never a fabricated one.
-
-- Same jargon and formatting rules as everywhere else in this footer: plain words, no unexplained terms, the code-fence is mandatory (not bullets, not a bare list).
 
 
 ## No jargon — the heart of it
@@ -386,4 +364,4 @@ The session does not end until you've verified the user has **demonstrated** und
 
 - Right gear: quick unless the user explicitly asked to be taught or quizzed.
 
-- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → USER OPTION (only when the turn puts a decision to you: each option with its cost, balanced `+`/`−`, a HOLDS UP durability read, exactly one ← RECOMMENDED, then IF YOU SAY NOTHING + WHY THAT DEFAULT — omitted entirely when there is no fork) → SUGGESTED ACTION (PASTE THIS, which MUST name the ← RECOMMENDED option when a USER OPTION block is present, + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE → TIMELINE (debrief-style staged timeline for the whole project, this turn's step marked ← YOU ARE HERE, last step is the finish line) — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
+- Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → USER OPTION (only when the turn puts a decision to you: each option with its cost, balanced `+`/`−`, a HOLDS UP durability read, exactly one ← RECOMMENDED, then IF YOU SAY NOTHING + WHY THAT DEFAULT — omitted entirely when there is no fork) → SUGGESTED ACTION (PASTE THIS, which MUST name the ← RECOMMENDED option when a USER OPTION block is present, + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.
