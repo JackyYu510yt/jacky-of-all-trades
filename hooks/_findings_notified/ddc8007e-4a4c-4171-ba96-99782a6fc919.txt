@@ -1,2 +1,4 @@
 research.txt
 outline.txt
+Chapter 1.txt
+Chapter 2.txt
