@@ -2,3 +2,5 @@ finding_ahsoka_thumb.txt
 prep-ahsoka-thumbnail.txt
 RUN.md
 manifest.json
+finding_reproducible_offprompt.txt
+2.txt
