@@ -5,3 +5,7 @@ manifest.json
 finding_reproducible_offprompt.txt
 2.txt
 finding_final.txt
+fire_ahsoka.py
+finding_resolved.txt
+thumbnail-delivery-location.md
+MEMORY.md
