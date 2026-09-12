@@ -11,3 +11,5 @@ finding2.txt
 prep-openlux-only-lane.txt
 finding3.txt
 finding4.txt
+HANDOFF-openlux-only-lane-2026-09-12.md
+finding-unknown-chain.txt

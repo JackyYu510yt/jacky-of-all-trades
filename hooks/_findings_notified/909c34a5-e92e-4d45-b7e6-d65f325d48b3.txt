@@ -9,3 +9,5 @@ fire_ahsoka.py
 finding_resolved.txt
 thumbnail-delivery-location.md
 MEMORY.md
+finding_asymmetric_refusal.txt
+prep-ahsoka-content-filter-hypotheses.txt
