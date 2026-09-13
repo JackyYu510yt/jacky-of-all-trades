@@ -1,3 +1,8 @@
 RUN.md
 run_hypothesis_tests.py
 run_yoda_validation.py
+run_indirection_tests.py
+run_yoda_photoreal_check.py
+run_cross_franchise_check.py
+run_restyle_edit_test.py
+run_bg_only_edit_test.py
