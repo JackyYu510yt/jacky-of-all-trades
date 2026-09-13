@@ -12,3 +12,4 @@ run_manhwa_convention_test.py
 run_manhwa_original_bg_test.py
 run_empty_bg_gen.py
 run_local_composite.py
+run_add_text_overlay.py
