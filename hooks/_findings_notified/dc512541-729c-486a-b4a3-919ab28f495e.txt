@@ -7,3 +7,7 @@ prep-got-render-ship.txt
 RUN.md
 config.json
 finding_autorun_bigless.txt
+_render_lane_supervisor.ps1
+_render_lane_supervisor_launch.vbs
+_production_tasks.ps1
+_job_manifest.json
