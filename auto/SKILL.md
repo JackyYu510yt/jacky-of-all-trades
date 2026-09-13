@@ -257,7 +257,7 @@ Goal:    <one sentence>
 Status:  DONE | STOPPED
 
 Criteria:
-  [x] <criterion> -- <evidence, one line>
+  [✓] <criterion> -- <evidence, one line>
   [ ] <criterion> -- <why it's unmet, if STOPPED>
 
 Findings this run: <n, or "none -- <reason>">
