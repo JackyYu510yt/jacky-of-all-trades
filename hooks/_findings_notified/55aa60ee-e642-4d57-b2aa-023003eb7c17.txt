@@ -14,3 +14,4 @@ run_empty_bg_gen.py
 run_local_composite.py
 run_add_text_overlay.py
 composite_thumbnail_pipeline.py
+run_yoda_pipeline_test.py
