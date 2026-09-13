@@ -16,3 +16,4 @@ run_add_text_overlay.py
 composite_thumbnail_pipeline.py
 run_yoda_pipeline_test.py
 rung_d_composite_fallback.py
+run_hp_scene_test.py
