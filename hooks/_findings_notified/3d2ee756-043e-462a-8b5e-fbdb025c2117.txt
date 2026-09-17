@@ -2,3 +2,6 @@ RUN.md
 reaper.py
 _test_reaper_selftest_orphan.py
 selftest.py
+config.py
+vast.py
+_test_gpu_frac_filter.py
