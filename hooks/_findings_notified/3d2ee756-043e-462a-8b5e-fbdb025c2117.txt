@@ -8,3 +8,4 @@ _test_gpu_frac_filter.py
 prep-production-restart-watchdog.txt
 production_watchdog.py
 _test_production_watchdog.py
+_test_integration.py
