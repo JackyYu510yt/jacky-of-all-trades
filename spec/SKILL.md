@@ -665,6 +665,14 @@ entry. Use only when the session's edits genuinely don't need a "why".
 
 - All of this only matters in projects that have a `SPEC.md`. Everywhere else
   the hooks are silent (zero footprint).
+- **`Spec/` folder support (2026-09-17):** `note.py`, `spec_digest.py`,
+  `spec_tool.py`, and the `spec-collect`/`spec-guard` hooks all check
+  `<project>/Spec/SPEC.md` and `<project>/Spec/FINDINGS.md` FIRST, falling
+  back to the legacy `<project>/SPEC.md`/`FINDINGS.md` when no `Spec/` folder
+  exists. This lets a project follow the file-layout convention
+  (`~/.claude/CLAUDE.md`, "Project file layout convention") without breaking
+  any of this system. A bound spec file (`bind <name>`) resolves the same
+  way. Regression-tested: `test_spec_system.py` + `tests/test_note_*.py`.
 - The Stop guard's nudge is internal — tagged "NOT a message to you". It's the
   cue for you to run `/spec log`, not user-facing output.
 - `status` subcommand prints the unlogged-edit count (debug).

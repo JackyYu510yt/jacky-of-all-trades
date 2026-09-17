@@ -5,6 +5,38 @@ description: Explain whatever was just said, shown, or done in 1-3 plain sentenc
 
 # debrief — say it plain, then lay out the order
 
+## 0. Ground it on disk first (recon, before a single word is written)
+
+_(Added 2026-09-15. A debrief was given straight from conversation memory of what
+the code/config was believed to do, and it was flatly wrong — the thing being
+"debriefed" had since changed on disk, or was never quite what the chat assumed.
+Mirrors `/supergoal` Stage 2: recon happens BEFORE the plan is written, not after,
+because a wrong claim stated confidently is worse than a slower right one.)_
+
+Before drafting parts 1–3, list every factual claim the answer will make about
+**current state or behavior** — what a file contains, what a flag defaults to,
+what order things run in, what a script does when it fails, whether something
+is wired up or just discussed. For each one:
+
+- **If it names a file, config, or piece of code** — open it and read the actual
+  current content. Never answer from what the conversation said it does, or what
+  it used to do, or what it was supposed to do after a change that was discussed
+  but not confirmed applied.
+- **If it names a runtime behavior** (what happens when X runs, what gets logged,
+  what order steps fire in) and there's a cheap way to check — a log, a test run,
+  a grep for the actual call site — check it. Don't infer behavior from the name
+  of a function or the intent stated when it was written.
+- **If it's genuinely just-established** (the tool call three messages ago whose
+  output is already in context, unchanged since) — that's already grounded; no
+  re-read needed. The rule targets stale/assumed claims, not re-verifying the
+  immediately-preceding tool result.
+
+Only write parts 1–3 once every claim in them is either freshly confirmed on disk
+or freshly observed in this conversation. If recon contradicts what was assumed
+going in, the corrected version is what gets written — silently; see "Settle,
+then speak" below. **This step produces no visible output of its own** — it's
+the difference between a debrief that's right and one that just sounds right.
+
 Answer the user's target (the thing just discussed, pasted, built, or errored) in
 **exactly this shape, plus one optional trailing line (see "Next" under Rules)**:
 

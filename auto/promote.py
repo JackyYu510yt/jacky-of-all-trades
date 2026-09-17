@@ -70,7 +70,7 @@ def promote(proj: Path, path: str, session_id: str | None = None) -> list[str]:
         # sync-findings prints its own line; capture it by calling the function
         # directly rather than shelling out, so failures surface as exceptions
         # we can report instead of a silent nonzero subprocess exit.
-        spec = proj / "SPEC.md"
+        spec = spec_tool._spec_path(str(proj))
         if not spec.is_file():
             report.append("no SPEC.md in this project -- nothing to sync (legal)")
         else:

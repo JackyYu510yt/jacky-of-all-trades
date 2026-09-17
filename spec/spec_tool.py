@@ -48,6 +48,28 @@ def _spec_dir(proj: str) -> Path:
     return Path(proj) / ".spec"
 
 
+def _spec_path(proj: str) -> Path:
+    """<proj>/Spec/SPEC.md if it exists there (2026-09-17 file-layout
+    convention), else the legacy <proj>/SPEC.md. Mirrors
+    spec_digest.py's resolve_spec_path -- kept as a separate copy since the
+    two files don't otherwise import each other."""
+    in_spec_folder = Path(proj) / "Spec" / "SPEC.md"
+    if in_spec_folder.is_file():
+        return in_spec_folder
+    return Path(proj) / "SPEC.md"
+
+
+def _named_spec_path(proj: str, name: str) -> Path:
+    """Resolve a BOUND spec file's location the same way: <proj>/Spec/<name>
+    if it's there, else the legacy <proj>/<name>. `name` is untrusted input
+    from a binding marker or CLI arg, but this only ever joins it under
+    `proj` or `proj/Spec` -- never escapes either."""
+    in_spec_folder = Path(proj) / "Spec" / name
+    if in_spec_folder.is_file():
+        return in_spec_folder
+    return Path(proj) / name
+
+
 def _latest_session(proj: str):
     files = glob.glob(str(_spec_dir(proj) / "pending-*.jsonl"))
     if not files:
@@ -109,7 +131,7 @@ def _binding_target(proj: str, sid):
         return None
     if not name or name == "SPEC.md":
         return None
-    target = Path(proj) / name
+    target = _named_spec_path(proj, name)
     if not target.is_file():
         print(f"warning: bound spec '{name}' missing -- falling back to SPEC.md",
               file=sys.stderr)
@@ -138,8 +160,8 @@ def cmd_bind(proj: str, sid, args) -> int:
         print("usage: spec_tool.py bind <SPEC-file.md> [--sid S] | bind --clear [--sid S]",
               file=sys.stderr)
         return 1
-    if not (Path(proj) / name).is_file():
-        print(f"bind failed: {name} not found in {proj} -- create it first (INIT interview)",
+    if not _named_spec_path(proj, name).is_file():
+        print(f"bind failed: {name} not found in {proj} or {proj}/Spec -- create it first (INIT interview)",
               file=sys.stderr)
         return 1
     try:
@@ -166,7 +188,7 @@ def cmd_log(proj: str, sid_arg=None) -> int:
     if not raw:
         print("nothing to log: no block text on stdin", file=sys.stderr)
         return 1
-    spec = Path(proj) / "SPEC.md"
+    spec = _spec_path(proj)
     if not spec.is_file():
         print("no SPEC.md here -- run /spec init first", file=sys.stderr)
         return 1
@@ -183,7 +205,7 @@ def cmd_log(proj: str, sid_arg=None) -> int:
     try:
         if bound:
             # Full block -> the session's own spec; one-line pointer -> shared SPEC.md.
-            target = Path(proj) / bound
+            target = _named_spec_path(proj, bound)
             content = target.read_text(encoding="utf-8")
             tmp = target.with_name(target.name + ".tmp")
             tmp.write_text(_prepend_block(content, block), encoding="utf-8")
@@ -256,7 +278,7 @@ def _findings_block_body(proj: str) -> str:
         sys.path.insert(0, str(spec_dir))
     import note  # local import: only sync-findings needs it
 
-    record = Path(proj) / note.RECORD_NAME
+    record = note._findings_path(Path(proj))
     try:
         entries = note._read_entries(record)
     except OSError as exc:
@@ -286,7 +308,7 @@ def cmd_sync_findings(proj: str) -> int:
     from source every call. Idempotent (same input -> byte-identical block).
     Never touches anything outside its own BEGIN/END markers.
     """
-    spec = Path(proj) / "SPEC.md"
+    spec = _spec_path(proj)
     if not spec.is_file():
         print(f"no SPEC.md in {proj} -- nothing to sync (a project without a spec is legal)")
         return 0

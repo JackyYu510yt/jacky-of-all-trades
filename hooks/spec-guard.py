@@ -165,7 +165,7 @@ def main() -> int:
     except (OSError, ValueError):
         return 0
 
-    if not (cwd_path / "SPEC.md").is_file():
+    if not ((cwd_path / "SPEC.md").is_file() or (cwd_path / "Spec" / "SPEC.md").is_file()):
         return 0  # project hasn't opted in
 
     skip = cwd_path / ".spec" / f"skip-{session_id}"

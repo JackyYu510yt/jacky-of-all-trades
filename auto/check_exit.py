@@ -217,13 +217,14 @@ def check_c4(proj: Path, session_id: str | None) -> str:
 
 
 def check_c5(proj: Path) -> str:
-    spec = proj / "SPEC.md"
-    if not spec.is_file():
-        return "C5 SKIPPED -- no SPEC.md in this project"
     spec_tool_dir = Path.home() / ".claude" / "skills" / "spec"
     if str(spec_tool_dir) not in sys.path:
         sys.path.insert(0, str(spec_tool_dir))
     import spec_tool  # local import: only this check needs it
+
+    spec = spec_tool._spec_path(str(proj))
+    if not spec.is_file():
+        return "C5 SKIPPED -- no SPEC.md in this project"
 
     current = spec_tool._findings_block_body(str(proj))
     content = _read(spec)

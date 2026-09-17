@@ -52,6 +52,27 @@ from pathlib import Path
 GLOBAL_INDEX = Path.home() / ".claude" / "FINDINGS.md"
 RECORD_NAME = "FINDINGS.md"
 
+
+def _findings_path(project: Path, for_write: bool = False) -> Path:
+    """Resolve <project>'s FINDINGS.md location.
+
+    2026-09-17 file-layout convention puts findings in <project>/Spec/.
+    Reads: prefer Spec/FINDINGS.md if it exists there, else the legacy
+    <project>/FINDINGS.md, so a project that hasn't been reorganized keeps
+    working unchanged.
+    Writes (for_write=True): land in Spec/FINDINGS.md when that folder
+    already exists (even with no FINDINGS.md yet) or already holds the
+    record; otherwise the legacy <project>/FINDINGS.md, so writing a first
+    finding never silently invents a new Spec/ folder under a project that
+    was never reorganized.
+    """
+    in_spec = project / "Spec" / RECORD_NAME
+    if in_spec.is_file():
+        return in_spec
+    if for_write and (project / "Spec").is_dir():
+        return in_spec
+    return project / RECORD_NAME
+
 # Sidecar index for findings tagged `scope: universal` in their body -- a
 # lesson that holds for a project that does not exist yet (names no project
 # file). Additive only: it is never a substitute for the record/index above,
@@ -457,10 +478,10 @@ def cmd_tag_universal(eid: str, target_dir: str) -> int:
     read general but name project-specific files once the body is actually read.
     """
     project = _resolve_dir(target_dir)
-    entries = _read_entries(project / RECORD_NAME)
+    entries = _read_entries(_findings_path(project))
     match = next((e for e in entries if e["id"] == eid), None)
     if match is None:
-        raise ValueError(f"no finding with id {eid} in {project / RECORD_NAME}")
+        raise ValueError(f"no finding with id {eid} in {_findings_path(project)}")
     if match["retracted_by"]:
         raise ValueError(f"{eid} is retracted; refusing to tag a dead finding as universal")
     summary = _summary("\n".join(match["body"]))
@@ -491,7 +512,7 @@ def cmd_note(target_dir: str, file_path: str) -> int:
     _guard_secret(body, "the finding body")
 
     eid = _sha8(body)
-    record = project / RECORD_NAME
+    record = _findings_path(project, for_write=True)
 
     for entry in _read_entries(record):
         if entry["id"] != eid or entry["retracted_by"]:
@@ -562,7 +583,7 @@ def _reconcile(project: Path, entries: list[dict]) -> int:
 
 def cmd_recent(target_dir: str, limit: int) -> int:
     project = _resolve_dir(target_dir)
-    entries = _read_entries(project / RECORD_NAME)
+    entries = _read_entries(_findings_path(project))
     live = [e for e in entries if not e["retracted_by"]]
     dead = [e for e in entries if e["retracted_by"]]
     if not entries:
@@ -598,7 +619,7 @@ def _project_for(path: Path) -> Path | None:
     except OSError:
         return None
     for cand in [start, *start.parents]:
-        if (cand / RECORD_NAME).is_file():
+        if (cand / RECORD_NAME).is_file() or (cand / "Spec" / RECORD_NAME).is_file():
             return cand
     return None
 
@@ -639,7 +660,7 @@ def cmd_for(raw: str, limit: int) -> int:
               f"has no findings record yet (NOT the same as 'nothing known "
               f"about {name}')")
     else:
-        entries = _read_entries(project / RECORD_NAME)   # unreadable -> raises
+        entries = _read_entries(_findings_path(project))   # unreadable -> raises
         hits = [e for e in entries if needle in "\n".join(e["body"]).lower()]
         live = [e for e in hits if not e["retracted_by"]]
         dead = [e for e in hits if e["retracted_by"]]
@@ -691,7 +712,7 @@ def cmd_retract(eid: str, target_dir: str, reason: str) -> int:
     while holding the writer mutex, and because readers never contend for it.
     """
     project = _resolve_dir(target_dir)
-    record = project / RECORD_NAME
+    record = _findings_path(project)
     if not reason.strip():
         raise ValueError("--reason is required: say what was wrong about it")
     # --reason is the OTHER write path into these files, and it was reaching disk

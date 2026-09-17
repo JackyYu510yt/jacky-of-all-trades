@@ -45,6 +45,17 @@ ERR_LOG = Path.home() / ".claude" / "skills" / "spec" / "digest-errors.log"
 NOTHING_REASON = "no SPEC.md here — nothing to digest"
 
 
+def resolve_spec_path(project_dir: Path) -> Path:
+    """<project>/Spec/SPEC.md if it exists there (2026-09-17 file-layout
+    convention), else the legacy <project>/SPEC.md — so old and reorganized
+    projects both resolve correctly. Never guesses which layout a project
+    uses beyond checking what's actually on disk."""
+    in_spec_folder = project_dir / "Spec" / "SPEC.md"
+    if in_spec_folder.is_file():
+        return in_spec_folder
+    return project_dir / "SPEC.md"
+
+
 # ── unit 1: parse + build ────────────────────────────────────────────────────
 
 def parse_spec(text: str) -> dict:
@@ -376,7 +387,7 @@ def check_fresh(project_dir) -> tuple:
     """(fresh, reason) — recomputes SPEC.md's hash NOW; never trusts the stamp alone.
     Surfaces the digest-blocked breadcrumb (RED-TEAM B4) so a refusal recorded by the
     hook is visible to whoever runs --check."""
-    spec_path = project_dir / "SPEC.md"
+    spec_path = resolve_spec_path(project_dir)
     claude_path = project_dir / "CLAUDE.md"
     crumb = _read_crumb(project_dir)
     suffix = f" [digest-blocked: {crumb[:200]}]" if crumb else ""
@@ -465,7 +476,7 @@ def _note_blocked(project_dir, reason: str) -> bool:
 
 
 def generate(project_dir) -> int:
-    spec = project_dir / "SPEC.md"
+    spec = resolve_spec_path(project_dir)
     if not spec.is_file():
         print(f"ERROR: no SPEC.md found in {project_dir}")
         return 2
@@ -505,13 +516,18 @@ def hook_main() -> int:
             if not target or Path(target).name.lower() != "spec.md":
                 return 0
             target_dir = Path(target).parent
+            # 2026-09-17 file-layout convention: SPEC.md may live in
+            # <project>/Spec/SPEC.md — the digest still belongs in the
+            # project root's CLAUDE.md, not in Spec/.
+            if target_dir.name == "Spec":
+                target_dir = target_dir.parent
         elif tool_name in ("Bash", "PowerShell"):
             command = (tool_input.get("command") or "").lower()
             cwd_val = data.get("cwd")
             if not cwd_val:
                 return 0  # RED-TEAM U2: never guess a target directory
             cwd = Path(cwd_val)
-            if ("spec.md" in command or "spec_tool.py" in command) and (cwd / "SPEC.md").is_file():
+            if ("spec.md" in command or "spec_tool.py" in command) and resolve_spec_path(cwd).is_file():
                 target_dir = cwd
             else:
                 return 0
@@ -522,7 +538,7 @@ def hook_main() -> int:
         if fresh:
             action = "fresh"
         else:
-            spec = target_dir / "SPEC.md"
+            spec = resolve_spec_path(target_dir)
             block = _build_block_from_disk(spec)
             try:
                 write_digest(target_dir / "CLAUDE.md", block)

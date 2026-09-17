@@ -7,6 +7,8 @@ description: Interactively plan, prototype, and pentest a new script from scratc
 
 A guided, collaborative workflow for creating new scripts from a blank page. Unlike `optimize`, which improves existing code, `prep` starts with nothing but an end goal and walks the user through a disciplined path: clarify → structure → explain in plain terms → interview on risky pieces → plan → AUDITOR review loop → prototype → pentest.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** planning artifacts (prep plan files, interview notes) go in `Prep/`; a prototype under pentest goes in `Tests and Probing/<timestamped subfolder>/`; once a design is real, its stage files (`stage_1_...py`, `stage_2_...py`, ...) go in the project's active folder, not loose alongside planning material.
+
 ## When to Use This Skill
 
 - User wants to plan or design a new script or tool from scratch

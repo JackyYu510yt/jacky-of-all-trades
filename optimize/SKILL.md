@@ -7,6 +7,8 @@ description: Audit a script or pipeline for speed, storage, retry, and concurren
 
 Audit a script or pipeline end-to-end, then surgically improve it. Focused on KISS: the smallest change that moves the biggest dial. Complexity must earn its place. Tailors recommendations to the actual machine (CPU cores, free RAM, free disk, GPU presence) rather than giving generic advice.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** benchmark/profiling scripts used to measure before/after go in `Tests and Probing/<timestamped subfolder>/`; the optimized pipeline's own stage files stay in the project's active folder.
+
 ## When to Use This Skill
 
 - User says "optimize this", "make it faster", "speed this up", "reduce storage usage", "why is this slow"

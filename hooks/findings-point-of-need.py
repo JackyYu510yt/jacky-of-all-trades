@@ -81,7 +81,7 @@ def main() -> int:
     if project is None:
         return 0
     try:
-        entries = note._read_entries(project / note.RECORD_NAME)
+        entries = note._read_entries(note._findings_path(project))
     except OSError:
         return 0  # unreadable record: stay silent, never block the edit over it
     needle = basename.lower()

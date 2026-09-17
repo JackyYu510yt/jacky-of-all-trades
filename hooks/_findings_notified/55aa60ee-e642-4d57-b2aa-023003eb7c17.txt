@@ -17,3 +17,8 @@ composite_thumbnail_pipeline.py
 run_yoda_pipeline_test.py
 rung_d_composite_fallback.py
 run_hp_scene_test.py
+run_remake_video3.py
+run_remake_video1.py
+run_remake_video2.py
+run_remake_video3_verbatim.py
+run_remake_video3_house_style.py

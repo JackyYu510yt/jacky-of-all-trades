@@ -11,6 +11,7 @@ Repair is a **methodology**, not a workflow per system. It defines HOW to fix th
 
 This skill modulates how Claude debugs and fixes any work — it does not constrain what kind of work the failure lives in.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** standalone repro scripts (e.g. `repair_stage4_no_images.py`) and isolation harnesses go in `Tests and Probing/<timestamped subfolder>/`, never dropped loose next to the real pipeline files they're isolating.
 
 ## When to Use This Skill
 

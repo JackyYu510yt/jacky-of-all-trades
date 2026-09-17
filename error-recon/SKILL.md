@@ -9,6 +9,8 @@ description: Evidence-first failure mapping for any tool — smoke-test it, prov
 
 A tool may only act on failures that have been **seen, captured, and proven**. This skill produces the evidence map and the healing spec that make that possible. It does NOT build the healing code — building happens later, on explicit user go, gated through `/audit`.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** every provoked-failure probe and its captured evidence (messages, verbose output, screenshots) go in `Tests and Probing/<timestamped subfolder>/`; the resulting error map and self-healing spec go in `Spec/`.
+
 ## When to Use This Skill
 
 Three doors in. Detect which from the invocation; if genuinely ambiguous, ask one question — never guess.

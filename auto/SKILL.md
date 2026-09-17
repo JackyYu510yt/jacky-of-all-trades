@@ -54,11 +54,15 @@ under 600 lines instead of 3,114.
 
 ```
 1. An explicit path in the invocation ("/auto <path>")
-2. Exactly one prep-*.txt in the working directory
+2. Exactly one prep-*.txt in the working directory, OR — if none there —
+   exactly one prep-*.txt in ./Prep/ (2026-09-17 file-layout convention:
+   prep plan files live in Prep/, not loose in the project root; check the
+   root first for backward compatibility, then Prep/, never both at once)
 3. ./PLAN.md
 4. A SPEC.md's `## Milestones` blueprint — ONLY when explicitly bound
    (named in the invocation, chained via /spec, or you're already working
-   in it this session). Mere presence never binds it.
+   in it this session). Mere presence never binds it. SPEC.md itself may
+   live at the project root or in ./Spec/ — check both.
 ```
 `(judgment` — the refusal itself; nothing forces the model to actually stop`)`
 
@@ -66,7 +70,9 @@ under 600 lines instead of 3,114.
 refuse, name exactly what was looked for and what was found, and stop. No
 guessing which plan was meant — Q1 of the original plan's Open Questions
 decided this the safe way: zero typing in the common case (one file), loud
-in the ambiguous one (more than one, or none).
+in the ambiguous one (more than one, or none). This still applies per
+location: one match in the root OR one match in Prep/ is unambiguous; a
+match in both places at once is the ambiguous case and must refuse.
 
 **A match exists:** extract the goal (one sentence) and at least one
 checkable success condition. Both frozen from here on — never re-derived,
@@ -114,6 +120,15 @@ overlaps a row whose folder+files were touched in the last 24h, don't touch
 that overlap — work the rest, name the overlap in the report. A row with no
 overlap, or one that's aged out, is not your concern. Release happens
 automatically at exit (see below) — never left for the user to notice.
+
+## File layout for anything a run creates outside auto-runs/
+
+`auto-runs/<slug>/` stays /auto's own bookkeeping (RUN.md, log.txt) — untouched
+by this rule. But any project file the run itself produces (a probe script, a
+support/helper script, a promoted stage file) follows the project file layout
+convention in `~/.claude/CLAUDE.md`: main pipeline stages in the active folder,
+probes/tests in `Tests and Probing/<timestamped subfolder>/`, helpers in
+`Support Scripts and Functions/`, specs/findings in `Spec/`.
 
 ## Write RUN.md — the one file this run owns
 
