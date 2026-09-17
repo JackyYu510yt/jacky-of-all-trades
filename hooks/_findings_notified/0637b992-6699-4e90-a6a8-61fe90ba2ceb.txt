@@ -2,3 +2,6 @@ RUN.md
 _test_dup_guards.py
 finding-m1-reorg.txt
 prep-factory-subtool-reorg.txt
+pause_patrol.py
+probe_cap_message.py
+finding-m2-reorg.txt
