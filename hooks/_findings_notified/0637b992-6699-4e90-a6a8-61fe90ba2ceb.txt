@@ -10,3 +10,4 @@ _test_consolidate_gate.py
 _test_writer_lock.py
 test_cap_resilience.py
 test_resume_discovery.py
+finding-m4-reorg.txt
