@@ -28,3 +28,4 @@ etw_catch_killer.ps1
 repro_account7_for_etw.py
 finding_root_cause.txt
 finding_shadowpc_disabled.txt
+post_shadowpc_verify.py
