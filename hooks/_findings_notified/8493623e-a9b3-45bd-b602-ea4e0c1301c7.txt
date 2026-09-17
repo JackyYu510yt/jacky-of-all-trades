@@ -12,3 +12,6 @@ finding_fastfail_hostmemory_fix.txt
 finding_job_timeout.txt
 _run_sample_campaign.py
 finding_confirm_terminated_timing.txt
+host_memory.py
+_test_host_memory.py
+_test_host_memory_concurrency.py
