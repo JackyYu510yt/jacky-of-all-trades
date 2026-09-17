@@ -11,3 +11,4 @@ _test_writer_lock.py
 test_cap_resilience.py
 test_resume_discovery.py
 finding-m4-reorg.txt
+finding-m5-reorg.txt
