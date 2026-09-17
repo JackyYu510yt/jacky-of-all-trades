@@ -6,3 +6,7 @@ pause_patrol.py
 probe_cap_message.py
 finding-m2-reorg.txt
 finding-m3-reorg.txt
+_test_consolidate_gate.py
+_test_writer_lock.py
+test_cap_resilience.py
+test_resume_discovery.py
