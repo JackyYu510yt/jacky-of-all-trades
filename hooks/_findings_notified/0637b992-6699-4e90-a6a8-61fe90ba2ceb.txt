@@ -1,2 +1,4 @@
 RUN.md
 _test_dup_guards.py
+finding-m1-reorg.txt
+prep-factory-subtool-reorg.txt
