@@ -26,3 +26,4 @@ live_debug_chromedriver.py
 finding_livedebug.txt
 etw_catch_killer.ps1
 repro_account7_for_etw.py
+finding_root_cause.txt
