@@ -3,3 +3,10 @@ finding_watchdog_halt.txt
 production_watchdog.py
 _test_integration.py
 finding_mutation_test_near_miss.txt
+finding_pause_incomplete.txt
+prep-watchdog-kill-switch-fix.txt
+config.json
+finding-community-host-gate.txt
+finding-nvenc-failed-state-gap.txt
+vast_farm_backend.py
+finding-gpu-frac-verified-unresolved.txt

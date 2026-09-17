@@ -45,3 +45,4 @@
 - [User coherence — verdict first](feedback_user_coherence_verdict_first.md) — separate axis from "no jargon": lead every report with a plain right/wrong/partial verdict on the user's stated hypothesis before any narrative; wired into /explain + /debrief (renamed from /dumb 2026-09-09) 2026-09-06
 - [Project file layout convention](feedback_project_file_layout.md) — active/stages, Tests and Probing (timestamped), Support Scripts, Spec, Prep folders; wired into /auto /prep /deep-audit /error-recon /optimize /repair
 - [Mutation testing](feedback_mutation_testing.md) — a test only proves something if it FAILS when the fix it protects is reverted on a copy; the concrete, mechanical form of discriminating-tests; wired into /auto (Evidence capture) + /repair (Conclusive Evidence) 2026-09-10
+- [Rediscovery = finding](feedback_rediscovery_findings.md) — "X already exists, just not wired/reachable" is a keeper-test finding; note.py it unprompted, don't wait to be asked

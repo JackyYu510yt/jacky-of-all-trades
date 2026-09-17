@@ -270,6 +270,8 @@ already shows the state; the footer explains it.
 
 Goal:    <one sentence>
 Status:  DONE | STOPPED
+Finish line: REACHED | NOT REACHED -- <one line: ultimate goal met, or what's
+             still missing between here and it>
 
 Criteria:
   [✓] <criterion> -- <evidence, one line>
@@ -323,6 +325,10 @@ SUGGESTED ACTION
 `(judgment)` for the prose fields; the Criteria block and `check_exit:` line
 are copied straight from RUN.md and check_exit.py's own output — never
 re-typed, never summarized into something check_exit didn't say.
+
+`Finish line:` is REACHED only when Status is DONE and check_exit passed --
+never inferred from progress or effort. On STOPPED it is always NOT REACHED,
+paired with the concrete gap (not a restatement of "goal:" or "next:").
 
 **Added 2026-09-11.** `Heaven's net` and `Feynman` were absent from this
 block — a leftover from when it reported once per guardian tick and stayed

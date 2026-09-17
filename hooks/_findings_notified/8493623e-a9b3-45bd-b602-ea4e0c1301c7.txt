@@ -15,3 +15,6 @@ finding_confirm_terminated_timing.txt
 host_memory.py
 _test_host_memory.py
 _test_host_memory_concurrency.py
+finding_hostmemory_lock.txt
+_sample_campaign_result.json
+finding_orphaned_job.txt
