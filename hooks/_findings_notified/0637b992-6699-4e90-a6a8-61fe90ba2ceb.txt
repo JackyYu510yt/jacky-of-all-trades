@@ -5,3 +5,4 @@ prep-factory-subtool-reorg.txt
 pause_patrol.py
 probe_cap_message.py
 finding-m2-reorg.txt
+finding-m3-reorg.txt
