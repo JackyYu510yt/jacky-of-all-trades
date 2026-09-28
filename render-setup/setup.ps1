@@ -386,25 +386,18 @@ Wait-Until { $api = Get-StApi; (Invoke-RestMethod "$($api.Base)/system/status" -
 Ok "Syncthing running + autostarts at login."
 
 # ----------------------------------------------------------------------------
-# STEP 10 - local folders: video bulk lives on the HDD via ONE junction
-#   SSD (C:) keeps scripts/tools; Shared Folder -> D:\Shared Folder (junction)
+# STEP 10 - local folders: everything lives on C: (default Shadow 512 GB SSD)
+#   Changed 2026-09-28: no extra HDD is bought any more - the auto-delete of
+#   delivered videos keeps C: from filling. Shared Folder is a plain folder.
+#   An old PC that still has a Shared Folder junction (HDD era) is left alone.
 # ----------------------------------------------------------------------------
-$hdd = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" |
-       Where-Object { $_.DeviceID -ne 'C:' } |
-       Sort-Object Size -Descending | Select-Object -First 1
 $existing = Get-Item $SharedRoot -ErrorAction SilentlyContinue
 if ($existing -and ($existing.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-    Ok "Shared Folder junction already in place."
-} elseif ($existing) {
-    Warn "Shared Folder already exists as a REAL folder on C: - leaving it alone (migrate to the HDD manually later)."
-} elseif ($hdd) {
-    $hddRoot = "$($hdd.DeviceID)\Shared Folder"
-    New-Item -ItemType Directory -Force $hddRoot | Out-Null
-    New-Item -ItemType Directory -Force (Split-Path $SharedRoot) | Out-Null
-    New-Item -ItemType Junction -Path $SharedRoot -Target $hddRoot | Out-Null
-    Ok "Video storage -> HDD $($hdd.DeviceID) ($([math]::Round($hdd.Size/1GB)) GB) via Desktop junction."
+    Ok "Shared Folder is a junction from the HDD era - leaving it in place."
 } else {
-    Warn "No HDD found - video folders will live on the small C: drive."
+    New-Item -ItemType Directory -Force $SharedRoot | Out-Null
+    $c = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+    Ok "Video storage -> C: ($([math]::Round($c.Size/1GB)) GB SSD, $([math]::Round($c.FreeSpace/1GB)) GB free)."
 }
 foreach ($d in $OutputDir, $ThumbsDir, $RenderedDir) {
     New-Item -ItemType Directory -Force $d | Out-Null
