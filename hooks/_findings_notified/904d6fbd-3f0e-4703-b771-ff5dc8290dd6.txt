@@ -1,0 +1,14 @@
+CLAUDE.md
+SKILL.md
+feedback_project_file_layout.md
+MEMORY.md
+spec_digest.py
+note.py
+spec-collect.py
+spec-guard.py
+spec_tool.py
+check_exit.py
+promote.py
+prep-factory-subtool-reorg.txt
+findings-point-of-need.py
+finding-pon-hook.txt

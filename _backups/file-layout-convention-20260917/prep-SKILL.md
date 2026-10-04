@@ -1,0 +1,1323 @@
+---
+name: prep
+description: Interactively plan, prototype, and pentest a new script from scratch. Captures the end goal, breaks it into specifics, derives the preferences it can and states them for veto rather than interviewing, proposes a plain-language structure, surfaces only the risky-function choices that are genuinely the user's to make (irreversible actions, budget, risk appetite) as one batched offer, drafts a full plan, runs an independent AUDITOR second-brain review and iterates on its feedback, then builds a first prototype and pentests each part. Use when the user says "let's plan X", "prep a new script", "help me design Y", "plan a project", or wants a collaborative plan + auditor-review + build + test loop. Every artifact this skill produces must be smooth, consistent, reliable, self-healing, and optimized for speed.
+---
+
+# Prep
+
+A guided, collaborative workflow for creating new scripts from a blank page. Unlike `optimize`, which improves existing code, `prep` starts with nothing but an end goal and walks the user through a disciplined path: clarify → structure → explain in plain terms → interview on risky pieces → plan → AUDITOR review loop → prototype → pentest.
+
+## When to Use This Skill
+
+- User wants to plan or design a new script or tool from scratch
+- Explicit phrases: "let's plan X", "prep a script for Y", "help me design Z", "plan out a new project"
+- User has a fuzzy goal and needs it broken down into specifics before coding
+- User wants an independent review step (an AUDITOR second-brain pass) built into the workflow
+
+## Core Principle
+
+Every artifact this skill produces — the plan, the prototype, every function — must optimize for five properties, in this priority order:
+
+1. **Smooth** — runs without jank, user-facing steps feel continuous.
+2. **Consistent** — same inputs produce same outputs; no hidden state.
+3. **Reliable** — handles realistic failure modes without silent data loss.
+4. **Self-healing** — on failure, recovers automatically (retry, checkpoint, state restore) rather than requiring manual intervention.
+5. **Optimized** — fast and resource-efficient, within the limits set by the first four.
+
+When two properties conflict, preserve the higher-priority one.
+
+## Plain-Language Rule
+
+The user has asked for explanations in extremely simple terms. **Obey this strictly.**
+
+- Short sentences.
+- Concrete analogies (compare to physical things the user sees every day).
+- Define any technical term the first time it appears, in one plain sentence.
+- Never assume background knowledge. If you use a word like "idempotent" or "async", explain it in parentheses the first time.
+- No abbreviations without expansion on first use.
+- No condescension. Plain ≠ dumbed-down. The user is thinking clearly; they just want no jargon fog.
+
+Example of the tone:
+
+> **Checkpointing** means the script saves its progress every few steps, the way a video game saves after each level. If something crashes, we restart from the last checkpoint instead of from zero.
+
+
+## Runtime Autonomy Rule — "Autonomous Engine, Optional Startup Gate"
+
+(Hard invariant — applies to every artifact /prep produces.)
+
+Every script /prep designs has an **autonomous engine** that runs blind once it fires. Some scripts also have an **optional startup gate** before the engine — others don't need one. Which shape applies depends on the script and pipeline:
+
+```
+Shape A: With startup gate         Shape B: No startup gate
+─────────────────────────          ─────────────────────────
+
+┌─────────────────┐                ┌──────────────────────┐
+│  STARTUP GATE   │                │  AUTONOMOUS ENGINE   │
+│                 │                │                      │
+│  Human input    │                │  Auto-detects work   │
+│  OK. Pick       │                │  from inputs / queue │
+│  config, how    │                │  / drop-folder /     │
+│  many, etc.     │                │  watcher state.      │
+└────────┬────────┘                │                      │
+         ↓                         │  Zero human input.   │
+┌────────────────────────┐         │  Runs to DONE,       │
+│  AUTONOMOUS ENGINE     │         │  FAILED, or          │
+│                        │         │  checkpoint-resume.  │
+│  Zero human input.     │         └──────────────────────┘
+│  All decisions resolve │              cron-ready
+│  from gate config +    │              by default
+│  computed state.       │
+└────────────────────────┘
+   walk away after gate
+```
+
+**Examples by shape:**
+
+- **Shape A (with gate)** — interactive video-script generator: asks at startup which config and how many videos, then runs the generation pipeline blind.
+- **Shape B (no gate)** — drop-folder ingest pipeline: detects whatever appears in `input/`, knows exactly what to do, processes it, exits. No setup question; the inputs ARE the configuration.
+- **Shape B (no gate)** — cron-driven worker: wakes on schedule, scans queue, processes pending items, exits. The schedule + queue state IS the configuration.
+
+**The non-negotiable part.** The engine — the part that does the actual work — runs blind. No `input()`, no `getpass()`, no GUI dialog, no "press Y to continue" between stages. Whether a startup gate exists or not, **once the engine fires, no human input.**
+
+**The optional part.** A startup gate is a tool for resolving choices the inputs alone can't. Use it when:
+
+- The user picks among multiple configs / modes / accounts
+- The user provides a credential or a one-shot parameter
+- The user confirms a destructive op before the engine runs
+
+Skip it when:
+
+- The script auto-detects work from filesystem / queue / watcher state
+- The script runs on cron and reads a fixed config
+- All inputs are already determined by the environment when the script starts
+
+**The user's test:** *"After whatever startup it has — does the rest of the run work without me?"* If the script asks for input mid-pipeline, it has failed. If the script asked at startup OR didn't need to ask at all, both are fine.
+
+**The user's test:**
+
+> *"After I answer the startup questions and walk away — does the rest of the run work without me?"*
+
+If the answer is "no, it'll ask me something at hour 3," the design has failed this rule.
+
+**What's allowed in the startup gate (before the engine starts):**
+
+- `input()`, `getpass()`, `Read-Host`, CLI prompts, simple TUI menus
+- "Which config?" / "How many videos?" / "Which account?" / "Confirm destructive action?"
+- Anything that resolves a one-shot setup choice
+- Reading from env vars, config files, CLI flags — preferred when the answer is reusable
+
+**What's forbidden in the autonomous engine (after the engine starts):**
+
+- ANY blocking call on human input — no `input()`, no `getpass()`, no GUI dialog mid-run
+- "Press Y to continue" between stages, "Approve this batch?", "Retry?" prompts
+- Waiting on stdin to be ready when there is no terminal
+- Any path where the engine halts and a human must intervene to resume
+
+**What replaces in-engine prompts:**
+
+| Decision the engine would have asked about | Where it resolves from instead |
+|---|---|
+| Retry the failed step? | Bounded retry policy with backoff — captured at startup |
+| Continue past a flaky stage? | Checkpoint + auto-resume — no human in the loop |
+| Pick between two paths mid-run? | Decision computed from current state (input size, prior outcome) |
+| Confirm a destructive action mid-run | Resolved at startup as `--yes` flag or config policy |
+| Wait for an external system? | Monitor + retry with timeout, then fail-fast or skip |
+
+**Boundary check during planning.** Every function spec must declare which **region** of the script it lives in (region, not PHASE — this is a different axis from the plan pyramid in `/principles` → Plan vocabulary):
+
+- **Startup-gate function** — runs once before the engine fires. May ask the user. Returns a config object the engine consumes.
+- **Engine function** — runs inside the autonomous loop. May NOT ask the user. All inputs come from the startup-gate config or computed state.
+
+A library helper that calls `input()` deep inside an engine chain breaks the rule just as badly as a top-level prompt. The boundary is enforced per-function at field 16 of the per-function card.
+
+**The engine's only valid stopping conditions:** DONE (success), FAILED (irrecoverable, with state preserved for post-mortem), or checkpoint-pause (work-so-far saved, next run resumes from the saved state). Never "waiting for human input."
+
+
+## Tool Preload (light)
+
+At the start of every `/prep` session:
+
+**Run `ToolSearch` with `select:Monitor,CronCreate,CronList,CronDelete` to load these tool schemas.** They are not loaded by default and are needed during the pentest phase when prototypes are run live.
+
+There is no mandatory arm step in `/prep` — the prototypes built here are usually short. But during pentest, if a prototype runs >30 seconds, arm a `Monitor` on its output with a filter covering both completion and failure signatures. If the script being designed IS a scheduled job (cron-driven, recurring), use `CronCreate` during pentest to test the scheduling behavior end-to-end rather than just the script body.
+
+
+## Interaction Protocol
+
+The guiding stance for this skill: **I drive. You steer. You only steer when it actually matters.**
+
+Every yes/no comes with the story baked in. No menus for the user to pick from. No commands for the user to paste. No gates for busywork. One gate per real decision — and the gate always arrives with "here's what, here's why, here's the risk."
+
+
+### The Four-Field Offer Block
+
+Every decision point prints this shape:
+
+```
+TL;DR:   [1–2 lines — what's going on + why this step]
+
+Risk:    [LOW / MEDIUM / HIGH + one-line reason]
+
+Mode:    [STEP-BY-STEP / AUTONOMOUS]   (omit for LOW defaults)
+
+Next:    [one action in plain language]
+
+Proceed?
+```
+
+- **TL;DR** is the story before the button. The user never sees "Proceed?" without first knowing what's happening and why.
+
+- **Risk** sets the stakes explicitly.
+
+- **Mode** sets expectations about who drives the next stretch.
+
+- **Next** is one concrete action, not a menu.
+
+- **Proceed?** is a yes/no gate.
+
+
+### Risk Tiers
+
+```
+LOW      Read-only or trivially reversible. No state changes,
+         or the change undoes itself on restart.
+
+MEDIUM   System state changes, but reversible. May need a reboot.
+         No data loss path.
+
+HIGH     Destructive, irreversible, or affects shared state.
+         Data loss possible, running work can be lost, or another
+         user/process is affected.
+```
+
+**Behavior by tier:**
+
+- **LOW** → may auto-proceed under a standing "yes" from the user; still print the block so a veto is possible.
+
+- **MEDIUM** → always gates. Always show the rollback path in the Risk line.
+
+- **HIGH** → always gates. Both-sides consequences spelled out (what's lost on yes, what's lost on no). Never bundled with other actions.
+
+
+## The Question Gate — what a question must pass before it reaches the user
+
+_(Added 2026-08-28 by user directive: "one test a question has to pass before it
+reaches me." The existing "don't ask" material is a LIST OF EXAMPLES, which only
+catches questions somebody already thought of. Field incident that forced this: a
+run finished a folder cutover correctly, then handed the user "Stage 1 — retire the
+gate or rewrite it?" and "Stage 4 — your call." Neither was the user's decision;
+both were stale-checklist findings dressed up as forks. The user's words afterward:
+"there was no user decision needed... i'm getting asked questions i dont know how to
+answer, or just irrelevant answers that make me end up in a loop." A list could not
+have caught those. A test does.)_
+
+Before ANY question reaches the user — mid-run, in a report, or inside a USER OPTION
+block — it must pass **all four**. Fail even one and it is not a question: decide it,
+log the decision in ONE line, keep going.
+
+```
+1. DECISION-CHANGING   The answer changes what I DO next, not what I write
+                       down. If both answers lead to the same next action,
+                       it is not a question.
+
+2. UNGETTABLE          I cannot get the answer myself — not from a file, a
+                       command, a log, the plan, or a cheap probe. If a probe
+                       would answer it, RUN THE PROBE. "I didn't check" is
+                       never a reason to ask.
+
+3. COSTLY TO GUESS     Being wrong is irreversible, burns the run, spends
+                       money, or reaches outside this machine. If wrong just
+                       means redoing a step → decide, log, continue.
+
+4. THEIRS TO ANSWER    It is about WHAT the user wants — intent, scope, taste,
+                       budget, risk appetite, outside consequences. Not HOW to
+                       build it. An implementation question is MINE, always,
+                       including when I am genuinely unsure.
+```
+
+**Test 4 fires most often.** The questions that waste the user's time are HOW
+questions wearing a WHAT costume: *"retire this gate or rewrite it?"*, *"retry or
+fail fast?"*, *"text log or database?"*, *"should I investigate or try a
+workaround?"* Every one of those is mine to answer. Being unsure is not a transfer
+of ownership — it is the job.
+
+**Test 2 is the one to run before test 4.** Most borderline questions dissolve into
+a single command. Reach for the probe before reaching for the user.
+
+### A stale checklist item is a FACT, not a fork
+
+When a written plan and reality disagree, that is a **finding to report**, not a
+decision to hand over. "Stage 1's check can no longer run — the folder it compared
+against was moved" is a sentence in the report. Reshaping it into "do you want to
+retire it or rewrite it?" manufactures a decision the user never needed, cannot
+evaluate, and did not ask for.
+
+State the mismatch. State what you did about it. Move on.
+
+### If it passes, it arrives fully loaded
+
+A question that clears all four gates is never asked bare. It goes into a USER
+OPTION block — each option with its cost, balanced `+`/`−`, a `HOLDS UP` durability
+read, exactly one `← RECOMMENDED`, and `IF YOU SAY NOTHING` naming the default.
+
+**Silence must always be a valid answer.** A question the user can stall on without
+stalling the work is the only kind allowed to exist.
+
+### Default to Action, Not Menu
+
+Pick the obvious next move and state it in one line. Only show a menu when there are **genuinely competing directions** the user needs to choose between — and include a confident lean.
+
+Bundle safe read-only checks under a single Proceed — don't fragment into five questions.
+
+
+### Offers, Not Commands
+
+Closing questions are offers to act, not commands for the user to execute.
+
+Pattern: *"It seems like [hypothesis]. Do you want me to [action] to check?"*
+
+- Never hand the user a command to run when the skill can run it.
+
+- Every offer names a hypothesis + a specific action + the evidence it will produce.
+
+- That shape IS the P11 debug loop's steps 3 / 5 / 6 (hypothesize → design the one-variable probe → run it). When the offer is about diagnosing a failure, use the P11 vocabulary: name what result CONFIRMS and what DISPROVES before the check runs.
+
+- The user remains the decider. The skill remains the hands.
+
+
+### Closing Question Must Unblock the Next Step
+
+End-of-phase questions must pass this test:
+
+> *Does answering this question advance the plan, or does it just inform me?*
+
+If it only informs, save it for a post-mortem. The closing prompt's job is to keep the work moving, never to poll preferences or ask the user to recall something from memory.
+
+
+### Autonomous Mode
+
+When all remaining steps are LOW or MEDIUM and fully reversible, offer a single four-field gate whose `Next` lists the entire chain. Mark `Mode: AUTONOMOUS` — one "proceed" authorizes the whole chain.
+
+**Auto-offer criteria** (all must hold):
+
+- All steps LOW or MEDIUM risk
+- Every step reversible without data loss
+- Fix is well-understood (no "try this and see")
+- No HIGH-risk step anywhere in the chain
+- User has given at least one prior proceed in this session
+
+**User-invoked phrases** (skip the auto-offer, go straight to one authorization gate):
+
+- "run it autonomously"
+- "autonomous mode"
+- "just do it"
+- "don't ask me again this session"
+
+**Execution tools:** shell (run commands, elevate where needed), monitor (poll logs/processes for completion), session cron (one-shot scheduled tasks that self-delete).
+
+**Tripwires that drop back to step-by-step:**
+
+- Step turns out to be HIGH-risk
+
+- Step fails mid-chain
+
+- Shell output contradicts the plan
+
+- Monitor times out
+
+- External dependency needed (credential rot, manual service start)
+
+- Step wants to install permanent state (see below)
+
+Always print a recap at the end.
+
+
+### Session Cron vs Permanent Cron
+
+```
+SESSION CRON     Lives only for the current plan/build session.
+                 Used for: poll a log, schedule a one-shot action,
+                 wake up and verify. Self-removes when the task
+                 fires OR the session ends. No lasting footprint.
+                 Safe inside autonomous mode.
+
+PERMANENT CRON   Part of the actual fix/plan output. Runs forever
+                 until removed. Creates lasting system state. NOT
+                 safe to bundle silently into autonomous mode.
+                 Always its own four-field gate, even inside an
+                 autonomous chain. Listed in the final recap with
+                 exact removal instructions.
+```
+
+Same rule applies to any permanent system state: scheduled tasks, registry keys, startup entries, services, firewall rules, env vars in user/system scope, pagefile changes.
+
+
+## Runtime Workflow
+
+Follow these phases in order. Do not skip.
+
+**Every phase below that asks the user anything is subordinate to The Question Gate.** `AskUserQuestion` is how a Gate-passing decision gets RENDERED — it is not permission to generate one. A decision that fails any of the four gates is derived, stated in one line with its reason, and left for the user to veto. Where a phase says "ask", read it as "ask what clears the Gate, batched".
+
+## Autonomous Mode (when /auto invokes /prep, or user opts in)
+
+### When autonomous mode triggers
+
+Activate autonomous mode when ANY of these hold:
+
+```
+1. /auto has invoked /prep as a sub-skill (Phase 0 handoff)
+2. User says "autonomous prep", "no questions, just plan it",
+   "auto-prep", "prep this without asking", or invokes /prep with
+   /auto in the same prompt
+3. The user's prior /principles → /auto → proceed pattern is
+   active in this session
+```
+
+### What autonomous mode does to each phase
+
+```
+Phase 1 (4-condition intake)
+  Normal:  Derive what's derivable (workflow, testing conditions);
+           ONE batched offer for what clears the Gate (usually the
+           end goal + the success bar — the user's intent).
+  Auto:    Derive all four from the invocation message, recent context,
+           and any code or files visible in CWD. Log each derivation
+           as a one-liner in the ASSUMPTIONS & FORKS card with the
+           reasoning ("Picked X because <signal>; alt to challenge:
+           Y"). Continue without asking.
+
+Phase 4 (structure proposal)
+  Normal:  Iterate function list with the user until they agree.
+  Auto:    Propose the function list once. Write it into the plan.
+           Skip the iterate-until-agreement gate.
+
+Phase 5 (risky-function interviews)
+  Normal:  Gate each risky function first. Derive what's derivable and
+           state it for veto; ONE batched offer for whatever clears
+           the Gate (usually irreversible actions + risk appetite).
+  Auto:    For every risky function, auto-pick "I don't know —
+           recommend something" and apply the documented default
+           (smooth → consistent → reliable → self-healing → optimized
+           priority). Document the rationale in field 2 (Reasoning)
+           of that function's spec.
+
+Phase 7 (AUDITOR audit + RED-TEAM)
+  Normal:  Dispatch the AUDITOR second-brain and the RED-TEAM attacker
+           in parallel, then pause to walk the user through their
+           findings one at a time (RED-TEAM BREAKS items first).
+  Auto:    Dispatch both (independent reviewer + scenario-attacker
+           subagents), integrate their feedback automatically with
+           `> [AUDITOR]` / `> [RED-TEAM]` callouts — a RED-TEAM BREAKS
+           must be fixed in the plan, not just noted — and note in the
+           plan's open-questions card that the auto path was taken.
+
+Phase 8 (per-function approval)
+  Normal:  Ask "does this match what you pictured?" after each
+           function clears AUDIT.
+  Auto:    Drop that gate. The Red → Green → Mutate → Real → Audit cycle IS
+           the verify; AUDIT pass = function done. Update the BUILD
+           STATUS card and move to the next function.
+```
+
+### What autonomous mode does NOT skip
+
+These remain mandatory regardless of mode:
+
+- The four condition cards (END GOAL / WORKFLOW / TESTING / SUCCESS) — they're derived, not skipped
+- The Red → Green → Mutate → Real → Audit cycle for every RISKY function
+- The P7 guards in Phase 8 (per-function isolation, spec-broadening-stop, style-locks-after-2)
+- The BUILD STATUS card live updates
+- The FINAL VERDICT card as a P4 block
+
+Autonomous mode skips **gates**, not **rigor**. Every output a normal /prep run would produce, an autonomous /prep run also produces — just without pausing for human input at each gate.
+
+### The "could not derive" exit
+
+If autonomous /prep cannot derive an observable end goal OR a checkable success condition from the invocation + context, it does NOT proceed. It writes a partial plan file containing only the cards it could fill, plus a top card noting:
+
+```
+[autonomous prep] Could not derive observable success conditions
+from invocation. Need from user: <specific missing piece>.
+Plan generation halted; will resume on user input.
+```
+
+This mirrors /auto's activation gate. Without observable criteria, "done" is opinion (P2 + P8).
+
+
+## Phase 1 — Capture the four conditions
+
+P2 (figure out the conditions upfront) requires three condition types nailed down before any work starts. Plus the end goal itself. Four answers, four cards in the plan file.
+
+In **interactive mode**, derive first, then ask what is left — in ONE batched offer, not four prompts in a row. The end goal and the success bar usually clear Gate 4 (they are the user's intent, and nothing on disk can supply them). Workflow and testing conditions are usually derivable from the invocation, the files present, and how the user's existing tools behave — derive those, state each as a decision with its reason, and let the user veto. Four prompts where one offer would do is the interview this skill no longer runs.
+
+In **autonomous mode**, derive all four from invocation + context in one pass. Log each derivation in the ASSUMPTIONS & FORKS card. Continue without asking.
+
+**1. End goal — one sentence + concrete shape + out-of-scope.**
+- One-sentence statement of what "done" means
+- Concrete input/output shape (file paths, formats)
+- Explicit out-of-scope list (what is NOT in v1)
+- Time horizon (how long unattended)
+
+**2. Workflow conditions — preconditions and handoffs per stage.**
+- For each stage of the planned pipeline: what must hold going in, what it hands to the next stage
+- The end-state signal that means the whole pipeline ran right (e.g., "every input id has a matching output file AND a line in progress.jsonl")
+
+**3. Testing conditions — how we'll prove it works.**
+- The production-reality sentence (Phase 9 Step 2 spec, P1 form): "<scale + concurrency + duration + environment + realistic failure mode>"
+- The specific failure injections we'll simulate (kill mid-run, network drop, auth expiry, malformed input)
+- What we are explicitly NOT testing in v1
+
+**4. Success conditions — the bar to clear.**
+- MUST-hold checklist (blocks v1 from shipping)
+- SHOULD-hold checklist (nice to have, not blocking)
+- Hard fail signals (signatures that mean a real bug, not noise)
+
+If the user's first answer to any of these is vague, ask ONE narrowing follow-up — never three (P3).
+
+Each answer goes into its own card in Phase 6's plan file. They become the spine the rest of the plan hangs off — every later phase points back at them.
+
+### Phase 2 — Derive the specifics
+
+From the goal, list the concrete sub-tasks the script must do. Each should be one sentence. Present them as a bulleted list and ask the user to confirm, add, or remove items.
+
+Example:
+
+> **Goal:** Batch-convert 200 videos to 1080p and upload to Drive.
+>
+> **Specifics I think this involves:**
+> - Read a folder of source videos.
+> - For each video, check if it's already 1080p or needs scaling.
+> - Re-encode to 1080p with a known codec.
+> - Upload the result to a specific Drive folder.
+> - Keep track of which ones have already been done so we don't repeat work.
+> - Report failures at the end so you know what to re-run.
+>
+> Which of these are right? Anything missing? Anything I should drop?
+
+### Phase 3 — Preferences: DERIVE first, ask only what clears the Gate
+
+_(Rewritten 2026-08-28. This phase used to read "for each confirmed specific, ask one
+broad preference question" — an interview, N specifics producing N prompts. The three
+examples it shipped with were all **implementation** questions, which the Question Gate
+now assigns to me. This phase was the single biggest source of the loop the user
+described: "i'm getting asked questions i dont know how to answer.")_
+
+Every preference question must clear all four gates in **The Question Gate** above.
+Most do not — retry policy, log format, GPU vs CPU are HOW questions, and HOW is mine.
+
+So this is no longer an interview. For each specific:
+
+```
+1. DERIVE   Answer it from what is already known — the goal, the files on
+            disk, how the user's existing tools behave, what the plan needs.
+
+2. STATE    Write it as a decision already made. One line. With the reason,
+            so the user can spot a wrong one at a glance.
+
+3. ASK      Only what genuinely clears the Gate. Batch it into ONE offer at
+            the end of the phase — never one prompt per specific.
+```
+
+**Old shape — an interview. Do not do this:**
+
+```
+"For the upload step — retry on network flakiness, or fail fast?"
+"For tracking already-done files — a text log, or a small database?"
+"For the re-encode — speed-priority, quality-priority, or whichever's idle?"
+```
+
+**New shape — derived, stated, vetoable:**
+
+```
+Upload retries on network errors — 3 attempts, backing off. The box runs
+  unattended, so failing fast would need a human who isn't there.
+Done-files tracked in a plain text log — a few thousand rows, nothing queries it.
+Re-encode on GPU — ffmpeg is already on PATH with NVENC, so it's free speed.
+
+Any of those wrong? Say so. Otherwise I'm building on them.
+```
+
+Three questions became zero, the user still vetoes anything, and nothing waits on a
+reply. That is the bar: **a derived default the user can overturn beats a question
+the user has to answer.**
+
+A specific you genuinely cannot derive is a Gate-passing question — it goes in the
+single batched offer with a recommendation and a stated default, never bare.
+
+### Phase 4 — Propose a simple structure
+
+Write a one-page sketch of the script's shape:
+
+- A short **plain-language walkthrough** — 4–8 sentences describing what the script does when it runs, start to finish, like telling a friend.
+- A **function list** — 5–15 functions, each with a one-line purpose. Group by stage (setup / main work / cleanup / reporting).
+- A **data flow diagram in text** — "A reads X, passes to B, B writes Y, C reads Y and does Z."
+
+Example plain-language walkthrough:
+
+> When you run the script, it first looks at a folder full of videos (like looking in a drawer to count the socks). It writes down which ones it's already done before (in a small notepad file). For each new video, it asks ffmpeg — the tool that handles video — to shrink it to 1080p. When ffmpeg is done, it uploads the result and ticks that video off the notepad. If anything fails, it tries again up to three times. At the end, it tells you which ones worked and which ones didn't.
+
+Ask the user: does the structure match what they pictured? Iterate until yes.
+
+### Phase 5 — Interview on risky functions
+
+A **risky function** is one that affects one or more of these:
+
+- The final output (correctness).
+- Speed (bottleneck potential).
+- Reliability (likely failure points).
+- Data loss (anything that deletes, overwrites, or uploads).
+
+From the function list in Phase 4, mark each function as **risky** or **safe**.
+
+**Run every risky function through The Question Gate first — do not prompt by default.**
+Risky does NOT mean unanswerable. Most risky functions still have a derivable
+behavior: the goal implies it, the existing tools show it, or one cheap probe settles
+it. Derive those, state them the Phase 3 way (decision + reason, vetoable), and move on.
+
+What survives the Gate here is real and worth the user's attention — usually Gate 3
+(irreversible: it deletes, overwrites, uploads, or spends money) or Gate 4 (their risk
+appetite, their budget, their audience). Those are genuinely theirs.
+
+**Batch what survives.** One offer covering every Gate-passing function, at the end of
+the phase — not one prompt per function. A five-risky-function plan that produces five
+separate prompts is the interview this skill no longer runs.
+
+For each function that DID clear the Gate, the offer carries:
+
+- Header: the function name.
+- Question: "How should `<function_name>` behave?"
+- Describe the function's purpose in one plain sentence.
+- 2–4 options, each a concrete behavior choice with tradeoffs named.
+- Always include: "I don't know — recommend something."
+
+If the user picks "I don't know", propose a default grounded in the five core properties (smooth / consistent / reliable / self-healing / optimized) and explain the reasoning in plain language.
+
+### Phase 6 — Draft the plan
+
+Write the plan file in the **current working directory** as a `.txt` file:
+
+```
+./prep-<goal-slug>.txt
+```
+
+Use the **card-stack format** (Style C). Every section is its own bounded card with `╭── HEADER ───╮ ... ╰────╯` borders. The title card uses `┌── ──┐` borders. One blank line between cards.
+
+**Card order — keep it exactly this:**
+
+1. **Title card** — name + one-line goal
+2. **TL;DR** — bolded headline + ≤20-word active-voice clarifier (P2 mandate)
+3. **END GOAL** — one-sentence goal, concrete shape (input/output/side-files/run command), out-of-scope list, time horizon
+4. **ASSUMPTIONS & FORKS** — silent defaults the plan is making, each with: pick / why / tradeoff / alt-to-challenge (P6)
+5. **WORKFLOW CONDITIONS** — per-stage preconditions and handoffs, plus the end-state signal (P2)
+6. **TESTING CONDITIONS** — Phase 9 production-reality sentence + specific failure injections + explicit NOT-testing list (P1)
+7. **SUCCESS CONDITIONS** — MUST-hold checklist, SHOULD-hold checklist, hard-fail signals
+8. **Plain-language walkthrough** — the Phase-4 friend-explanation
+9. **Function list** — name, purpose, risky?, agreed behavior
+10. **Data flow** — text diagram
+11. **Self-healing mechanisms** — where retries / checkpoints / atomic writes live
+12. **Files the script reads/writes** — explicit paths and formats
+13. **Dependencies** — libraries and external tools, versions if they matter
+14. **Open questions** — for the AUDITOR to weigh in on
+15. **Per-function specs** — Phase 7.5 17-field cards appended below, one per RISKY function
+16. **BUILD STATUS** — progress tracker, updated by Phase 8 after each cycle phase clears (see format below)
+17. **FINDINGS** — lessons learned during build/pentest: context, proven result, suspected verdict (see format below). Starts empty; Phase 8 and Phase 9 append to it.
+
+Cards 1–7 lock in WHAT we're building before any function-level design appears. Every later phase (function specs, build cycles, pentest checks) points back at these front-matter cards. Card 16 lets the user (and Phase 8 itself) see exactly where the build is at any moment — and lets a resumed Phase 8 pick up where it left off. Card 17 captures *why* things turned out the way they did — the discoveries worth remembering after the run.
+
+### FINDINGS card format
+
+Phase 6 emits this card empty. Phase 8 (build cycle) and Phase 9 (pentest) append an entry whenever they **learn why** something behaved as it did — a failure whose cause got pinned down, or a small success that flipped a prior assumption (the classic: "it worked once we authenticated → the thing was never broken, we just weren't logged in"). Do NOT log routine, expected passes.
+
+```
+╭─ FINDINGS ──────────────────────────────────────────────────╮
+│                                                              │
+│  <ISO timestamp> — <one-line summary>                        │
+│    Context:           <what we were doing + assumption held> │
+│    Result:            <what actually happened — PROVEN>      │
+│    Suspected verdict: <best-guess WHY — a hypothesis, never  │
+│                        stated as fact>                       │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+The `Result` is the proven part; the `Suspected verdict` is always flagged as a guess (evidence-first). A verdict confirmed by a decisive check — one experiment that isolates the cause, "pin the fix, don't guess" — is far stronger than one inferred from a single outcome; name the check in the verdict when one was run.
+
+### BUILD STATUS card format
+
+Phase 6 emits this card with all phases unchecked. Phase 8 updates it after each cycle phase (RED / GREEN / MUTATE / REAL / AUDIT) clears.
+
+```
+╭─ BUILD STATUS ──────────────────────────────────────────────╮
+│                                                              │
+│  Mode:      NORMAL | DIAGNOSING | ROTATING                  │
+│                                                              │
+│  Progress per function — columns [R][G][M][L][A] =           │
+│    Red, Green, Mutate, reaL, Audit                            │
+│  (SAFE rows show only [G][A]; RISKY rows show all five)      │
+│                                                              │
+│    [ ] [ ] [ ] [ ] [ ]   <function_1>        (RISKY/SAFE)    │
+│    [ ] [ ] [ ] [ ] [ ]   <function_2>        (RISKY/SAFE)    │
+│    [ ] [ ] [ ] [ ] [ ]   <function_3>        (RISKY/SAFE)    │
+│    ...                                                       │
+│                                                              │
+│  Current function:                <name or "—" if not started>│
+│  Approaches tried (this cycle):   0                          │
+│  Sibling notes (carried forward): []                         │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+A function is **complete** when every visible column is `[x]`. The build is shippable when every function row is fully checked AND Phase 9 integration checks have all cleared (see FINAL VERDICT card).
+
+### Phase 7 — AUDITOR audit loop (second-brain self-review)
+
+The audit is run in-house by an **AUDITOR** — a fresh, independent reviewer pass that acts as a second brain. Its only job is to try to *break* the plan, not to defend it. The author of the plan (you, who just wrote it) is the wrong brain to grade it — the AUDITOR is a deliberately separate one.
+
+**How to run the AUDITOR (in priority order):**
+
+**Model routing — these dispatches KEEP Opus. Leave `model:` unset.**
+_(Added 2026-08-30 during a cost review of `/auto`, which found that skill naming
+no model on any dispatch and paying Opus for a per-tick Navigator whose job is
+reading files. The same sweep checked `/prep` and `/audit` and found NO cheap-tier
+dispatch here at all: every subagent this skill spawns is the AUDITOR, the RED-TEAM
+or the FnReview, each once per run. There is no volume to cut — and these are the
+three that FIND things. Measured the same day, on one run: the plan-stage AUDITOR
+caught a design that would have shipped a write-only index and a FALSE evidence
+claim by the author; the plan-stage RED-TEAM MEASURED a 27% concurrent data loss
+that the whole final design was then built around. Downgrading either to save
+tokens buys nothing here and costs exactly the findings the skill exists for.)_
+
+1. **Preferred — dispatch an independent reviewer subagent.** Invoke the `Agent` tool (subagent_type `general-purpose`, or `code-reviewer` if available) with the full plan file contents and the audit brief below. A subagent has none of your plan-authoring context, so its read is genuinely independent. Wait for its findings.
+
+2. **Fallback — if subagents are unavailable**, perform the audit yourself, but explicitly switch voice: open a section headed `=== AUDITOR ===`, drop the author's stance, and adopt a skeptic whose success metric is finding holes. List concrete defects, not reassurance.
+
+**The audit brief handed to the AUDITOR:**
+
+```
+You are the AUDITOR — an independent second brain reviewing a plan you
+did NOT write. Your job is to break it, not bless it. Evaluate:
+1. Does the function list cover the goal, or is anything missing?
+2. Are the self-healing mechanisms adequate? Where could the script
+   silently fail, lose data, or wedge?
+3. Are there simpler approaches that meet the same five properties
+   (smooth, consistent, reliable, self-healing, optimized)?
+4. Answer the plan's OPEN QUESTIONS directly.
+5. Do the tests discriminate? For each field-13 RED / REAL check (when
+   per-function spec cards are present) and each success criterion:
+   could it pass while the goal is still unmet? Name the nearest
+   failure state it fails to distinguish (signed-out, empty output,
+   stale cache) — a check that cannot say NO merely confirms the
+   current assumption.
+6. Band-aid scan (aim at the right fix): is any mechanism a band-aid —
+   it neutralizes one instance of a failure while the condition that
+   produces it survives (a special case, a narrowed scope, a workaround
+   around the broken part, or filtering for inputs that already satisfy
+   a precondition instead of establishing it on any input)? For each
+   hit: name the scenario where the same failure returns, and the
+   structural version that removes the condition. A band-aid survives
+   review only if the user explicitly requested a temporary patch.
+Return specific, actionable defects ranked by severity — not approval.
+For each: what's wrong, why it bites, and the concrete fix.
+
+=== PLAN BEGINS ===
+<plan contents here>
+=== PLAN ENDS ===
+```
+
+**The RED-TEAM — second independent attacker, dispatched IN PARALLEL with the AUDITOR (same message, two `Agent` calls).** Its ONLY job is scenario attack: generate concrete hostile scenarios across the 10 canonical attack categories (mid-op death, check-then-act races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) and walk each one through the plan to a verdict — HANDLED / DEGRADES / BREAKS / UNKNOWN. The canonical RED-TEAM brief lives in `~/.claude/skills/audit/SKILL.md` under the heading "**The brief handed to the RED-TEAM**" — read it there at dispatch time and hand the agent the plan contents as the target. Mandatory when the planned tool is unattended, long-running, stateful, or concurrent; skippable only for a plainly attended one-shot, noted in the plan as `RED-TEAM: skipped — not unattended/stateful`.
+
+When the findings come back (AUDITOR + RED-TEAM), integrate each item explicitly with the user — RED-TEAM **BREAKS** items first:
+
+- **Gate every finding before it reaches the user.** Most AUDITOR findings are HOW problems — a weak check, a missing rollback, an unbounded retry — and Gate 4 makes those MINE: fix them in the plan and list what was fixed. A finding reaches the user only when it clears the Gate: it changes scope, costs money, risks something irreversible, or turns on their risk appetite.
+- What clears the Gate goes in ONE batched offer (RED-TEAM **BREAKS** first), each item carrying a recommendation and a stated default — not a separate Accept/Reject/Modify prompt per finding.
+- Update the plan file with every accepted change, noted with a `> [AUDITOR]` or `> [RED-TEAM]` callout so edits are traceable.
+- A RED-TEAM **UNKNOWN** on a load-bearing scenario becomes an open-questions item carrying the cheapest probe that would resolve it.
+
+Loop until the user says they are satisfied (optionally re-running the AUDITOR on the revised plan for a second pass). Do not proceed to Phase 7.5 without explicit user go-ahead.
+
+
+### Phase 7.5 — Per-Function Audit Spec
+
+For every function flagged as **risky** in Phase 5, produce a full audit-grade specification using the 17-field template below. This is the artifact the AUDITOR actually audits — every field exists to give the reviewer something specific to engage with, not rubber-stamp.
+
+Safe functions get a one-line summary. Only risky ones get the full spec.
+
+**The 17 Fields** (in this order, every time)
+
+```
+ 0. Traces to goal           One sentence: how this function
+                             moves the pipeline toward the
+                             END GOAL card. If you can't draw
+                             that line, the function is drift —
+                             cut it (P3).
+
+ 1. Logic                    What it does, 2–4 plain sentences.
+
+ 2. Reasoning                Why THIS approach, not the obvious
+                             generic one.
+
+ 3. Alternatives considered  2–3 rejected approaches, each with
+                             the one-line reason. Critical for
+                             audit — lets the reviewer challenge
+                             the rejection, not rubber-stamp the
+                             winner.
+
+ 4. Scenario fit             The SPECIFIC project constraints
+                             that shaped this choice. Long jobs?
+                             Large files? GPU-bound? Rate limits?
+                             Generic textbook answers die here.
+
+ 5. Pipeline integration     Upstream:    who calls, with what
+                                          input shape, what
+                                          guarantees I rely on.
+                             Downstream:  who reads my output,
+                                          what shape they expect,
+                                          what I guarantee them.
+                             Invariants:  what stays true at
+                                          every hand-off.
+
+ 6. State ownership          Owns (writes) / Reads only /
+                             Never touches. Prevents silent
+                             coupling across functions.
+
+ 7. Protocols followed       Standard 8-row checklist:
+                             [ ] Atomic write
+                             [ ] Idempotent
+                             [ ] Bounded retry with jitter
+                             [ ] Retry only on transient errors
+                             [ ] Fail-fast on non-transient
+                             [ ] Health check before heavy work
+                             [ ] Checkpoint after confirmation
+                             [ ] Structured log, no bare prints
+
+ 8. Pipelining / concurrency Streaming vs batching, parallelism
+                             cap, backpressure, place in the
+                             producer/consumer graph.
+
+ 9. Failure modes            Table: failure → self-healing path
+                             → if that fails, what next. The
+                             self-healing path uses Ordered
+                             recovery on re-entry (see Self-Healing
+                             Patterns) — never retry on a prior
+                             attempt's residue. Source the rows from
+                             /error-recon's map when one exists — its
+                             confirmed entries are the evidence-backed
+                             failure list (+ the `Residue` field feeds
+                             field 12). Group the rows by Heaven's Net
+                             failure class (see Self-Healing Patterns).
+
+10. Performance profile      CPU / IO / net bound? Cost per
+                             item? Where the bottleneck lives?
+                             What would make it 10x slower?
+
+11. Observability hook       What it logs (fields). ONE metric
+                             to watch on the first real run.
+
+12. Rollback plan            If this misbehaves mid-batch, how
+                             to undo. Cleanup covers BOTH this
+                             function's own partial state AND any
+                             downstream consumer (field 5) that
+                             already read the now-undone output —
+                             else they run on a stale foundation.
+
+13. Test specs (4 sub)       The Phase 8 build cycle, pre-written:
+
+                             RED:    The failing-first test.
+                                     Spec the input state, the
+                                     call, and the expected
+                                     failure signature. Must be
+                                     specific enough to fail
+                                     before the function exists.
+
+                             GREEN:  The minimum behavior the
+                                     function must show to pass
+                                     the RED test. Plus one
+                                     positive case (the happy
+                                     path).
+
+                             REAL:   How this function will be
+                                     tested in production-shape
+                                     (chained with neighbors,
+                                     real inputs, real I/O).
+                                     Pulls directly from the
+                                     TESTING CONDITIONS card.
+
+                             AUDIT:  The one-sentence criterion
+                                     that means this function
+                                     traces to the END GOAL and
+                                     can clear the cycle. Pulls
+                                     from field 0.
+
+                             (A 5th cycle step, MUTATE, runs between
+                             GREEN and REAL at BUILD time — see Phase
+                             8. It isn't pre-written here because what
+                             to mutate isn't known until the function
+                             exists; the AUDITOR still expects its
+                             proof to be pasted alongside RED/GREEN.)
+
+14. KISS check               What I deliberately did NOT add,
+                             and why a future reader might be
+                             tempted to add it anyway.
+
+15. Open questions (AUDITOR) Explicit prompts for audit: "I'm
+                             not sure about X — can you
+                             challenge it?" Makes the review
+                             targeted, not hunt-and-peck.
+
+16. Runtime autonomy         Where in the script's lifecycle does
+                             this function run, and how does it
+                             resolve every decision without asking
+                             a human mid-pipeline?
+
+                             Region: STARTUP-GATE | ENGINE
+                                    - STARTUP-GATE — runs once
+                                      before the engine fires; may
+                                      ask the user. Optional —
+                                      omit if the script has no
+                                      gate (drop-folder, watcher,
+                                      cron-driven scripts).
+                                    - ENGINE — runs inside the
+                                      autonomous loop; may NOT ask
+                                      the user.
+
+                             For ENGINE functions, list every
+                             decision the function makes and where
+                             its answer comes from:
+                               - <decision>: <default | env var |
+                                 CLI flag | config | computed-from-
+                                 input-files | computed-from-state |
+                                 retry-policy>
+
+                             If any decision can only be answered
+                             by a human at runtime, the function is
+                             not engine-safe. Either:
+                               (a) move the decision to a startup
+                                   gate (if the script has one), OR
+                               (b) compute it from the input files
+                                   / queue / state (preferred for
+                                   gate-less scripts), OR
+                               (c) reclassify the function as
+                                   STARTUP-GATE, OR
+                               (d) replace the human decision with
+                                   a computed default + log the
+                                   default that fired.
+
+                             Stop conditions (ENGINE only):
+                                 [ ] DONE — success path checkable
+                                 [ ] FAILED — irrecoverable, state
+                                     preserved for post-mortem
+                                 [ ] CHECKPOINT — work-so-far saved,
+                                     next run resumes
+                             At least one must be checked. None of
+                             them may be "wait for human input."
+```
+
+**Header format**
+
+Each function's spec begins with:
+
+```
+================================================================
+FUNCTION:  <signature>
+PIPELINE:  stage <N> of <M> — <one-line position>
+================================================================
+```
+
+Append the 17-field block to the plan file. Phase 7.5 ends when every risky function has a completed spec.
+
+
+### Phase 8 — Build the prototype
+
+Build one function at a time. Each function goes through a tiered cycle keyed off its Phase 5 risk tag.
+
+**RISKY function — full Red → Green → Mutate → Real → Audit cycle**
+
+```
+RED      Write the test FIRST. Run it. Watch it fail.
+         The failing-first run proves the test actually
+         exercises the target — without it you can't tell
+         a real test from a label (P1).
+
+GREEN    Write the function. Run the test. Watch it pass.
+         Then add one positive case (happy path) and run
+         that too. Function-then-test makes it too easy to
+         tailor the test to whatever the function happens
+         to do — this ordering blocks that.
+
+MUTATE   Prove the test discriminates, not just confirms
+         (2026-09-10, user directive: "make sure everything
+         is literally evidence-backed"). RED only proved the
+         test fails when the function is ABSENT; that is not
+         the same claim GREEN just made. On a copy, break the
+         function's own logic — revert to a stub, flip the
+         key condition, hardcode a wrong value — and re-run
+         the SAME test. It must now FAIL. A test that still
+         passes against a broken function proves nothing: it
+         would have passed whether the function worked or not,
+         which means GREEN's earlier pass was never evidence.
+         Paste the mutation + the failure it produced as the
+         proof; then revert the mutation before REAL. This is
+         the concrete, mechanical form of the discriminating-
+         probe principle (P11/HI #13) applied to the test
+         itself rather than to a diagnosis.
+
+         CARVE-OUT — when re-running the test is itself the
+         risk. MUTATE means running GREEN's test a SECOND
+         time, on top of the first. If that test's own body
+         triggers a real costly or irreversible effect (spends
+         money, sends a real message/email, writes to shared
+         or production state, hits a rate-limited API), running
+         it twice doubles that effect — the safety net becomes
+         the hazard. Two legal outs, in order of preference:
+           (a) STUB THE LEAF for the mutation run only — same
+               principle as Scale-Soak's "real logic, stubbed
+               leaf": everything up to the outermost paid/
+               irreversible call runs real and gets mutated;
+               that one call is faked for this run alone. Proves
+               the function's own logic discriminates without
+               spending/sending twice.
+           (b) SKIP explicitly, same shape as the RED-TEAM
+               carve-out above: `MUTATE: skipped — <the real
+               effect a second run would cause>`. A skipped
+               MUTATE is a named gap, not a silent one — the
+               AUDIT card inherits the risk and the AUDITOR
+               sees the skip reason.
+         Never mutate-and-rerun against a real paid/irreversible
+         call "just this once" to save the trouble of stubbing —
+         that is exactly the case this carve-out exists for.
+
+         SECOND CARVE-OUT — genuine nondeterminism (the function
+         calls an LLM, relies on timing, or draws from randomness
+         the test doesn't seed). A single mutated run can pass or
+         fail by chance either way, so one result isn't proof by
+         itself. Seed what can be seeded (same discipline as
+         Scale-Soak's "deterministic where possible"); what's left
+         genuinely random gets a small ensemble (2-3 runs) instead
+         of one, with the verdict stated as "N/M mutated runs
+         failed" rather than a bare pass/fail. Don't fabricate
+         precision a nondeterministic function can't offer.
+
+REAL     Run the function in production-shape — the
+         conditions named in the TESTING CONDITIONS card.
+         Real inputs, real I/O, chained with neighbor
+         functions. Catches "passes alone, breaks in
+         pipeline."
+
+AUDIT    P4 checkpoint vs the END GOAL card. One sentence:
+         "this function moves us from <prior state> to
+         <next state>; here's the observable evidence."
+         If the line doesn't draw to the goal, the function
+         is drift — revert and rethink before moving on (P3).
+         EXECUTED BY FnReview — a fresh-context reviewer, not
+         the brain that wrote the function (added 2026-08-22):
+         it reads the function from disk and returns, per item
+         with a file:line citation, GOAL-TRACE (this sentence)
+         + the 5 principles (Heaven's Net / evidence-only /
+         re-entry hygiene / no silenced failures / KISS) +
+         the 4 completeness tests — does the condition that
+         produced the failure / the gap it closes still exist?
+         next run, different input, nobody watching? establish-
+         vs-filter? cause-lock (only when the function was
+         FIXED — otherwise a legal N/A)? The driver still
+         writes the AUDIT card itself (the P4 sentence, the
+         style-match line, Sibling notes) — FnReview's
+         CLEAN+COMPLETE is the condition that lets [A] check.
+         A VIOLATION / BAND-AID sends the function back to
+         GREEN (REAL + AUDIT re-run on the rewrite; bounded per
+         /auto FnReview — fresh approach budget, ≤2 review
+         rounds). Round 2 still failing → stop and surface the
+         finding to the user at the per-function "Does this
+         match what you pictured?" question (under /auto:
+         PARKED, open finding = DONE gate). Plain /prep (no
+         /auto): dispatch a fresh Agent subagent with the
+         canonical brief — same machinery as Phase 7's AUDITOR;
+         subagents unavailable → same-context skeptic pass,
+         marked as the weaker fallback. A finding
+         that would broaden the spec routes through the
+         spec-broadening stop below, and a recorded spec-card
+         decision is a valid WAIVED citation. Under /auto this
+         AUDIT step is the single FnReview executor — no extra
+         dispatch. Canonical mechanism, brief, bounds and
+         stamps: /auto SKILL.md, "FnReview — per-function
+         completeness review" — pointer, not a copy.
+```
+
+**SAFE function — Green + smoke check + FnReview.** No separate failing-first test for trivial functions (e.g., reading a text file into a list). Write it, run it, confirm output shape. One-line log in the plan file. Then the same FnReview as a RISKY function's AUDIT (Option B, 2026-08-22: every function is reviewed, not just the load-bearing ones — reviews for several functions fan out in parallel, so it costs wall-clock, not certainty); a SAFE function that was **fixed** — rewritten to clear a failed GREEN / REAL, or it rewrote a def that existed before this build — carries the fix packet too (/auto FnReview "fix-trigger").
+
+**P7 guards on every cycle (RISKY and SAFE alike).**
+
+```
+Per-function isolation     Each cycle touches ONE function.
+                           Edits outside that function are
+                           not allowed during the cycle. If a
+                           sibling function needs work, MENTION
+                           it in the AUDIT card — do not fix
+                           inline (P7).
+
+Spec-broadening requires   If a cycle reveals the function's
+a stop                     Phase 7.5 spec is wrong or
+                           incomplete, halt. Renegotiate the
+                           spec card with the user. Do not
+                           silently broaden the function beyond
+                           its agreed spec.
+
+Style locks after          The first two built functions set
+function 2                 the file's style — naming, error
+                           handling, logging shape, return
+                           semantics. Every later function
+                           matches. AUDIT explicitly checks for
+                           style match. No "I'd write it
+                           better" past function 2.
+```
+
+**Sibling notes field on AUDIT.** Every AUDIT card includes a "Sibling notes" line — anything noticed about other functions during this cycle, not fixed. Each note becomes a candidate for a dedicated cycle the user can open later.
+
+**Other rules that still apply:**
+
+- Self-healing in every risky function — bounded retries, checkpoint writes, idempotent operations. Never bare `try/except Exception: pass`.
+- KISS (P5) — no class hierarchies for linear flows, no `tenacity` when a 5-line loop works, no CLI framework for ≤ 2 args.
+- Every subprocess and network call gets a retry wrapper. Every file write uses write-to-temp-then-rename.
+- **Visual smoke capture (P10 — see it before you call it).** When a function's smoke/REAL test touches a visual surface (a browser, a GUI window, a rendered frame), the generated test captures a screenshot at each state-change + assertion and prints a `[shot] <path>` line per capture. The test's PASS is not accepted until that shot is read — a passing exit code on a visual surface is necessary but not sufficient (a signed-out page exits 0 too). Non-visual tests get no shot. Mirrors /auto Hard Invariant #11.
+- **Pin the cause before the fix (P11) on any unexpected failure.** When a cycle phase fails in a way the spec didn't predict (RED won't fail, GREEN won't pass, REAL breaks in the pipeline), never guess-and-edit the prototype. Run the P11 debug loop — log the facts, list 2–4 ranked falsifiable causes, run ONE pre-registered cheapest one-variable probe at a time (variable / expected / CONFIRMS / DISPROVES written before the result exists), and edit only once exactly one cause has positive proof. Standard: /principles P11; full procedure: /repair; fast path only for one-read-obvious causes (typo, missing import). The pre-registered probe must be a **discriminating test** — its CONFIRMS / DISPROVES must separate the leading cause from its ranked rivals, not merely confirm the current assumption; avoid **search-space neglect** and **anchoring bias** by actively checking plausible alternatives (mirrors /repair Hard Invariant #18 + /auto Hard Invariant #13).
+
+After each function clears AUDIT, ask the user one quick question: "Does this match what you pictured?" (Yes / Tweak / Rewrite). The user is reviewing a proven function, not a hopeful one.
+
+### Updating the BUILD STATUS card
+
+Phase 8 keeps the BUILD STATUS card (Phase 6 card 16) live. Update it after every cycle phase clears AND when mode changes:
+
+- After RED clears for a function → check the `[R]` column
+- After GREEN clears → check `[G]`
+- After MUTATE clears (the broken-function re-run FAILED as required) → check `[M]` (RISKY only — SAFE rows never show this column). A named skip (the carve-out above) marks `[M]` as `[s]` with the reason in Sibling notes, never left blank — blank would read as "not attempted yet," not "deliberately skipped."
+- After REAL clears → check `[L]`
+- After AUDIT clears → check `[A]`, set Current function to next, reset Approaches counter
+- On entering DIAGNOSING / ROTATING (verify failed, picking new approach) → update Mode
+- On returning to NORMAL after a successful rotation → set Mode back to NORMAL
+- On adding a sibling note from an AUDIT card → append to the Sibling notes list
+
+This is what makes Phase 8 resumable: if the build is interrupted, the next run reads the BUILD STATUS card, finds the first function with un-checked phases, and resumes from there.
+
+The BUILD STATUS card is also the file `/auto` reads when running on top of `/prep` to know where to pick up the build runbook.
+
+### Phase 9 — Pentest the integrated system
+
+By the time Phase 9 starts, every RISKY function has already cleared its own Red → Green → Mutate → Real → Audit cycle in Phase 8. Per-function correctness is proven. Phase 9 proves the functions **compose** — that the integrated system survives the production-shape conditions named in the TESTING CONDITIONS card.
+
+Phase 9 has one job: source its checks directly from the TESTING CONDITIONS card. Nothing here is invented fresh — if a check isn't in that card, it doesn't run. This keeps Phase 9 from drifting into "tests I felt like writing."
+
+**The integration + scale + failure-injection check list.**
+
+```
+Pull each item from the TESTING CONDITIONS card and run it:
+
+[ ] Production-shape sentence test
+       The full pipeline at the scale and duration the card
+       names (e.g., "200 prompts, single Chrome profile,
+       8-hour wall clock, home network").
+
+[ ] Each named failure injection — PRE-REGISTERED before it runs (P11)
+       For every injection, write three fields BEFORE running it:
+         expected:  <what the system should do when this failure hits>
+         confirms:  <the observable result that proves recovery worked>
+         disproves: <the observable result that proves it did not>
+       An injection result may NOT be interpreted until the three
+       fields are written — the pass/fail meaning exists before the
+       result, so the result can't be rationalized after the fact.
+       Kill mid-run → resume from progress.jsonl
+       Network drop → retry succeeds
+       Auth expiry → recovery fires
+       Malformed input → logs error, continues
+       (Each one a separate run. Pass/fail per row, judged against
+        its pre-registered fields. A failing row routes through the
+        P11 debug loop — never guess-and-edit the integrated system.)
+
+[ ] End-state signal from the WORKFLOW CONDITIONS card
+       The thing that means "the whole pipeline ran right"
+       holds at the end of the production-shape run.
+
+[ ] MUST-hold checklist from the SUCCESS CONDITIONS card
+       Each item passes or fails explicitly.
+
+[ ] Visual-surface verdicts read, not inferred (P10)
+       Any production-shape check whose result is something you
+       LOOK at (a rendered page, an app window) is confirmed by
+       reading its captured screenshot — never from log text or
+       exit code alone. A missing/unreadable shot = INCONCLUSIVE,
+       not pass.
+```
+
+**No standalone Step 1 PoC layer.** It's been folded into Phase 8's per-function REAL step. The historical Step 1 / Step 2 split existed for skills that don't have a per-function build cycle — `prep` does, so Phase 9 is integration-only.
+
+**Scale-soak escalation (canonical: /auto "Scale-Soak Verification", added 2026-08-24).** When the deliverable is production-scale and the TESTING CONDITIONS card names a scale or failure mix that a live run can't safely or affordably host (failure waves, per-resource budgets, high concurrency), the scale-soak harness is a PLANNED COMPONENT, not a Phase 9 invention: Phase 6 lists it in the plan like any other deliverable, Phase 8 builds it through the normal per-function cycle (real decision logic, stubbed produce-leaf, negative-control-proven tripwire, the SMOKE→INJECT→SCALE→VALIDITY ladder), and Phase 9 — which stays integration-only — RUNS the card's pre-registered failure injections INSIDE it (same expected/confirms/disproves discipline) and puts its `[CHK]` reconciliation block on the verdict card as HARD evidence, scope card attached.
+
+**Verdict block — formatted as a P4 card (see Final Report below).**
+
+A prototype is not shippable while any MUST-hold or end-state check is red, regardless of how many SHOULD-hold items pass.
+
+## Offer Template — how a Gate-passing question is RENDERED (phases 3 and 5)
+
+_(Renamed 2026-08-28: this was the "Interview Template", back when phases 3 and 5 ran interviews. It is a rendering format, not a licence to ask — a question reaches this template only after clearing all four gates in **The Question Gate**, and Gate-passing questions from one phase are batched into a single offer, never one call per specific or per function.)_
+
+```
+AskUserQuestion(
+  header: "<short tag or function name>",
+  question: "<one specific question>",
+  options: [
+    { label: "<Option A> (Recommended)", description: "<one-sentence tradeoff>" },
+    { label: "<Option B>",                description: "<one-sentence tradeoff>" },
+    { label: "I don't know — recommend something", description: "Skill proposes a default grounded in the five core properties and explains why." }
+  ]
+)
+```
+
+## Self-Healing Patterns (reference for Phase 6 and 8)
+
+Use these primitives when writing the plan and the prototype. Prefer simple versions.
+
+- **Bounded retry with jitter** — 3 attempts, `2**n + random()` seconds, retry only on specific exceptions.
+- **Atomic write** — write to `path.tmp`, then `os.replace(path.tmp, path)`. Partial writes never corrupt the destination.
+- **Checkpoint file** — after each stage, append the item id to `progress.jsonl`. On restart, skip ids already in the file.
+- **Idempotent operations** — every stage should be safe to re-run. If output exists and is valid, skip it. If not, produce it.
+- **Fail-fast on non-transient errors** — bad codec, missing file, wrong credentials: raise immediately. Only retry truly transient conditions.
+- **Health check before heavy work** — ffprobe the input before a 2-hour encode. Ping the upload endpoint before batching.
+- **Ordered recovery on re-entry** — when retrying or resuming a step that may have run partway, never retry on top of a prior attempt's residue. Restore in order: roll back partial work → re-assert the precondition (re-run the step's health check / readiness check, field 7) → invalidate downstream (the field-5 consumers that read the old output, but only when the redone output actually differs) → resume. The build-time form of /auto's Re-entry hygiene + /spec's RECOVERS-BY.
+- **Heaven's Net (class-level recovery)** — recovery logic keys to failure CLASSES (navigation / auth-session / element / timing / network / resource / unknown), one general strategy per class: diagnose the actual state → classify → recover toward the required state → verify it's restored with evidence → bounded escalate, fail loud. Never one bespoke handler per observed error string — a new symptom joins a class via a new evidence-backed map entry, NEVER by resemblance or assumption (an unmatched signal is "unknown": capture, park, stop loud). Field 9's failure-modes table groups its rows by class accordingly. Canonical definition + strict guardrails (evidence-only, confidence gating, job-level recovery budget): /error-recon, "Heaven's Net" section — read it before designing recovery; don't run it from memory. KISS: the taxonomy is earned at the third handler in the same class, not before. Proportion (guardrail in the same section): a recovery that rests/retires capacity or pulls a pool is sized from an OBSERVED recovery measurement or a bounded ≥×2 smallest-first ladder — never a constant picked by feel; under- and over-sizing are equal failures. Field 9's self-healing path states the size and cites the map entry's measured recovery + `Scope:` it came from. Same section: the recovery must HOLD (recurrence inside the hold-window = failed recovery), verify cheapest-first, and environment-given numbers are measurements.
+
+## Hard NOs
+
+Same list as the `optimize` skill, plus these specific to Phase 8:
+
+- Do not write the whole script in one pass before the user has approved each function.
+- Do not skip Phase 7 (AUDITOR audit) because "the plan looks fine to me." The author brain never grades its own plan.
+- Do not declare Phase 9 done while any pentest check is failing.
+- Do not invent requirements the user did not ask for — if uncertain, ask.
+- Do not put `input()` / `getpass()` / `Read-Host` / GUI prompts inside any ENGINE function (post-startup-gate). The pipeline runs blind once the engine fires — every decision must resolve from startup-gate config, env vars, CLI flags, defaults, or computed state. Field 16 of every per-function spec must declare this explicitly.
+
+## Final Report (end of Phase 9)
+
+P4 verdict-format. One of DONE / PARTIAL / BLOCKED / UNCLEAR. Append as a card to the bottom of `./prep-<slug>.txt` and print to the user.
+
+```
+╭─ FINAL VERDICT ─────────────────────────────────────────────╮
+│                                                              │
+│  **<✅/🟡/🔴/❓> <STATE> — <one-line headline contrasting    │
+│  current state with the END GOAL>.**                         │
+│                                                              │
+│  Done:                                                       │
+│  • <observable artifact / state>                             │
+│  • <observable artifact / state>                             │
+│  • Plan iterations: <N>  (plan → AUDITOR → revise → approve) │
+│  • Functions built: <N>                                      │
+│  • Self-healing hooks: <retry/checkpoint/atomic-write spots> │
+│                                                              │
+│  Pending / Blocker / Ambiguity:                              │
+│  • <each MUST-hold or end-state check that didn't clear,     │
+│    or each AUDITOR point not yet integrated>                 │
+│  • Permanent changes installed: <change + exact removal>     │
+│    (omit if none installed)                                  │
+│  • Known limitations: <out-of-scope items the user accepted> │
+│                                                              │
+│  Next: <one concrete action — first real run command, OR     │
+│         what would unblock, OR the info needed to resolve    │
+│         the ambiguity. Not "let me know if you want more."   │
+│         Include metrics to watch on first run when DONE.>    │
+│                                                              │
+│  Current stage:                                              │
+│    Before:   <state before this session's work>              │
+│    Now:      <state right now — built / verified / waiting>  │
+│    Changed:  <what changed and WHY — evidence or decision>   │
+│    Next:     <immediate milestone toward the END GOAL>       │
+│    Meant to: <what Next achieves + the problem it fixes>     │
+│    Feynman:  <Next to a smart 12-year-old, one analogy —     │
+│              how it fits Heaven's Net + the ultimate goal>   │
+│  Ultimate goal (4 lenses, from the END GOAL card — frozen):  │
+│    Delivers:   <finished result, zero input from the user>   │
+│    Heals:      <failures recover or surface themselves>      │
+│    Replaces:   <whose job/attention the system deletes>      │
+│    Guarantees: <what wrongness is structurally impossible>   │
+│  User option:  (omit entirely if no fork this turn)          │
+│    Question: <the decision put to you, one line>             │
+│      1. <option in your terms>          (<cost>)             │
+│         + <what it gets you>                                 │
+│         − <what it costs you>                                │
+│         Holds up: <survives next run / diff input /          │
+│                   nobody watching? maintenance cost?         │
+│                   what breaks later? name band-aids>         │
+│      <n>. <holds up best>   (<cost>)  ← RECOMMENDED          │
+│         + / − / Holds up — same four fields                  │
+│    If you say nothing: I take <n> and keep going.            │
+│    Why that default: <why it wins on STRUCTURE —             │
+│                      what each loser leaves broken,          │
+│                      least maintenance, least likely         │
+│                      to recur. Not just "faster".>           │
+│                                                              │
+│  Suggested action:                                           │
+│    Paste this:     <answers THIS TURN'S question: on a pick  │
+│                    = the pick + one line why (work prompt    │
+│                    waits for next turn); on a do-it request  │
+│                    = standalone prompt: what / files /       │
+│                    limits / facts / show-or-ask before cost  │
+│                    — "nothing — goal reached" if DONE>       │
+│    → Toward goal:  <a chain, not a tag: move → concrete gain │
+│                    → which lens needs it and why, + cost of  │
+│                    the rejected option>                      │
+│    → Heaven's Net: <on a pick: seen evidence + what ruled    │
+│                    others out + how we'd know if wrong +     │
+│                    bounded fallback, unchecked named, never  │
+│                    "n/a"; on a work step: class-keyed,       │
+│                    evidence-only, bounded, fail-loud — or    │
+│                    "n/a — no recovery logic">                │
+│    Feynman:        <the choice in kid words: one analogy,    │
+│                    three beats — why THIS move won, what we  │
+│                    passed on, what happens if it's wrong;    │
+│                    never a repeat of the stage Feynman>      │
+│                                                              │
+│  Confidence: <PERFECT/HIGH/MED/LOW> — <what was verified     │
+│              directly (tests run, output seen) vs inferred;  │
+│              PERFECT only if all angles incl. failure paths  │
+│              tested on real inputs + AUDITOR found nothing — │
+│              name the tests>                                 │
+│  Risk: <HIGH/MED/LOW> — <what's exposed if this verdict is   │
+│        wrong; which parts are unproven on real inputs>       │
+│                                                              │
+│  Timeline: (debrief-style staged timeline, whole project —   │
+│    see debrief skill / TIMELINE rules in the explain skill)  │
+│    <STAGE>                                                   │
+│    1. <milestone already done>                               │
+│    THIS SESSION                                              │
+│    2. <this session's step>              ← YOU ARE HERE      │
+│    WHAT'S LEFT                                                │
+│    3. <next milestone>                                        │
+│    4. <finish line>                                           │
+│                                                              │
+╰──────────────────────────────────────────────────────────────╯
+```
+
+The headline contrasts current state with the END GOAL card, not with a sub-step. SHIPPABLE / NOT SHIPPABLE is implied by the state — DONE means shippable, anything else means not.
+
+**Goal-compass rules (mandatory):** `Ultimate goal` is derived fresh PER PROJECT from the END GOAL card — the end-state of THIS scenario, not a generic principle. Frame it at the systems level, from the user's seat (a human building automation so they never have to give input), through ALL FOUR lenses: **Delivers** (factory view — the finished result that arrives with zero input), **Heals** (organism view — failures recover or surface themselves), **Replaces** (operator view — whose job/attention the system deletes), **Guarantees** (structure view — what wrongness is impossible by construction). Fill every lens; a lens that genuinely doesn't apply gets "n/a — <why>", never a silent skip. Write each lens in the user's confirmed style (8/13/26): concrete and first-person from their seat, real actors and real stakes ("me", "the VA", "at 2 AM"), good state contrasted against bad ("delivered correct" vs "wrong and quiet"), consequences stated — never abstract boilerplate. Once stated the block is FROZEN; never quietly reworded to match what got built (that rewording is exactly the drift the user wants to catch). `Current stage` (8/22/26) precedes it: Before / Now / Changed (with WHY) / Next (the immediate milestone — replaced the old Next-step line) / Meant to (what Next achieves + the problem it fixes) / Feynman (Next to a smart 12-year-old, one analogy, naming both the Heaven's Net fit and the goal fit). `Suggested action` is ONE concrete move (v3 8/22/26): `Paste this` answers THIS TURN'S question — on a pick it IS the pick in the user's voice + one line of why (the after-pick work prompt waits for the next turn); on a do-it request it is the complete standalone work prompt (what / files / limits / corrected facts / what to show-or-ask before anything costly); `→ Toward goal` is a chain in plain words, never a bare lens tag — this move → gets us <concrete thing> → which is what <lens> needs because <why>, plus what the rejected option would have cost — an action whose chain doesn't connect to the goal is drift and must not be suggested; `→ Heaven's Net` answers "why can we proceed with confidence?": on a pick = the SEEN evidence the pick stands on + what ruled the other options out (same evidence) + how we'd know fast if wrong and the bounded fallback, unchecked items named, never "n/a"; on a work step it follows the canonical error-recon definition (class-keyed recovery, evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work step has no recovery logic); `Feynman` (8/27/26) re-tells the CHOICE in kid words — one everyday analogy, zero jargon, three beats: why THIS move won, what we passed on instead, and what happens if it turns out wrong — the plain-words twin of the two arrows (they are the audit trail, this is the version the user can repeat back from memory), never a repeat of the Current-stage Feynman (that one explains the milestone, this one explains the decision); on a do-it request with no rival option, beat two is the obvious alternative we are not taking and why it loses. If the goal is fully reached: Next "none", Paste this "nothing — goal reached", Feynman "n/a — goal reached".
+
+**`User option` rules (added 8/28/26 — user-designed, C1 shape):** the block sits directly ABOVE `Suggested action` and appears ONLY when this turn genuinely puts a decision to the user — no fork → omit the whole block (never "n/a"), and `Suggested action` stands alone as before. Every option carries FOUR fields in order: the option line with its cost, `+` pros, `−` cons, and `Holds up`. **`Holds up` is the field that earns the section** — it judges the option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching; what maintenance does it create; what breaks later because we chose it. That is the structural-fix bar applied per option, so a band-aid is NAMED as a band-aid there, never softened. Because `Holds up` forces the durability question, **a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped** — if every listed option is a band-aid, that IS the finding: say so and add the option that isn't. Exactly ONE option carries `← RECOMMENDED` on the option line, decided on the `Holds up` reads FIRST and cost second. Pros and cons stay balanced in count. `If you say nothing` names the option taken when the user never answers. `Why that default` argues on STRUCTURE, never on speed alone. **ECHO RULE (hard):** `Paste this` MUST name the option marked `← RECOMMENDED` — one decision, two renderings; if they differ the card is wrong, so fix the reasoning above rather than splitting the verdict.
+
+**Confidence + Risk rules (mandatory, evidence-tied):** Confidence rates only what was verified with this session's own checks — PERFECT is the 100%-guaranteed, full-autopilot grade: every angle tested empirically (happy path AND failure paths, real inputs at real scale), every result directly observed, zero pending items, the independent AUDITOR/pentest tried to break it and found nothing, AND the autopilot itself was proven — the script ran (and recovered) end-to-end with no human thought, no human decision, no human intervention, and no Claude in the loop (structural-fix bar: next run, different input, nobody watching, still works) — the evidence clause must name the tests per angle including the unattended-run proof; one untested angle → HIGH at best. HIGH means every Done bullet was directly observed (test output read, artifact opened, screenshot read) but not every angle was adversarially tested; anything inferred, secondhand, or untested on real inputs caps it at MEDIUM; assumptions cap it at LOW. Risk names what breaks and who gets hit if the verdict is wrong. Hard cap: any pending / waiting / "should work" item anywhere in the card → Confidence cannot be HIGH (and PERFECT is unreachable). A bare grade with no evidence clause is invalid — if the grade can't justify itself in one line, it's wrong.
+
+**`Timeline` rules (added 2026-09-10 — pulled from the debrief skill's staged timeline, reused here to show progress rather than mechanism):** reuses debrief's format exactly — numbered steps top to bottom, whole numbers, grouped into short ALL-CAPS stages, one blank line before each label. Read the debrief skill's timeline rules before writing one — don't reinvent the shape. Scope is the WHOLE project, not this session: `Current stage` above is this session's move, `Timeline` is the zoomed-out version — every milestone from where the project started to the finish line, this session's step marked in place among them.
+
+**The finish line is resolved, never invented.** For `/prep` this is almost always trivial — the finish line IS the **END GOAL** card, already pinned before Phase 8 build cycles start. If a project is somehow mid-build with no END GOAL card yet (should not happen post-Phase-6, but if it does): fall back to the same resolution order as `/explain` — an open `SPEC.md`'s `## Goal` section, then a stated goal already given this conversation — and if none of those exist either, stop and ask the user directly what the finish line is, one plain question, no guessing. Once resolved, it is FROZEN for the rest of the build, exactly like `Ultimate goal`.
+
+**Stages mesh with the MILESTONE ▸ PHASE ▸ STEP pyramid** (canonical definition in `/principles` → "Plan vocabulary"). `/prep` almost always has this structure already — the plan's own PHASEs and the BUILD STATUS card (Phase 6 card 16). `Timeline`'s stage labels ARE those phase names, in the plan's own order, and its numbered steps are that phase's real steps — this card renders the plan's existing structure, it does not invent a second one alongside it. Only a project with genuinely no phase breakdown yet falls back to free-form stages (what's done / THIS SESSION / what's left) — and even then the last step is still the resolved finish line, not a guess.
+
+Exactly one step carries `← YOU ARE HERE` — the step this session's work belongs to; steps already done get no marker, steps not yet started get no marker either. The last numbered step is always the finish line — the same end-state as `Ultimate goal`'s `Delivers` line, phrased as the final milestone. Goal fully reached → every step reads as done and the last one carries `← YOU ARE HERE`, or write one line: "finish line reached — see Ultimate goal above."
+
+### Promote keeper findings to SPEC.md (only if a SPEC.md exists)
+
+After the FINAL VERDICT card is written, if the project has a `SPEC.md`, promote the **keeper** findings from the FINDINGS card (the ones that explain a real cause — skip the obvious) into its Change Log. The ledger fields don't match the Change Log schema, so translate as you pipe each keeper — `finding → change` (prefix `FINDING: `), `suspected verdict → why` (keep the word "suspected"), `context → context`, prior-assumption `→ before`, `result → after`:
+
+```bash
+printf 'change: FINDING: %s\nwhy: suspected — %s\ncontext: %s\nbefore: %s\nafter: %s\n' \
+  "<summary>" "<suspected verdict>" "<context>" "<prior assumption>" "<proven result>" \
+  | python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log
+```
+
+No `SPEC.md` → skip silently (the findings still live in the FINDINGS card). One `spec_tool.py log` call per keeper.

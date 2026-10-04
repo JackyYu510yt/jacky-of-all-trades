@@ -1,0 +1,6 @@
+run_remake_video3_scale_fix.py
+run_remake_video3_house_style.py
+composite_thumbnail_pipeline.py
+rung_d_composite_fallback.py
+claude_judge.py
+thumbnail_template_workflow.py

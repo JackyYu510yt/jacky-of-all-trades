@@ -17,7 +17,7 @@ Never write an assumption into the spec as if it were fact. **Success criteria**
 especially must be things you can *prove* — each one empirically checkable (a
 smoke test, a probe, a specialized test that hits the real condition, not a
 proxy). And they must name the **user-visible result** (the deliverable existing
-in the world), never machinery milestones ("the loop runs", "the fix is merged")
+in the world), never machinery waypoints ("the loop runs", "the fix is merged")
 — machinery belongs in phases; criteria phrased as sub-goals produce truthful
 "DONE" reports over undelivered results (P12, adopted 2026-08-12). When a Change Log or Findings entry claims something works, or explains
 *why*, it rests on observed evidence — a run, a probe, a test result — not on
@@ -38,6 +38,59 @@ rendered vs black frames). Do not prematurely converge on the first reading: a
 cause is written as fact only when the relevant alternatives were investigated
 or explicitly ruled out — avoid **search-space neglect** and **anchoring
 bias** by actively checking plausible alternatives.
+
+## Build-state discipline (all modes)
+
+Every spec carries a **`## Build State`** table directly under `## Goal`. It is
+the first thing a future session reads, and it answers the one question a spec
+otherwise cannot: **is this actually running right now?**
+
+The rules:
+
+**1. State is read from the machine, never from the document.** Before writing
+or updating any row, run its Evidence check and paste the real result. A spec
+that says LIVE because an old Change Log entry said "shipped" is exactly the
+failure this table exists to prevent. If you cannot run the check this session,
+the row's state becomes **UNVERIFIED (was: <old state>, <date>)** — never leave
+a stale confident claim standing.
+
+**2. WIRED and LIVE are different, and the gap is the whole problem.** Code that
+is imported by production is WIRED. Code that has been *observed executing* in
+production is LIVE. The path between them is where finished work quietly dies:
+built, tested, red-teamed, wired, gated off pending a live verify that needed a
+restart — and the chat ended there. Promote a row to LIVE only on a dated
+runtime observation (a file whose timestamp moved, a log line, a metric that
+changed). Code presence proves nothing.
+
+**3. Every gate gets named.** A default-off env var or flag file makes a fully
+built, fully wired feature completely inert. The Gate column names it and states
+whether it is currently open. This is a factual reading of the machine, not a
+design note — check the actual env and the actual file.
+
+**4. KILLED rows are never deleted.** A spec section that vanishes takes its
+reasoning with it, and the same idea gets re-proposed six weeks later at full
+cost. A killed deliverable keeps its row and gains three facts: what evidence
+killed it, what finding that out cost, and what we do instead. "Instead:
+nothing — accepted gap" is a valid and useful answer.
+
+**5. SPEC'D rows are a debt list.** Anything still SPEC'D when a session closes
+gets named explicitly in the closing report under "still specced, not built" —
+not left for the reader to infer from a table they may not scroll to.
+
+**INIT mode:** scaffold the table with one row per deliverable in `## Scope
+(In)`. Everything starts at SPEC'D with a blank Last-checked. Write the Evidence
+column *now*, while you still know what would prove it — a row with no named
+check is a blank HARD field, same bar as an assumption with no probe.
+
+**LOG mode:** before writing the change block, re-run the Evidence checks for
+every row this session touched and update State, Gate, and Last checked. If the
+session moved something from BUILT to WIRED but could not prove LIVE, say so in
+the row *and* in the change block's `context:` line. A LOG that advances a state
+without a re-run check is a guess wearing a conclusion's clothes.
+
+**Cross-check against reality, not against the last entry.** The states most
+worth distrusting are the confident ones — LIVE rows nobody has re-checked in
+weeks, and BUILT rows from a session that ended at PARTIAL.
 
 ## Goal-compass + confidence/risk footer (all user-facing /spec reports)
 
@@ -71,6 +124,36 @@ Replaces: <whose job/attention the system deletes — nobody left in the loop>
 
 Guarantees: <what wrongness is structurally impossible>
 
+**━━ USER OPTION ━━  (only when this turn puts a decision to the user)**
+
+QUESTION: <the decision this turn is putting to the user, in one plain sentence>
+
+  1. <the option in the user's own terms>                    (<cost — time / effort / money>)
+
+     + <what it gets you>
+     + <what it gets you>
+     − <what it costs you>
+     − <what it costs you>
+
+     HOLDS UP: <the durability read. Does this survive the NEXT run, on a
+     DIFFERENT input, with NOBODY watching? What maintenance does it create?
+     What breaks later because we picked it? A band-aid is NAMED as a band-aid
+     — "fixes tonight, recurs next batch" — never softened.>
+
+  2. <next option>                                           (<cost>)
+
+     + / − / HOLDS UP — same four fields, always, in the same order
+
+  <n>. <the option that holds up best>                       (<cost>)   ← RECOMMENDED
+
+     + / − / HOLDS UP — same four fields
+
+IF YOU SAY NOTHING: I take <n> and keep going.
+
+WHY THAT DEFAULT: <why it wins on STRUCTURE, not on speed — what each losing
+option leaves broken, and what makes this one the least maintenance and the
+least likely to come back.>
+
 **━━ SUGGESTED ACTION ━━**
 
 PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next message. Turn ended on a PICK → the pick in the user's voice + one line of why ("Go with Choice 2 — <why>"); the work-prompt waits for the next turn. Turn was a DO-IT request → the work prompt: what / which files / limits / corrected facts / what to show or ask before anything costly. "nothing — goal reached" if reached>
@@ -79,12 +162,20 @@ PASTE THIS: <the answer to THIS TURN'S question, pasted verbatim as the next mes
 
 → HEAVEN'S NET: <why we can proceed with confidence. On a PICK: (1) SEEN evidence the pick stands on, (2) what the other options were ruled out on (same evidence), (3) how we'd know fast if wrong + bounded fallback; unchecked things NAMED — never "n/a" on a pick. On a WORK STEP: how it leaves a STRONGER system — class-keyed recovery, evidence-only detection, bounded tries, fail-loud — or "n/a — no recovery logic in this step">
 
+FEYNMAN: <the CHOICE in kid words — ONE everyday analogy, zero jargon, four beats: why THIS move won, HOW IT PUSHES TOWARD THE FINISH LINE (the plain-words version of → TOWARD THE GOAL, said outright, not left implicit), what we passed on instead, and what happens if it turns out wrong. The plain-words twin of the two arrows above; never a repeat of the CURRENT STAGE FEYNMAN (that one explains the milestone, this one explains the decision). "n/a — <why>" only when there is no action (goal reached / standalone question)>
+
 **━━ GRADE ━━**
 
 CONFIDENCE: PERFECT | HIGH | MEDIUM | LOW — <what was verified directly vs inferred/assumed>
 
 RISK: HIGH | MEDIUM | LOW — <what's exposed if this report is wrong; which claims are unproven>
+
+**━━ TIMELINE ━━**
+
+<debrief-style staged numbered timeline (see debrief skill) for the WHOLE project, start to the RESOLVED finish line (the spec's own `## Goal` section — never invented; ask the user if no goal is pinned yet) — not just this session. Stage labels ARE the spec's own phases when phases exist, per the MILESTONE ▸ PHASE ▸ STEP pyramid. This session's step marked ← YOU ARE HERE, last step is the finish line. See TIMELINE rules in the explain skill — same format, reused here.>
 ```
+
+**USER OPTION rules (added 8/28/26 — user-designed, C1 shape).** The block sits directly ABOVE `SUGGESTED ACTION` and appears ONLY when this turn genuinely puts a decision to the user — no fork → omit the whole block (never write "n/a"), and `SUGGESTED ACTION` stands alone as before. Every option carries FOUR fields in order: the option line with its cost in parentheses, `+` pros, `−` cons, and `HOLDS UP`. **`HOLDS UP` is the field that earns the section** — it judges the option on FUTURE runs, not this one: does it survive the next run, on a different input, with nobody watching; what maintenance does it create; what breaks later because we chose it. That is the structural-fix bar applied per option, so a band-aid is NAMED as a band-aid there ("fixes tonight's batch, recurs on the next one"), never softened into a neutral trade-off. Because `HOLDS UP` forces the durability question, **a structurally better option that was NOT on the original list must be written down and offered, not quietly skipped** — if every listed option is a band-aid, that IS the finding: say so and add the option that isn't. Exactly ONE option carries `← RECOMMENDED` on the option line itself, decided on the `HOLDS UP` reads FIRST and cost second (the fastest option wins only when it also holds up). Pros and cons stay balanced in count — writing more about the favorite stacks the deck. `IF YOU SAY NOTHING` names the option taken when the user never answers, so an unattended run keeps moving. `WHY THAT DEFAULT` argues on STRUCTURE: what each losing option leaves broken, and why the pick is the least maintenance and least likely to recur — "it's faster" is never sufficient. **ECHO RULE (hard):** `PASTE THIS` below MUST name the option marked `← RECOMMENDED`. One decision, two renderings — `USER OPTION` is where it gets made, `SUGGESTED ACTION` is where it gets handed over as pasteable words plus the goal chain, Heaven's Net and Feynman. If the two ever differ the report is wrong: fix the reasoning above, never split the verdict across two sections.
 
 One blank line between every field; labels fixed, explaining text plain-language (8/22/26).
 
@@ -118,8 +209,18 @@ evidence the pick stands on + what ruled the other options out (same evidence) +
 we'd know fast if wrong and the bounded fallback, unchecked items named, never "n/a";
 on a work step it follows the canonical error-recon definition (class-keyed recovery,
 evidence-only, bounded, fail-loud — read it, don't paraphrase; "n/a" only when a work
-step has no recovery logic). Goal fully reached → NEXT "none", PASTE THIS
-"nothing — goal reached".
+step has no recovery logic). FEYNMAN (8/27/26) re-tells the CHOICE in kid words — one
+everyday analogy, zero jargon, four beats: why THIS move won, how it pushes toward the
+finish line (the plain-words version of → TOWARD THE GOAL, said outright — added
+2026-09-11 after the user caught that this line was called the arrow's "twin" without
+ever being required to actually restate it, so the goal-connection lived only in the
+technical line and the plain explanation could skip it), what we passed on instead, and
+what happens if it turns out wrong. It is the plain-words twin of the two arrows (they
+are the audit trail; this is the version the user can repeat back, goal-connection
+included), and it must NOT repeat the CURRENT STAGE FEYNMAN — that one explains the
+milestone, this one explains the decision. On a do-it request with no rival option, beat
+three is the obvious alternative we are not taking and why it loses. Goal fully reached
+→ NEXT "none", PASTE THIS "nothing — goal reached", FEYNMAN "n/a — goal reached".
 
 Confidence rates verification, not optimism: PERFECT is the 100%-guaranteed
 full-autopilot grade — every angle empirically tested (happy AND failure paths,
@@ -161,6 +262,18 @@ spec so "the spec" is never ambiguous and log blocks land in the right file.
    file exists). Ask the user which this session is — or whether to create a
    new specialized spec (run the INIT interview, but Write it as
    `SPEC-<short-slug>.md` instead of `SPEC.md`).
+
+   **Naming is load-bearing, not cosmetic.** The glob above is `SPEC-*.md`. A file
+   named `<slug>-SPEC.md` is INVISIBLE to it — verified 2026-08-28 in a real project
+   where three specialized specs (`function-review-SPEC.md`, `options-SPEC.md`,
+   `screenshot-smoke-SPEC.md`) had never once been seen by this step, so no pointer
+   had ever been written and the shared spec had no idea they existed. They were
+   renamed to `SPEC-<slug>.md` that day. Write new ones the right way round.
+
+   **On creating a specialized spec, write its row into the shared `SPEC.md`'s
+   `## Specs in this project` table in the SAME action** — not afterwards, not as a
+   follow-up. Creating the file and indexing it is one step, so there is no window
+   where the spec exists and its row does not. Create the section if it is absent.
 2. Bind: `python spec_tool.py bind SPEC-<slug>.md --sid <sid>`
    (unbind: `bind --clear --sid <sid>`).
 3. From then on, LOG blocks from this session go to the bound spec's Change
@@ -228,12 +341,13 @@ time, plainly — then write the file:
    blank HARD field (quality bar). Skip this section only when the task has no
    real unknowns (KISS) — don't fabricate doubts for a trivial one-shot.
 
-6. **Phases / blueprint** — the **default** for any task beyond a trivial
+6. **Milestones / blueprint** — the **default** for any task beyond a trivial
    one-shot. Break the work into an ordered blueprint using the three-level
-   format below (PHASES ▸ MILESTONES ▸ STEPS — only as deep as the task needs).
-   This is the step-by-step plan `/auto` follows so it doesn't guess. Skip it
-   ONLY for a trivial single-action task (a rename, a config flip), where one
-   phase would just restate the success criteria.
+   format below (MILESTONES ▸ PHASES ▸ STEPS — only as deep as the task needs;
+   canonical vocabulary in `/principles` → Plan vocabulary). This is the
+   step-by-step plan `/auto` follows so it doesn't guess. Skip it ONLY for a
+   trivial single-action task (a rename, a config flip), where one milestone
+   would just restate the success criteria.
 
 Then Write `./SPEC.md` from this template (fill the sections; leave the Change
 Log empty):
@@ -243,6 +357,94 @@ Log empty):
 
 ## Goal
 <goal>
+
+## Build State
+<!-- REQUIRED. The first thing anyone reads. One row per deliverable this spec
+     promises. State is NEVER claimed from memory, from the Change Log, or from
+     "I remember building that" — each row is backed by a named, re-runnable
+     check that a future session can paste and run in seconds.
+
+     STATES (a deliverable is at exactly one):
+       SPEC'D  designed here, no code exists yet.
+       BUILT   code exists and its own tests pass, but nothing in the real
+               system calls it. Harmless and inert.
+       WIRED   the real system imports/calls it. Name the call site file:line.
+       LIVE    PROVEN to actually execute in production. Requires a RUNTIME
+               observation with a date — a fresh output file, a log line, a
+               metric that moved. Code presence is NOT liveness.
+       KILLED  decided against. REASON IS MANDATORY: what we learned, what it
+               cost, and what we do instead. A killed row is never deleted —
+               deleting it is how the idea comes back next quarter.
+
+     THE GATE COLUMN is the trap this table exists to catch. A deliverable can
+     be BUILT + WIRED + loaded in memory and still do nothing because it sits
+     behind a default-off env var or flag file. If a row has a gate, NAME it and
+     say whether it is currently open. No gate = write "none".
+
+     WIRED != LIVE. That gap is where work goes to die: the code is finished,
+     the switch was never flipped, the chat closed, and the next session reads
+     the design and assumes it shipped. -->
+
+| Deliverable | State | Gate (and is it open?) | Evidence — the check that proves this state | Last checked |
+|---|---|---|---|---|
+| <thing this spec promises> | SPEC'D \| BUILT \| WIRED \| LIVE \| KILLED | <env var / flag file / "none"> | <paste-able check + what a passing result looks like> | <YYYY-MM-DD> |
+
+**Killed rows** (never delete — reason is the whole point):
+
+- **<thing>** — KILLED <date>. Learned: <what evidence killed it>. Cost: <what
+  it took to find out>. Instead: <what we do now, or "nothing — accepted gap">.
+
+## Specs in this project
+<!-- REQUIRED once a second spec exists. One row per spec file. A row is written by
+     /spec at the moment a specialized spec is CREATED (see BIND), never by hand
+     afterwards -- an index maintained from memory goes stale exactly when the
+     project is busiest, and a stale index is worse than none because it is trusted. -->
+
+| Spec | What it covers | Status |
+|---|---|---|
+| `SPEC.md` | <the shared/original scope> | <DONE date / ACTIVE / PARKED> |
+| `SPEC-<slug>.md` | <one line -- what problem this spec exists to solve> | <status> |
+
+**READER: `/auto` Step 0.5.1 — Prior work in this project**, at Phase 0.5, before the
+runbook is written. It reads this table by `grep -n` + `sed -n` of THIS BLOCK ONLY,
+never a whole-file read. A section with a writer and no named reader is INCOMPLETE:
+adding one is not optional, and this line is what makes the section finished.
+
+**Why this section exists (added 2026-08-28).** A project accumulates specs, and
+without a list a new spec re-solves what an old one finished. The `see:` pointers in
+the Change Log are a TIMELINE of changes; they answer "what happened lately", never
+"has this already been solved". Those are different questions and need different
+sections.
+
+**Status vocabulary:** `ACTIVE` (being worked now) / `DONE <date>` (finished, do not
+re-open without reason) / `PARKED <date> <D> <why>` (stopped deliberately; the why is
+the whole value of the row).
+
+## Runs in this project
+<!-- REQUIRED once any /auto run has happened here. One row per run. Written by
+     /auto at slug freeze with verdict `running`, updated to its terminal verdict.
+     The run FOLDER holds the detail; this row exists so someone knows the folder
+     is worth opening. -->
+
+| Date | Run folder | Goal (one line) | Verdict |
+|---|---|---|---|
+| <YYYY-MM-DD> | `auto-runs/<slug>/` | <the run's pinned goal, one line> | <DONE / PARTIAL / STUCK / running> |
+
+**READER: `/auto` Step 0.5.1 — Prior work in this project**, at Phase 0.5, before the
+runbook is written — but this table is the SOFT source. Step 0.5.1 reads
+`ls -1d ./auto-runs/*/` FIRST (the hard source: the folders themselves) and treats these
+rows as corroboration, so a lost, deleted, or rolled-back row degrades the record
+rather than erasing it.
+
+**Why this section exists (added 2026-08-28).** Run folders are never deleted, so a
+run's full `notes.md` survives forever -- but nothing points at it, so a later session
+cannot know the ground was already covered. Nothing was ever LOST; it was unfindable.
+
+**This is what demotes the keeper judgement.** `/auto` decides which findings promote
+into the Change Log. Before this section, a wrong call meant the detail was
+effectively gone. With it, a wrong call costs a quote, not the evidence -- the folder
+is one line away. Judgement about what to QUOTE is survivable; judgement about what
+SURVIVES is not.
 
 ## Logic / How it works
 <logic>
@@ -265,7 +467,16 @@ Log empty):
      that already satisfy a precondition instead of establishing it on any
      input, e.g. "promote an already-logged-in spare"). Band-aid designs enter
      the spec only when the user explicitly asked, labeled
-     BAND-AID (user-requested) with the structural version named beside it. -->
+     BAND-AID (user-requested) with the structural version named beside it.
+     Scale-proof bar (production-scale fixes): a criterion claiming production
+     behavior ("holds at scale", "fixed in production") names its evidence —
+     a scale-soak run (canonical ladder in /auto "Scale-Soak Verification":
+     real logic, stubbed leaf, negative-control-proven tripwire,
+     machine-checked [CHK] reconciliation, frozen prod-calibrated validity
+     gate) or a live prod measurement. Neither named = a blank HARD field.
+     Soak evidence carries its scope card (what the harness cannot measure)
+     and, when it substitutes for live measurement, the named
+     live-confirmation follow-up ("confirm on next prod day: <metric>"). -->
 - <...>
 
 ## Assumptions & Unknowns (skip when the task has no real unknowns)
@@ -274,8 +485,8 @@ Log empty):
      with no probe = a blank HARD field. -->
 - ASSUME: <belief>   PROBE: <cheapest check that proves or disproves it>
 
-## Phases (blueprint — default; omit only for a trivial one-shot)
-<!-- Ordered PHASE ▸ MILESTONE ▸ STEP plan /auto follows. One block per phase. -->
+## Milestones (blueprint — default; omit only for a trivial one-shot)
+<!-- Ordered MILESTONE ▸ PHASE ▸ STEP plan /auto follows. One block per milestone. -->
 
 ---
 
@@ -285,90 +496,92 @@ Log empty):
 
 Tell the user it's created and that changes are now tracked.
 
-### Phase blueprint — the step-by-step plan /auto follows
+### Milestone blueprint — the step-by-step plan /auto follows
 
-For any task beyond a trivial one-shot, the `## Phases` section holds an ordered
+For any task beyond a trivial one-shot, the `## Milestones` section holds an ordered
 blueprint `/auto` runs without guessing. It nests in **three zoom levels** —
 write only as deep as the task needs:
 
 ```
-PHASE        a milestone-sized goal with its own conditions + checkpoint
-  MILESTONE    a waypoint inside a phase, with its own checkpoint (optional layer)
-    STEP         a single action (the flexible doing)
+MILESTONE      the biggest unit — a named chunk of the goal, with its own
+               conditions + checkpoint
+  PHASE        a waypoint inside a milestone, with its own checkpoint
+               (optional layer)
+    STEP       a single action (the flexible doing)
 ```
 
 **Depth scales with the task** (KISS — don't nest deeper than it earns):
 - Trivial one-shot (a rename) → no blueprint; the top-level Goal + Success
   criteria already cover it.
-- Normal task → PHASES with STEPS directly under each (no milestone layer).
-- Big / risky / failure-prone (a login flow) → full depth PHASE ▸ MILESTONE ▸
-  STEP, so a failure narrows to one waypoint instead of the whole phase.
+- Normal task → MILESTONES with STEPS directly under each (no phase layer).
+- Big / risky / failure-prone (a login flow) → full depth MILESTONE ▸ PHASE ▸
+  STEP, so a failure narrows to one waypoint instead of the whole milestone.
 
-**Phase block — the unit `/auto` reads and runs:**
+**Milestone block — the unit `/auto` reads and runs:**
 
 ```
-## Phase N — <what this phase achieves>
+## Milestone N — <what this milestone achieves>
 
-REQUIRES:          <condition that must be true first>   ← from Phase <X>            [HARD]
+REQUIRES:          <condition that must be true first>   ← from Milestone <X>            [HARD]
                    <another condition>                   ← external: <how to get it>  [HARD]
 VERIFY-REQUIRES:   <exact yes/no check that proves we're ready>                       [HARD]
-PRODUCES:          <output / now-true condition that feeds later phases>
-DONE-WHEN:         <observable checkpoint proving this phase succeeded>               [HARD]
-RECOVERS-BY:       <failure-prone / unattended phases only — failure mode + ORDERED   [HARD when
+PRODUCES:          <output / now-true condition that feeds later milestones>
+DONE-WHEN:         <observable checkpoint proving this milestone succeeded>               [HARD]
+RECOVERS-BY:       <failure-prone / unattended milestones only — failure mode + ORDERED   [HARD when
                    recovery: roll back partial write → re-assert precondition (re-run  applicable]
-                   this phase's VERIFY-REQUIRES, not a new check) → invalidate
+                   this milestone's VERIFY-REQUIRES, not a new check) → invalidate
                    downstream → resume. Proof: after injecting the named failure,
-                   the phase still reaches its DONE-WHEN.>
+                   the milestone still reaches its DONE-WHEN.>
 
 STEPS:             1. <action>   2. <action>   ...        (guidance — flexible)
 ```
 
-**When a phase earns the milestone layer**, replace its flat `STEPS` with named
-milestones, each carrying its own checkpoint:
+**When a milestone earns the phase layer**, replace its flat `STEPS` with named
+phases, each carrying its own checkpoint:
 
 ```
-  Milestone N.1 — <waypoint name>
+  Phase N.1 — <waypoint name>
         DONE-WHEN: <checkpoint for this waypoint>         [HARD]
         STEP: <action>   STEP: <action>
-  Milestone N.2 — <waypoint name>
+  Phase N.2 — <waypoint name>
         DONE-WHEN: <checkpoint>                           [HARD]
         STEP: <action>
 ```
 
 - **Hard vs flexible.** `REQUIRES`, `VERIFY-REQUIRES`, and every `DONE-WHEN`
-  (phase- or milestone-level) are the rails — crisp and checkable (an exit
+  (milestone- or phase-level) are the rails — crisp and checkable (an exit
   code, a file + size, a parseable assertion, a read screenshot). `STEP`s are
   guidance; `/auto` improvises the route between checkpoints. The blueprint pins
   the *where*, not the *how*.
-- **Setup is its own phase.** Reaching a condition is always written as an
-  earlier phase, never fixed inline. The first phase(s) usually *establish the
-  testing conditions* (e.g. *get a logged-in account*); the phases that need
+- **Setup is its own milestone.** Reaching a condition is always written as an
+  earlier milestone, never fixed inline. The first milestone(s) usually *establish the
+  testing conditions* (e.g. *get a logged-in account*); the milestones that need
   them list those conditions under `REQUIRES`.
 - **Source-of-condition tag.** Every `REQUIRES` line names its source:
-  `← from Phase <X>` (an earlier phase produces it — `/auto` can satisfy it) or
+  `← from Milestone <X>` (an earlier milestone produces it — `/auto` can satisfy it) or
   `← external: <how to obtain it>` (a human / a dropped-in file / another system
   supplies it — `/auto` cannot manufacture it, so the recipe is written right
   there). This is what lets `/auto` tell *"I'm stuck"* apart from *"I need
   accounts — here's how to get them."*
 - **More, smaller units = closer checkpoints = less drift.** Each `DONE-WHEN`
-  is a place `/auto` re-checks it's still on track; the milestone layer exists
-  so a failure boxes into one waypoint instead of the whole phase.
+  is a place `/auto` re-checks it's still on track; the phase layer exists
+  so a failure boxes into one waypoint instead of the whole milestone.
 - **Design the failure path, not just the happy path.** On a failure-prone or
-  unattended phase, add `RECOVERS-BY`: name how it fails and the *ordered*
+  unattended milestone, add `RECOVERS-BY`: name how it fails and the *ordered*
   recovery — roll back partial work → re-assert the precondition → invalidate
   downstream → resume — the planning-time form of `/auto`'s Re-entry hygiene.
   The happy-path `DONE-WHEN` proves it worked; `RECOVERS-BY` proves it survives
-  when it doesn't (proof: inject the named failure, confirm the phase still
-  reaches its `DONE-WHEN`). When the phase uses the milestone layer, attach
-  `RECOVERS-BY` to whichever milestone can leave partial state. Skip it on
-  phases that can't leave partial state behind (KISS).
+  when it doesn't (proof: inject the named failure, confirm the milestone still
+  reaches its `DONE-WHEN`). When the milestone uses the phase layer, attach
+  `RECOVERS-BY` to whichever phase can leave partial state. Skip it on
+  milestones that can't leave partial state behind (KISS).
 
 **Quality bar — a blueprint isn't done until it's airtight.** Do NOT consider
-the Phases section complete while any HARD field is blank or hand-wavy (a
+the Milestones section complete while any HARD field is blank or hand-wavy (a
 `REQUIRES`, `VERIFY-REQUIRES`, or `DONE-WHEN` that isn't concretely checkable,
-or a `REQUIRES` with no source tag). On a phase flagged failure-prone or
+or a `REQUIRES` with no source tag). On a milestone flagged failure-prone or
 unattended, a missing or hand-wavy `RECOVERS-BY` trips this bar too
-(HARD-when-applicable); on a happy-path phase that can't leave partial state
+(HARD-when-applicable); on a happy-path milestone that can't leave partial state
 it's simply absent, and that's fine. A vague field is exactly the gap `/auto`
 would improvise into — close it here, at planning time. A HARD check that
 cannot say NO — a `VERIFY-REQUIRES` or `DONE-WHEN` that would also pass in the
@@ -400,7 +613,21 @@ any step runs.
    python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log --sid <your-sid>
    ```
 
-4. Confirm to the user: one block written, marker advanced.
+4. **Refresh `## Build State` before you confirm.** For every row this session
+   touched, re-run its Evidence check against the machine and update State,
+   Gate, and Last checked. Two states need special care:
+
+   - Moved code from BUILT to WIRED but never saw it run? The row stays
+     **WIRED**, and the change block's `context:` says the live proof is owed
+     and what it needs (a restart, queued work, a flipped gate).
+   - Session is ending at PARTIAL? Any row you advanced this session gets its
+     real state, not its intended one. This is the single most common place a
+     spec starts lying.
+
+5. Confirm to the user: one block written, marker advanced, and **name every row
+   still at SPEC'D or BUILT** — "still specced, not built: X, Y" — so an unbuilt
+   deliverable is spoken out loud at the moment the session closes, rather than
+   silently inherited by whoever opens the spec next.
 
 **Do NOT** write one block per file-touch — one block per *logical* change.
 The note-taker already records every edit; your job is the reasoning.
@@ -438,6 +665,14 @@ entry. Use only when the session's edits genuinely don't need a "why".
 
 - All of this only matters in projects that have a `SPEC.md`. Everywhere else
   the hooks are silent (zero footprint).
+- **`Spec/` folder support (2026-09-17):** `note.py`, `spec_digest.py`,
+  `spec_tool.py`, and the `spec-collect`/`spec-guard` hooks all check
+  `<project>/Spec/SPEC.md` and `<project>/Spec/FINDINGS.md` FIRST, falling
+  back to the legacy `<project>/SPEC.md`/`FINDINGS.md` when no `Spec/` folder
+  exists. This lets a project follow the file-layout convention
+  (`~/.claude/CLAUDE.md`, "Project file layout convention") without breaking
+  any of this system. A bound spec file (`bind <name>`) resolves the same
+  way. Regression-tested: `test_spec_system.py` + `tests/test_note_*.py`.
 - The Stop guard's nudge is internal — tagged "NOT a message to you". It's the
   cue for you to run `/spec log`, not user-facing output.
 - `status` subcommand prints the unlogged-edit count (debug).

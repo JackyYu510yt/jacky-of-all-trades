@@ -35,7 +35,7 @@ template folder is left untouched on re-run; to force-refresh it, delete
 ## Updating the template (new tools, fixed scripts)
 
 1. Edit the MASTER template on the farmer:
-   `C:\Users\Shadow\Desktop\Testing\Jacky Rush Render PC Template`
+   `C:\Users\Shadow\Desktop\Compiled Binaries\Jacky's Production Factory\Jacky Rush Render PC Template`
    (this is the copy pack_payload.ps1 reads - the path is set at its top)
 2. Run `pack_payload.ps1`, type the same password
 3. Re-upload `payload.enc` to the GitHub release (tag `render-setup-v1`)
@@ -43,16 +43,16 @@ template folder is left untouched on re-run; to force-refresh it, delete
 Future setups now include the change. Already-running PCs: re-run setup or
 apply the change by hand.
 
-## Storage layout (two drives)
+## Storage layout (one drive - changed 2026-09-28)
 
-Shadow PCs: 256 GB SSD (C:) + purchased 1 TB HDD.
+Shadow PCs: default plan only, 512 GB SSD (C:). No extra HDD is bought any
+more - delivered videos are auto-deleted, so C: does not fill up.
 
-- **SSD (C:)** - scripts/tools: the template, Python, Syncthing, configs.
-- **HDD** - all video bulk: `! Jacky Rush Output`, `! Thumbnails`,
-  `! Jacky Rush Rendered`, physically at `D:\Shared Folder`.
-- One junction makes it invisible: `Desktop\Compiled Binaries\Shared Folder`
-  -> `D:\Shared Folder`. Every config keeps using the Desktop path.
-- No HDD present -> setup warns and falls back to C:.
+- Everything lives on C:: scripts/tools and all video bulk
+  (`! Jacky Rush Output`, `! Thumbnails`, `! Jacky Rush Rendered`) under
+  `Desktop\Compiled Binaries\Shared Folder`, a plain folder.
+- An old PC that still has the HDD-era junction (`Shared Folder` -> `D:\`)
+  is left alone by setup.
 
 ## Hard rules baked into setup.ps1 (do not "fix")
 

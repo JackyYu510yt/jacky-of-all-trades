@@ -9,6 +9,7 @@ Slow, deliberate read of code that already runs. Finds latent bugs *before* they
 
 Distinct from `audit`: that skill is a pre-flight check on *proposed changes*. This skill is an x-ray of *existing code* that you're about to trust with a long, unattended run.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** any probe script or trace harness written during a pass goes in `Tests and Probing/<timestamped subfolder>/`; write findings to `Spec/` via `note.py`, not to a loose file in the project root.
 
 ## When to Use This Skill
 

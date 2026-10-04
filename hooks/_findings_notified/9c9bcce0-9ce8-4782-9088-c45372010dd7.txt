@@ -1,0 +1,2 @@
+feedback_rediscovery_findings.md
+MEMORY.md

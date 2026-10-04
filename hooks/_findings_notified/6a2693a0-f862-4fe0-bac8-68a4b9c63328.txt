@@ -1,0 +1,6 @@
+research.txt
+outline.txt
+Chapter 1.txt
+Chapter 2.txt
+Chapter 3.txt
+Chapter 4.txt

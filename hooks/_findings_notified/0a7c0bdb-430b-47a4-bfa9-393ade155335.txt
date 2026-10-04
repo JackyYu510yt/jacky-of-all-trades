@@ -1,0 +1,11 @@
+run_street_event_test.py
+run_got5_singleshot_test.py
+run_hp218_singleshot_test.py
+run_ahsoka_softened_test.py
+run_ahsoka_filmstill_framing_test.py
+run_boys5_real_stuck_test.py
+run_boys5_debranded_test.py
+run_boys5_restructured_test.py
+run_boys5_qwen_test.py
+run_ahsoka_qwen_test.py
+prep-qwen-fallback-ladder.txt

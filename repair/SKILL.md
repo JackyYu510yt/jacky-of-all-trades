@@ -11,6 +11,7 @@ Repair is a **methodology**, not a workflow per system. It defines HOW to fix th
 
 This skill modulates how Claude debugs and fixes any work — it does not constrain what kind of work the failure lives in.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** standalone repro scripts (e.g. `repair_stage4_no_images.py`) and isolation harnesses go in `Tests and Probing/<timestamped subfolder>/`, never dropped loose next to the real pipeline files they're isolating.
 
 ## When to Use This Skill
 
@@ -270,6 +271,8 @@ Examples:
 
 A fix is not shippable while Step 2 is red, regardless of Step 1.
 
+**Scale-soak rider (canonical: /auto "Scale-Soak Verification", added 2026-08-24).** When the fix lives in production-scale routing, budgeting, capacity, or recovery logic — any system whose claim only shows at scale or under a failure mix — and a live run is days away, expensive, or unsafe, Step 2's test spec is the scale-soak ladder: real decision logic + stubbed leaf + negative-control-proven tripwire, the INJECT rung proving the real handler reacts to each injected failure class, and — when measured calibration data exists — the fix verified as an A/B (fix-ON vs fix-OFF, identical calibrated injection, ensemble means): the different-instance probe at scale. ADMISSIBILITY FIRST: map the failure signature against the harness's scope card — a fix whose effect sits in the harness's declared blind spot (e.g. time-based effects in a clockless harness) cannot be verified there; Step 2 then needs live measurement, and an unmeasurable A/B is never read as DROP. NO CALIBRATION DATA: a SMOKE+INJECT ladder still proves the handlers react, but confers no prod-grade claim — Step 2 then closes on live measurement or the Graduated ramp. "Should hold in prod" with neither soak evidence nor live measurement keeps Step 2 red; a soak-closed fix carries a named live-confirmation follow-up.
+
 ### 11. Report honestly
 
 The final report names the cause, the evidence that proved it, the exact fix applied, and the verification results — both PoC and actual-usecase. If anything regressed during integration, the report says so. Half-fixes get labeled PARTIAL, not DONE.
@@ -412,6 +415,7 @@ Good evidence:
 - A variable value printed from a probe that matches the failure condition.
 - A specific branch of code proven to execute via instrumentation.
 - A standalone that fails every run on the current codebase and passes every run after the fix.
+- **A mutation test**: on a copy, take the fix back OUT and re-run the same test — it must now FAIL. A test that still passes with the fix reverted doesn't discriminate; it would have passed either way, so its earlier PASS proved nothing. This is the reverse-direction twin of the bullet above (RED-before-fix proves the bug existed; this proves the test would have caught its return) — the cheapest of the two when the fix already landed and there's no un-fixed environment left to reproduce against.
 - A query plan that shows the index isn't being used.
 - A network trace that shows the request shape mismatch.
 - A screenshot of the broken UI alongside the rendered DOM.

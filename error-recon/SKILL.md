@@ -9,6 +9,8 @@ description: Evidence-first failure mapping for any tool — smoke-test it, prov
 
 A tool may only act on failures that have been **seen, captured, and proven**. This skill produces the evidence map and the healing spec that make that possible. It does NOT build the healing code — building happens later, on explicit user go, gated through `/audit`.
 
+**File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** every provoked-failure probe and its captured evidence (messages, verbose output, screenshots) go in `Tests and Probing/<timestamped subfolder>/`; the resulting error map and self-healing spec go in `Spec/`.
+
 ## When to Use This Skill
 
 Three doors in. Detect which from the invocation; if genuinely ambiguous, ask one question — never guess.
@@ -334,6 +336,7 @@ Protocols follow **Heaven's Net** (canonical section above): entries sharing a `
 - **`prep`** — the map + healing-spec feed /prep's per-function design: confirmed entries become field-9 (Failure modes table) and field-12 (rollback, via the `Residue` field) content, and the safe-to-provoke set plus the `described — unseen` modes become /prep's field-6 TESTING-CONDITIONS injection list. /prep designs the healing; `error-recon` supplies the evidence it heals against.
 - **`audit`** — gates the build step that follows this skill.
 - **`auto`** — under `/auto`, phase gates collapse; only DONE or STUCK ends the run. The budget is the exception — it must be pre-supplied, never invented.
+- **`auto` → Scale-Soak Verification (added 2026-08-24)** — the map is the injection catalogue for the soak ladder's INJECT rung: each confirmed class is injected at the stubbed leaf and the REAL handler's reaction asserted at scale — the at-scale proof of Phase 3's healing spec once it's built. A class a soak run discovers that isn't in the map comes back HERE as a finding (append, never an improvised handler); a class the map can't evidence is never injected — it rides the harness's scope card as unmodeled.
 - **`optimize`** — tune the tool after it's correct and self-healing.
 
 ## TL;DR

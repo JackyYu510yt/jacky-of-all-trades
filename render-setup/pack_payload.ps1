@@ -12,7 +12,9 @@ param([string]$Password)
 
 $ErrorActionPreference = 'Stop'
 
-$TemplateDir = 'C:\Users\Shadow\Desktop\Testing\Jacky Rush Render PC Template'
+# Repointed 2026-09-23: the old Testing\... root was deleted at the 2026-08-28
+# factory cutover. Production now runs from the factory; this is its template.
+$TemplateDir = "C:\Users\Shadow\Desktop\Compiled Binaries\Jacky's Production Factory\Jacky Rush Render PC Template"
 $KeysDir     = 'C:\Users\Shadow\Desktop\render-pc-identities'
 $OutFile     = Join-Path $PSScriptRoot 'payload.enc'
 
@@ -25,7 +27,7 @@ $ExtraTools = @(
 )
 
 if (-not (Test-Path $TemplateDir)) { throw "Template folder not found: $TemplateDir" }
-foreach ($pc in 'pc1', 'pc2', 'pc3', 'pc4') {
+foreach ($pc in 'pc1', 'pc2', 'pc3', 'pc4', 'pc5') {
     if (-not (Test-Path "$KeysDir\$pc\key.pem")) { throw "Key bundle missing: $KeysDir\$pc" }
 }
 foreach ($t in $ExtraTools) {
