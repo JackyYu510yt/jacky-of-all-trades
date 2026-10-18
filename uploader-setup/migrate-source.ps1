@@ -49,7 +49,8 @@ if ($Agent) {
     if (Test-Path "$StateDir\PACK-REQUEST.txt") {
         LogLine 'pack requested'
         Remove-Item "$StateDir\READY.txt" -ErrorAction SilentlyContinue
-        & powershell -NoProfile -ExecutionPolicy Bypass -File "$StateDir\pack_uploader_payload.ps1" -StageOnly "$StateDir\pack" *>> $Log
+        & powershell -NoProfile -ExecutionPolicy Bypass -File "$StateDir\pack_uploader_payload.ps1" -StageOnly "$StateDir\pack" 2>&1 |
+            ForEach-Object { LogLine "  $_" }
         if ($LASTEXITCODE -eq 0) { Set-Content "$StateDir\READY.txt" (Get-Date -Format s); LogLine 'pack READY' }
         else { LogLine "pack FAILED ($LASTEXITCODE)" }
         Remove-Item "$StateDir\PACK-REQUEST.txt" -ErrorAction SilentlyContinue
@@ -78,6 +79,8 @@ if ($InstallAgent) {
     foreach ($f in 'migrate-source.ps1', 'pack_uploader_payload.ps1') {
         Invoke-WebRequest "$RawBase/$f" -OutFile (Join-Path $StateDir $f) -UseBasicParsing
     }
+    # The staged pack holds the identity keys unencrypted - Administrators + SYSTEM only.
+    icacls $StateDir /inheritance:r /grant:r '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-18:(OI)(CI)F' | Out-Null
     $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$StateDir\migrate-source.ps1`" -Agent"
     $trigger   = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration (New-TimeSpan -Days 3650)
     $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Highest

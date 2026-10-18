@@ -172,6 +172,7 @@ if (-not $Done) {
         $P = Join-Path $Work 'payload'
         if (Test-Path $P) { Remove-Item $P -Recurse -Force }
         Copy-Tree "$Mig\pack" $P
+        Remove-Item "$Mig\pack", "$Mig\READY.txt" -Recurse -Force -ErrorAction SilentlyContinue   # unencrypted keys - don't leave them there
         $Manifest = Get-Content (Join-Path $P 'manifest.json') -Raw | ConvertFrom-Json
         $Restore = $true
         Write-Host "Got uploader identity $($Manifest.device_id.Substring(0,7)) from $($Manifest.source_host)." -ForegroundColor Green
