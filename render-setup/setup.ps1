@@ -139,6 +139,12 @@ $Password   = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
               [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
 Log "Setting up as $PcName (identity $($ExpectedId.Substring(0,7))...)"
 
+# the "FULLY COMPLETE.png" desktop marker is only ever written at the very end,
+# after every check passed - remove any old one so a re-run can't show a stale "done"
+$CompleteMarker = Join-Path ([Environment]::GetFolderPath('Desktop')) 'FULLY COMPLETE.png'
+Remove-Item $CompleteMarker -Force -ErrorAction SilentlyContinue
+$NotComplete = @()   # reasons the marker must NOT be written
+
 # ----------------------------------------------------------------------------
 # STEP 1 - get + unlock the payload (template + identity keys)
 # ----------------------------------------------------------------------------
@@ -615,7 +621,13 @@ if (-not $legacyBox) {
     $watcherAlive = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'jacky_rush_render_watcher' }
     if ($watcherAlive) { Ok "Watcher is already running - leaving it alone (no second copy)." }
     else { Start-Process cmd.exe -ArgumentList '/c', 'launch.bat' -WorkingDirectory $TemplateDir }
-    Ok "Watcher started + autostarts at login."
+    try {
+        Wait-Until { Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match 'jacky_rush_render_watcher' } } 'watcher process running' 120
+        Ok "Watcher started + autostarts at login."
+    } catch {
+        Warn "Watcher process not seen running after 2 min - check its window."
+        $NotComplete += 'watcher not seen running'
+    }
 }
 
 # ----------------------------------------------------------------------------
@@ -629,6 +641,7 @@ try {
 } catch {
     Warn "Rendered-folder share failed: $($_.Exception.Message)"
     Warn "Run it by hand later:  irm $shareUrl | iex"
+    $NotComplete += 'rendered-folder share to the uploader failed'
 }
 
 # ----------------------------------------------------------------------------
@@ -648,7 +661,35 @@ Write-Host " tools      : Chrome, WinRAR, Git, Claude Code (+dsp), skills repo, 
 $cbRoot = Split-Path $TemplateDir
 $extrasOnDisk = @('Image Metadata Cleaner V1', 'Metadata Cleanser V1') | Where-Object { Test-Path (Join-Path $cbRoot $_) }
 if ($extrasOnDisk.Count -eq 2) { Write-Host " extras     : $($extrasOnDisk -join ' + ') (in Compiled Binaries)" }
-else { Write-Host " extras     : NOT all installed (payload likely packed before the tools were added) - re-pack payload.enc and re-run" -ForegroundColor Yellow }
+else { Write-Host " extras     : NOT all installed (payload likely packed before the tools were added) - re-pack payload.enc and re-run" -ForegroundColor Yellow; $NotComplete += 'extra tools missing' }
+Write-Host ""
+
+# ----------------------------------------------------------------------------
+# FULLY COMPLETE.png on the desktop - the visual "this PC is done" signal.
+# Written ONLY when every check above passed; otherwise say why and skip it.
+# ----------------------------------------------------------------------------
+if ($NotComplete.Count -eq 0) {
+    try {
+        Add-Type -AssemblyName System.Drawing
+        $mkBmp = New-Object Drawing.Bitmap(1200, 800)
+        $mkG = [Drawing.Graphics]::FromImage($mkBmp)
+        $mkG.SmoothingMode = 'AntiAlias'
+        $mkG.TextRenderingHint = 'AntiAliasGridFit'
+        $mkG.Clear([Drawing.Color]::FromArgb(22, 163, 74))
+        $mkCenter = New-Object Drawing.StringFormat
+        $mkCenter.Alignment = 'Center'
+        $mkG.DrawString([string][char]0x2714, (New-Object Drawing.Font('Segoe UI Symbol', 160, [Drawing.FontStyle]::Bold)), [Drawing.Brushes]::White, 600, 20, $mkCenter)
+        $mkG.DrawString('FULLY COMPLETE', (New-Object Drawing.Font('Arial Black', 76, [Drawing.FontStyle]::Bold)), [Drawing.Brushes]::White, 600, 340, $mkCenter)
+        $mkG.DrawString("Shadow$PcName  -  set up $(Get-Date -Format 'yyyy-MM-dd h:mm tt')", (New-Object Drawing.Font('Arial', 40, [Drawing.FontStyle]::Bold)), [Drawing.Brushes]::White, 600, 560, $mkCenter)
+        $mkG.Dispose()
+        $mkBmp.Save($CompleteMarker, [Drawing.Imaging.ImageFormat]::Png)
+        $mkBmp.Dispose()
+        Ok "FULLY COMPLETE.png placed on the desktop."
+    } catch { Warn "Could not draw FULLY COMPLETE.png: $($_.Exception.Message)" }
+} else {
+    Write-Host " NOT fully complete - no FULLY COMPLETE.png. Fix, then re-run setup:" -ForegroundColor Yellow
+    $NotComplete | ForEach-Object { Write-Host "   - $_" -ForegroundColor Yellow }
+}
 Write-Host ""
 Write-Host " Remaining by hand: run 'claude login' once (credentials are never bundled)."
 Write-Host " Reboot once to prove autostart if you want the full test."
