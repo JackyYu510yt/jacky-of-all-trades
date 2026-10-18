@@ -42,28 +42,69 @@ Farmer <── xkrz4-rfveh ──> Uploader (send & receive, two-way)
   whole fleet forgets it. Versioning is off mesh-wide, so those deletes are
   permanent; upload FIRST, delete second.
 
-## On a blank uploader PC
+## Moving the uploader to a new box (same identity, picks up where it left off)
 
-Open PowerShell and run:
+The uploader's identity IS sealed in a payload now (`payload.enc` on the
+`uploader-setup-v1` release, same AES-256 lock as the render payload). A new
+box that unlocks it comes back as `MSZZ6T4` - every render PC, vast rig and
+the farmer reconnect with zero changes on their side.
+
+| Where | What |
+|---|---|
+| `pack_uploader_payload.ps1` | Run on the LIVE uploader. Seals Syncthing identity + full config.xml (whole device roster incl. the vast pool) + the Syncthing binary, `C:\Tools` (reaper + its config), the checksum guard, the 3 scheduled tasks, pip freeze, user PATH, Run keys, small app settings. `-Upload` publishes it. **Re-run whenever the uploader's setup changes.** |
+| `migrate-source.ps1 -Prepare` | Old box. Opens SMB (445) to the Tailscale range on the Tailscale adapter only, so the new box can copy from it. |
+| `setup.ps1` | New box, elevated. Payload password -> installs Python 3.11.9 + exact pip set, Chrome, Firefox, Tailscale, VS Code, WinRAR 7.23, Process Hacker 2.39; logs into Tailscale; junctions storage; copies from the old box; restores identity, tools, tasks; attaches WSL. |
+| `migrate-source.ps1 -Cutover` | Old box, when setup.ps1 asks. Stops + disables Syncthing, the reaper and the checksum guard, closes Chrome/AdsPower/WSL, drops an `INERT.txt` marker that setup.ps1 waits for. |
+| `migrate-source.ps1 -Undo` | Rollback - only before the new box has started Syncthing. |
+
+Copy is two passes over Tailscale: pass 1 (old box still uploading) moves the
+videos + Desktop/Downloads/Documents/`C:\ffmpeg`; pass 2 (after cutover)
+mirrors the videos exactly and takes the in-use data: Chrome `User Data`,
+AdsPower (program, `adspower_global`, `C:\` + `D:\.ADSPOWER_GLOBAL`),
+ClipAngel history, the WSL Ubuntu disk.
+
+**The videos must be copied, not re-synced** - ones delivered by vast rigs
+that no longer exist live only on the uploader.
+
+**Never let two boxes run Syncthing with the same identity.** That is what
+`-Cutover` is for; setup.ps1 will not take the identity over until the old box
+reports INERT (or you confirm it is permanently off).
+
+What cannot come across (machine-bound encryption): Chrome site logins
+(profiles, bookmarks, extensions do come - sign in again) and AdsPower's
+login (log in; profiles + cookies return from AdsPower's cloud). Not copied
+on purpose: the provider's `C:\ip.bat` first-boot script, the Recycle Bin,
+`D:\ck6yil9f8vb3iopl`.
 
 ```powershell
+# OLD box (elevated)
+$m = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/migrate-source.ps1'
+& ([scriptblock]::Create((irm $m))) -Prepare
+# NEW box (elevated) - follow its prompts; it tells you when to run -Cutover on the old box
 irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex
 ```
 
-No questions asked. It does: Syncthing install (direct GitHub download - Server
-editions have no winget), identity generation, RAW-disk initialization + the
-`Shared Folder -> <HDD>:\Shared Folder` junction (same trick as the render
-PCs), receive-only folder config trusting all three render PCs, autostart.
+If WSL had to be installed, setup asks for a reboot - re-run it after; done
+steps are skipped.
+
+## On a blank uploader PC (fresh identity)
+
+Open an elevated PowerShell, run the same `setup.ps1` line, and press Enter
+at the password prompt. It does: Syncthing install (direct GitHub download -
+Server editions have no winget), identity generation, RAW-disk
+initialization + the `Shared Folder -> <HDD>:\Shared Folder` junction (same
+trick as the render PCs), send-receive folder config trusting the render PCs
+and the farmer, autostart. Run `trust-render-pcs.ps1` afterwards for the vast
+pool.
 
 Safe to re-run - finished steps are skipped, an existing identity is never
 regenerated.
 
-### After a REBUILD (fresh identity)
+### After a REBUILD with a fresh identity
 
-Unlike the render PCs, the uploader's identity is not sealed in a payload - a
-rebuild means a new device ID, and the render PCs must be told. The setup
-script prints the exact command; it boils down to running this on each render
-PC:
+A fresh identity means a new device ID, and the render PCs must be told. The
+setup script prints the exact command; it boils down to running this on each
+render PC:
 
 ```powershell
 $u = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/render-setup/share-rendered-to-uploader.ps1'
