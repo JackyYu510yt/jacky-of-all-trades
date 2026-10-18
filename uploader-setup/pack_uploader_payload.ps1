@@ -17,9 +17,12 @@
 #  the git credential already stored in Windows Credential Manager.
 #
 #  Re-run any time the uploader's setup changes, same password, -Upload.
+#
+#  -StageOnly <dir> stages the same content unencrypted into <dir> and stops
+#  (used by migrate-source.ps1 -Agent, which hands it to a new box over SMB).
 # ============================================================================
 
-param([string]$Password, [switch]$Upload)
+param([string]$Password, [switch]$Upload, [string]$StageOnly)
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -37,7 +40,8 @@ foreach ($f in 'cert.pem', 'key.pem', 'config.xml') {
     if (-not (Test-Path "$StHome\$f")) { throw "Not an uploader: $StHome\$f missing" }
 }
 
-if ($Password) { $p1 = $Password }
+if ($StageOnly) { $p1 = $null }
+elseif ($Password) { $p1 = $Password }
 else {
     $s1 = Read-Host 'Choose the unlock password (you will type this on the new uploader)' -AsSecureString
     $s2 = Read-Host 'Type it again to confirm' -AsSecureString
@@ -45,10 +49,10 @@ else {
     $p2 = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s2))
     if ($p1 -ne $p2) { throw 'Passwords did not match - run again.' }
 }
-if ($p1.Length -lt 16) { throw 'Password must be at least 16 characters - it guards the uploader identity in a public download.' }
+if (-not $StageOnly -and $p1.Length -lt 16) { throw 'Password must be at least 16 characters - it guards the uploader identity in a public download.' }
 
 # stage: one folder holding exactly what setup.ps1 expects to find in the zip
-$stage = Join-Path $env:TEMP 'uploader-payload-stage'
+$stage = if ($StageOnly) { $StageOnly } else { Join-Path $env:TEMP 'uploader-payload-stage' }
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
 New-Item -ItemType Directory $stage | Out-Null
 function Stage([string]$From, [string]$To) {
@@ -100,6 +104,8 @@ Write-Host "  + manifest.json (device $($deviceId.Substring(0,7)))"
 # strip what must never ship
 Get-ChildItem $stage -Recurse -Force -Include '__pycache__', '*.pyc', 'syncthing.lock' |
     Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+
+if ($StageOnly) { Write-Host "STAGED -> $stage"; exit 0 }
 
 Write-Host 'Zipping...'
 Add-Type -AssemblyName System.IO.Compression.FileSystem

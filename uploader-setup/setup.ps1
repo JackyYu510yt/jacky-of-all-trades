@@ -8,19 +8,25 @@
 #
 #   irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex
 #
-# Run from an ELEVATED PowerShell. It asks one question first:
+# Run from an ELEVATED PowerShell. After installing apps and logging into
+# Tailscale it picks one of three modes on its own:
 #
-#   Payload password  -> MIGRATE / REBUILD. Unlocks payload.enc (made on the
-#                        live uploader by pack_uploader_payload.ps1) and comes
-#                        back as the SAME uploader: same Syncthing identity +
-#                        config, so every render PC, vast rig and the farmer
-#                        reconnect with zero changes. Installs the same apps,
-#                        Python packages, reaper, checksum guard and scheduled
-#                        tasks, then (if the old box is still reachable over
-#                        Tailscale) copies its videos, Desktop, browser
-#                        profiles, AdsPower and WSL disk across.
-#   Enter (blank)     -> FRESH install with a NEW identity (the render PCs
-#                        must then be re-pointed - instructions printed).
+#   LIVE MIGRATION  The old uploader answers on Tailscale (it ran
+#                   migrate-source.ps1 -InstallAgent once). Asks for the old
+#                   box's Windows password, then does EVERYTHING: pulls the
+#                   identity/config/tools, copies videos + Desktop while the
+#                   old box keeps uploading, makes the old box stand down,
+#                   copies the rest (browser profiles, AdsPower, WSL) and comes
+#                   up as the SAME uploader - render PCs, vast rigs and the
+#                   farmer reconnect with zero changes.
+#   PAYLOAD         Old box gone: the payload password unlocks payload.enc
+#                   (pack_uploader_payload.ps1) - same identity and setup,
+#                   but videos that lived only on the old box are lost.
+#   FRESH           Enter at the payload prompt: NEW identity (render PCs
+#                   must then be re-pointed - instructions printed).
+#
+# No-prompt variant: set $env:UPLOADER_SOURCE_PW (and optionally
+# $env:TS_AUTHKEY) before the irm line.
 #
 # Safe to re-run - finished steps are skipped.
 
@@ -41,6 +47,9 @@ $PyExe       = "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe"
 $TsExe       = 'C:\Program Files\Tailscale\tailscale.exe'
 $PAYLOAD_URL = 'https://github.com/JackyYu510yt/jacky-of-all-trades/releases/download/uploader-setup-v1/payload.enc'
 $Work        = "$env:TEMP\uploader-setup"
+# The current uploader (Tailscale IP + login). Override with $env:UPLOADER_SOURCE.
+$DefaultSource = '100.125.166.12'
+$SourceLogin   = 'WIN-L3OQCKM6FUM\Administrator'
 
 # Render PCs that feed this uploader (must match render-setup/README.md mesh facts)
 $RenderPCs = @(
@@ -89,12 +98,93 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) { throw 'Open PowerShell with "Run as administrator" and run this again.' }
 New-Item -ItemType Directory -Force $Work | Out-Null
 
-$sec = Read-Host 'Uploader payload password (Enter = fresh install with a NEW identity)' -AsSecureString
-$Password = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec))
-$Restore = [bool]$Password
+function Test-Port([string]$TargetHost, [int]$Port) {
+    $c = New-Object Net.Sockets.TcpClient
+    try { $ar = $c.BeginConnect($TargetHost, $Port, $null, $null); $ar.AsyncWaitHandle.WaitOne(4000) -and $c.Connected } catch { $false } finally { $c.Close() }
+}
+function Read-Secret([string]$Prompt) {
+    $s = Read-Host $Prompt -AsSecureString
+    [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+}
+$Restore = $false; $Live = $false; $Copied = $false
+$Done = Test-Path "$StHome\cert.pem"   # identity already here = re-run, just finish leftovers
 
-# --- 1. Payload (restore mode) -----------------------------------------------
-if ($Restore) {
+# --- 1. Apps -----------------------------------------------------------------
+Step 'Apps'
+foreach ($app in $Apps) {
+    if (Test-Path $app.Test) { Write-Host "already installed : $($app.Name)"; continue }
+    Write-Host "installing        : $($app.Name)..."
+    $f = Join-Path $Work $app.File
+    Invoke-WebRequest $app.Url -OutFile $f -UseBasicParsing
+    if ($f -like '*.msi') { $p = Start-Process msiexec.exe -ArgumentList "/i `"$f`" /qn /norestart" -Wait -PassThru }
+    else { $p = Start-Process $f -ArgumentList $app.Args -Wait -PassThru }
+    if (-not (Test-Path $app.Test)) { Warn "$($app.Name) did not install (exit $($p.ExitCode))" }
+}
+
+# --- 2. Tailscale ------------------------------------------------------------
+Step 'Tailscale'
+if (Test-Path $TsExe) {
+    & $TsExe status *> $null
+    if ($LASTEXITCODE -ne 0) {
+        if ($env:TS_AUTHKEY) { & $TsExe up --unattended --auth-key=$env:TS_AUTHKEY }
+        else {
+            Write-Host 'Log in to Tailscale with the fleet account (open the link below)...' -ForegroundColor Yellow
+            & $TsExe up --unattended
+        }
+    }
+    Write-Host "Tailscale IP: $(& $TsExe ip -4 | Select-Object -First 1)"
+}
+
+# --- 3. Where the uploader comes from ----------------------------------------
+# LIVE: the old uploader is reachable over Tailscale and has the migration
+#       agent (migrate-source.ps1 -InstallAgent) - identity, config, tools and
+#       all data come straight from it, and it cuts itself over on request.
+# PAYLOAD: old box gone - identity/config/tools from payload.enc (password).
+# FRESH: neither - brand-new identity.
+if (-not $Done) {
+    Step 'Find the old uploader'
+    $Src = if ($env:UPLOADER_SOURCE) { $env:UPLOADER_SOURCE } else { $DefaultSource }
+    $Mig = "\\$Src\C$\ProgramData\uploader-migration"
+    if (Test-Port $Src 445) {
+        Write-Host "Old uploader reachable at $Src."
+        $pwPlain = if ($env:UPLOADER_SOURCE_PW) { $env:UPLOADER_SOURCE_PW } else { Read-Secret "Old uploader's Windows password ($SourceLogin)" }
+        foreach ($share in 'C$', 'D$') {
+            net use "\\$Src\$share" /delete /y 2>$null | Out-Null
+            net use "\\$Src\$share" $pwPlain /user:$SourceLogin /persistent:no | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "Cannot open \\$Src\$share - wrong password for $SourceLogin?" }
+        }
+        if (Test-Path "$Mig\migrate-source.ps1") { $Live = $true }
+        else { Warn "Old uploader has no migration agent (run migrate-source.ps1 -InstallAgent there) - falling back to the payload." }
+    } else {
+        Write-Host "Old uploader not reachable at $Src - using the payload."
+    }
+
+    if ($Live) {
+        Step 'Get identity + config from the old uploader'
+        Remove-Item "$Mig\READY.txt" -ErrorAction SilentlyContinue
+        Set-Content "$Mig\PACK-REQUEST.txt" (Get-Date -Format s)
+        Write-Host 'Asked it to pack (its agent checks every minute)...'
+        $deadline = (Get-Date).AddMinutes(10)
+        while (-not (Test-Path "$Mig\READY.txt")) {
+            if ((Get-Date) -gt $deadline) { throw "Old uploader never answered - see $Mig\agent.log" }
+            Start-Sleep 10
+        }
+        $P = Join-Path $Work 'payload'
+        if (Test-Path $P) { Remove-Item $P -Recurse -Force }
+        Copy-Tree "$Mig\pack" $P
+        $Manifest = Get-Content (Join-Path $P 'manifest.json') -Raw | ConvertFrom-Json
+        $Restore = $true
+        Write-Host "Got uploader identity $($Manifest.device_id.Substring(0,7)) from $($Manifest.source_host)." -ForegroundColor Green
+    } else {
+        $Password = Read-Secret 'Uploader payload password (Enter = fresh install with a NEW identity)'
+        $Restore = [bool]$Password
+    }
+} else {
+    Write-Host "`nIdentity already on this box - finishing any remaining steps."
+}
+
+# --- 3b. Payload (old box gone) ----------------------------------------------
+if ($Restore -and -not $Live) {
     Step 'Unlock payload'
     $enc = Join-Path $Work 'payload.enc'
     if (-not (Test-Path $enc)) { Invoke-WebRequest $PAYLOAD_URL -OutFile $enc -UseBasicParsing }
@@ -119,32 +209,10 @@ if ($Restore) {
     Write-Host "Unlocked. Uploader identity $($Manifest.device_id.Substring(0,7)), packed $($Manifest.packed_at) on $($Manifest.source_host)."
 }
 
-# --- 2. Apps -----------------------------------------------------------------
-Step 'Apps'
-foreach ($app in $Apps) {
-    if (Test-Path $app.Test) { Write-Host "already installed : $($app.Name)"; continue }
-    Write-Host "installing        : $($app.Name)..."
-    $f = Join-Path $Work $app.File
-    Invoke-WebRequest $app.Url -OutFile $f -UseBasicParsing
-    if ($f -like '*.msi') { $p = Start-Process msiexec.exe -ArgumentList "/i `"$f`" /qn /norestart" -Wait -PassThru }
-    else { $p = Start-Process $f -ArgumentList $app.Args -Wait -PassThru }
-    if (-not (Test-Path $app.Test)) { Warn "$($app.Name) did not install (exit $($p.ExitCode))" }
-}
 if ($Restore -and (Test-Path $PyExe)) {
-    Write-Host 'Python packages (same versions as the old uploader)...'
+    Step 'Python packages (same versions as the old uploader)'
     & $PyExe -m pip install --disable-pip-version-check -q -r (Join-Path $P 'pip-freeze.txt')
     if ($LASTEXITCODE -ne 0) { Warn 'some pip packages failed to install - see output above' }
-}
-
-# --- 3. Tailscale ------------------------------------------------------------
-Step 'Tailscale'
-if (Test-Path $TsExe) {
-    & $TsExe status *> $null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host 'Log in to Tailscale with the fleet account in the browser link below...' -ForegroundColor Yellow
-        & $TsExe up --unattended
-    }
-    Write-Host "Tailscale IP: $(& $TsExe ip -4 | Select-Object -First 1)"
 }
 
 # --- 4. Bulk storage: junction Shared Folder onto the biggest data drive -----
@@ -190,24 +258,11 @@ New-Item -ItemType Directory -Force $FolderPath | Out-Null
 # the videos exactly and takes what is locked while in use (browser profiles,
 # AdsPower, ClipAngel, the WSL disk). Videos MUST come across this way: ones
 # delivered by vast rigs that no longer exist live only on the old uploader.
-$Copied = $false
-if ($Restore -and -not (Test-Path $StHome\cert.pem)) {
-    Step 'Copy from the old uploader'
-    Write-Host 'On the OLD uploader, in an elevated PowerShell, run first:' -ForegroundColor Yellow
-    Write-Host "  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/migrate-source.ps1'))) -Prepare" -ForegroundColor Yellow
-    $Src = ([string](Read-Host 'Old uploader Tailscale IP (Enter = old box is gone, skip copying)')).Trim()
-    if ($Src) {
-        $OldUser = "$($Manifest.source_host)\$($Manifest.source_user)"
-        $pw = Read-Host "Windows password for $OldUser" -AsSecureString
-        $pwPlain = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($pw))
-        foreach ($share in 'C$', 'D$') {
-            net use "\\$Src\$share" /delete /y 2>$null | Out-Null
-            net use "\\$Src\$share" $pwPlain /user:$OldUser /persistent:no | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw "Cannot open \\$Src\$share - check the IP, the password, and that -Prepare ran on the old box." }
-        }
+if ($Restore -and -not $Done) {
+    if ($Live) {
         $OldHome = "\\$Src\C$" + $Manifest.source_home.Substring(2)
         $OldData = "\\$Src\D$"
-        $Marker  = "\\$Src\C$\ProgramData\uploader-migration\INERT.txt"
+        $Marker  = "$Mig\INERT.txt"
         $Dl      = if ($data) { "$($data.DriveLetter):" } else { 'C:' }
 
         function Copy-Bulk([switch]$Final) {
@@ -222,11 +277,14 @@ if ($Restore -and -not (Test-Path $StHome\cert.pem)) {
         if (-not (Test-Path $Marker)) {
             Step 'Pass 1 of 2 - bulk copy while the old uploader keeps working'
             Copy-Bulk
-            Write-Host ''
-            Write-Host 'Pass 1 done. Now CUT OVER - on the OLD uploader run:' -ForegroundColor Yellow
-            Write-Host "  & ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/migrate-source.ps1'))) -Cutover" -ForegroundColor Yellow
-            Write-Host 'Waiting for it to report INERT...' -ForegroundColor Yellow
-            while (-not (Test-Path $Marker)) { Start-Sleep 10 }
+            Step 'Cutover - old uploader stops so this box can take its identity'
+            Set-Content "$Mig\CUTOVER-REQUEST.txt" (Get-Date -Format s)
+            Write-Host 'Asked the old uploader to stand down (its agent checks every minute)...'
+            $deadline = (Get-Date).AddMinutes(10)
+            while (-not (Test-Path $Marker)) {
+                if ((Get-Date) -gt $deadline) { throw "Old uploader never reported INERT - see $Mig\agent.log. Nothing was taken over; re-run setup." }
+                Start-Sleep 10
+            }
         }
         Write-Host 'Old uploader is INERT.' -ForegroundColor Green
 
@@ -244,7 +302,6 @@ if ($Restore -and -not (Test-Path $StHome\cert.pem)) {
         $oldWsl = Get-ChildItem "$OldHome\AppData\Local\wsl" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($oldWsl) { Copy-Tree $oldWsl.FullName "$env:LOCALAPPDATA\wsl\$($oldWsl.Name)"; $WslDisk = "$env:LOCALAPPDATA\wsl\$($oldWsl.Name)\ext4.vhdx" }
 
-        foreach ($share in 'C$', 'D$') { net use "\\$Src\$share" /delete /y | Out-Null }
         $Copied = $true
     } else {
         $ok = Read-Host 'No copy. Is the OLD uploader permanently OFF (it must never run Syncthing again)? (y/N)'
@@ -331,7 +388,7 @@ while ((Get-Date) -lt $deadline) {
 
 # --- 10. Configure sync folders + trusted render PCs (fresh mode) ------------
 # Restore mode already has the exact config (every device incl. the vast pool).
-if (-not $Restore) {
+if (-not $Restore -and -not $Done) {
     Step 'Configure sync'
     foreach ($pc in $RenderPCs) {
         try { & $StExe cli config devices add --device-id $pc.Id --name $pc.Name } catch { Write-Host "$($pc.Name) already present" }
@@ -391,7 +448,7 @@ if ($Restore) {
 # --- 12. WSL (restore mode) --------------------------------------------------
 # On the re-run after the WSL-install reboot the copy step is skipped, so find the disk it left.
 if (-not $WslDisk) { $WslDisk = Get-ChildItem "$env:LOCALAPPDATA\wsl\*\ext4.vhdx" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName }
-if ($Restore -and $WslDisk -and (Test-Path $WslDisk)) {
+if ($WslDisk -and (Test-Path $WslDisk)) {
     Step 'WSL'
     $env:WSL_UTF8 = '1'
     wsl --status *> $null

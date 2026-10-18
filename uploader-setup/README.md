@@ -49,13 +49,31 @@ The uploader's identity IS sealed in a payload now (`payload.enc` on the
 box that unlocks it comes back as `MSZZ6T4` - every render PC, vast rig and
 the farmer reconnect with zero changes on their side.
 
-| Where | What |
+**Moving day is ONE command on the new box** (elevated PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex
+```
+
+You click the Tailscale login link and type the OLD box's Windows password;
+nothing is run on the old box that day. (No-prompt variant: put
+`$env:UPLOADER_SOURCE_PW='...'; ` in front.)
+
+That works because the old box ran `migrate-source.ps1 -InstallAgent` once
+(done 2026-10-17 on `WIN-L3OQCKM6FUM`): SMB 445 open to Tailscale only, plus
+a scheduled task `UploaderMigrationAgent` that idles until the new box drops
+a request file into `C:\ProgramData\uploader-migration` (needs that box's
+admin password): `PACK-REQUEST` -> it stages identity/config/tools and writes
+`READY`; `CUTOVER-REQUEST` -> it stops + disables Syncthing, the reaper, the
+checksum guard, closes Chrome/AdsPower/ClipAngel/WSL and writes `INERT`.
+Log: `agent.log` in that folder.
+
+| Script | What |
 |---|---|
-| `pack_uploader_payload.ps1` | Run on the LIVE uploader. Seals Syncthing identity + full config.xml (whole device roster incl. the vast pool) + the Syncthing binary, `C:\Tools` (reaper + its config), the checksum guard, the 3 scheduled tasks, pip freeze, user PATH, Run keys, small app settings. `-Upload` publishes it. **Re-run whenever the uploader's setup changes.** |
-| `migrate-source.ps1 -Prepare` | Old box. Opens SMB (445) to the Tailscale range on the Tailscale adapter only, so the new box can copy from it. |
-| `setup.ps1` | New box, elevated. Payload password -> installs Python 3.11.9 + exact pip set, Chrome, Firefox, Tailscale, VS Code, WinRAR 7.23, Process Hacker 2.39; logs into Tailscale; junctions storage; copies from the old box; restores identity, tools, tasks; attaches WSL. |
-| `migrate-source.ps1 -Cutover` | Old box, when setup.ps1 asks. Stops + disables Syncthing, the reaper and the checksum guard, closes Chrome/AdsPower/WSL, drops an `INERT.txt` marker that setup.ps1 waits for. |
-| `migrate-source.ps1 -Undo` | Rollback - only before the new box has started Syncthing. |
+| `setup.ps1` | New box. Installs Python 3.11.9 + exact pip set, Chrome, Firefox, Tailscale, VS Code, WinRAR 7.23, Process Hacker 2.39; Tailscale login; pulls identity/config from the old box; junctions storage; copies data (below); restores identity, tools, scheduled tasks; attaches WSL. |
+| `pack_uploader_payload.ps1 -Upload` | Old box, optional BACKUP: the same identity/config sealed in `payload.enc` on the `uploader-setup-v1` release. Only used if the old box is dead on moving day (setup then asks for the payload password). Re-run after big changes. |
+| `migrate-source.ps1 -Undo` | Old box rollback after a cutover - only if the new box has NOT started Syncthing. |
+| `migrate-source.ps1 -Uninstall` | Old box: remove the agent + SMB rule. |
 
 Copy is two passes over Tailscale: pass 1 (old box still uploading) moves the
 videos + Desktop/Downloads/Documents/`C:\ffmpeg`; pass 2 (after cutover)
@@ -66,23 +84,15 @@ ClipAngel history, the WSL Ubuntu disk.
 **The videos must be copied, not re-synced** - ones delivered by vast rigs
 that no longer exist live only on the uploader.
 
-**Never let two boxes run Syncthing with the same identity.** That is what
-`-Cutover` is for; setup.ps1 will not take the identity over until the old box
-reports INERT (or you confirm it is permanently off).
+**Never let two boxes run Syncthing with the same identity.** setup.ps1 will
+not take the identity over until the old box reports INERT (or, in payload
+mode, you confirm it is permanently off).
 
 What cannot come across (machine-bound encryption): Chrome site logins
 (profiles, bookmarks, extensions do come - sign in again) and AdsPower's
 login (log in; profiles + cookies return from AdsPower's cloud). Not copied
 on purpose: the provider's `C:\ip.bat` first-boot script, the Recycle Bin,
 `D:\ck6yil9f8vb3iopl`.
-
-```powershell
-# OLD box (elevated)
-$m = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/migrate-source.ps1'
-& ([scriptblock]::Create((irm $m))) -Prepare
-# NEW box (elevated) - follow its prompts; it tells you when to run -Cutover on the old box
-irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex
-```
 
 If WSL had to be installed, setup asks for a reboot - re-run it after; done
 steps are skipped.
