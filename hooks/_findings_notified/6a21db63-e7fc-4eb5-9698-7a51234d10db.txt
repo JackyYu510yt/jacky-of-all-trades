@@ -1,0 +1,14 @@
+solver_diag.ps1
+solver_diag2.ps1
+shadowpc_launcher.py
+solver_install.ps1
+feedback_oneliners_only.md
+solver_logs.ps1
+solver_install2.ps1
+wake_logs.ps1
+stage_4_2_capsolver_cf.py
+proxy_install.ps1
+configs_fix.ps1
+guard_install.ps1
+unpark.ps1
+autostart_fix.ps1

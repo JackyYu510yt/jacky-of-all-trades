@@ -1,0 +1,3 @@
+feedback_finding_requires_hard_proof.md
+MEMORY.md
+CLAUDE.md

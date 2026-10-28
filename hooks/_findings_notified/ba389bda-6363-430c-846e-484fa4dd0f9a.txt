@@ -1,0 +1,6 @@
+SCENE-THUMBNAIL-TEMPLATE.txt
+prompt.txt
+make_scene_refs.py
+SCENE-THUMBNAIL-HOWTO.md
+thumbnail-scene-type.md
+switch_twilight_to_scene.mjs

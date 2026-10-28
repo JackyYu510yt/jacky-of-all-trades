@@ -1,0 +1,3 @@
+vocab_reserved_live_rig.md
+MEMORY.md
+prep-destroyable-race-and-commit.txt

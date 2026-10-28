@@ -1,1 +1,15 @@
 RUN.md
+finding_3rd_halt.txt
+finding_delivery_pending_conflation.txt
+production_watchdog.py
+_test_integration.py
+finding_delivery_pending_fix_shipped.txt
+finding_5th_halt_two_more_classes.txt
+finding_capped_is_real_failure_corrected.txt
+finding_structural_fix_shipped.txt
+finding_6th_halt_clean.txt
+finding_throughput_pattern.txt
+finding_7th_rearm_slots_lowered.txt
+finding_cross_batch_pattern.txt
+prep-fix-render-pipeline-reliability.txt
+finding_community_host_lead.txt

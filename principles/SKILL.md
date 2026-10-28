@@ -1,6 +1,6 @@
 ---
 name: principles
-description: The user's 14 engineering principles, each codified after a specific real failure: (1) test the condition, not the label; (2) figure out the conditions upfront; (3) keep the end goal in sight; (4) audit against the goal before handback; (5) KISS; (6) think before coding; (7) surgical changes; (8) goal-driven execution; (9) build for the real run; (10) see it before you call it; (11) pin the cause before the fix; (12) completed means delivered; (13) the report grades itself; (14) a question must earn its way to the user. Load at the start of a non-trivial task; before claiming anything is tested, verified, fixed or done; before asking the user a clarifying question; before a refactor, a new abstraction, or a drive-by cleanup; when debugging an unexplained failure; and on any unattended, overnight, or real-scale run. Read the skill body for the full text of any principle - this line only decides WHEN to load it.
+description: The user's 15 engineering principles, each codified after a specific real failure: (1) test the condition, not the label; (2) figure out the conditions upfront; (3) keep the end goal in sight; (4) audit against the goal before handback; (5) KISS; (6) think before coding; (7) surgical changes; (8) goal-driven execution; (9) build for the real run; (10) see it before you call it; (11) pin the cause before the fix; (12) completed means delivered; (13) the report grades itself; (14) a question must earn its way to the user; (15) state the error verbatim before classifying. Load at the start of a non-trivial task; before claiming anything is tested, verified, fixed or done; before asking the user a clarifying question; before a refactor, a new abstraction, or a drive-by cleanup; when debugging an unexplained failure; and on any unattended, overnight, or real-scale run. Read the skill body for the full text of any principle - this line only decides WHEN to load it.
 ---
 
 # Principles
@@ -117,6 +117,8 @@ the board is three lines. Structure is always present; size is not.
 
 14. **A question must earn its way to the user** — before any question reaches the user it must pass all four gates: the answer changes what I DO next; I cannot get it myself from a file, command, log or cheap probe; being wrong is costly or irreversible; and it is about WHAT they want, not HOW to build it. Fail one → decide, log one line, keep going. HOW is mine even when I'm unsure. What passes is batched and arrives with a recommendation and a default, so silence is always a valid answer.
 
+15. **State the error verbatim before classifying** — capture and read a failure's exact text (message, exception type, stack line, status code) before grouping, explaining, or fixing it; never treat two errors as related because they happened close together in time or in the same run — relatedness comes only from matching content (same exception, same call, same code), never from proximity. Generalizes `/error-recon`'s verbatim + no-umbrella-labels rules to every failure, everywhere.
+
 > **Crosswalk to Karpathy's 4 principles:** Think Before Coding → P6 · Simplicity First → P5 · Surgical Changes → P7 · Goal-Driven Execution → P8 (also touches P2 + P4).
 
 > **Tiebreaker:** when two principles pull opposite ways, ask which choice keeps the thing working for the *real job* — real-world fit (P9) breaks the tie. This does NOT license speculative complexity: P9 only fires on conditions you can prove will occur, so "practicality" can never be the reason for a safeguard against an imaginary case (that's still a P5 violation). Real fit wins ties; it does not win invented ones.
@@ -151,6 +153,7 @@ that principle is actually in play:
   P12  p12-completed-means-delivered.md             Completed means delivered               2410 chars
   P13  p13-the-report-grades-itself.md              The report grades itself                5465 chars
   P14  p14-a-question-must-earn-its-way-to-the-us.md A question must earn its way to the us  5616 chars
+  P15  p15-state-the-error-verbatim.md               State the error verbatim before classifying  4900 chars
 ```
 
 Read the Index first. Open a file only when the paragraph is not enough for the
@@ -264,5 +267,7 @@ can judge whether the rule still applies in edge cases }}
 - **P10 — see it before you call it:** when a check's result is visible (a rendered page, an app window, a generated image), confirm it by reading a screenshot captured at the assertion before trusting it; an exit code or matched log line is not proof on a visual surface. Capture inside the test at each state-change/assertion; a captured-but-unread shot is the account-95 miss. Encoded into /auto (Hard Invariant #11) and /prep (visual smoke capture).
 
 - **P11 — pin the cause before the fix:** hypothesis-driven debugging (RCA) — observe and collect evidence, list 2–4 ranked falsifiable causes, run one pre-registered cheapest one-variable probe at a time (confirms/disproves written before the result exists), keep a facts/unknowns ledger, and only edit code once exactly one cause has positive proof; fast path only for one-read-obvious causes. Standard here; full procedure in /repair; runs inside /auto fix mode and /prep build/pentest failures.
+
+- **P15 — state the error verbatim before classifying:** capture and read a failure's exact text before grouping, explaining, or fixing it; two errors are never called related because they happened close together in time or in the same run — relatedness comes only from matching content (same exception, same call, same code), never from proximity. Generalizes /error-recon's verbatim + no-umbrella-labels rules to every failure, anywhere, not only inside an error-recon run.
 
 - Append new principles using the template. Update the index and the frontmatter description when you do.

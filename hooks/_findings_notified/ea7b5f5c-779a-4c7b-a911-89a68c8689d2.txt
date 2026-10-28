@@ -1,0 +1,3 @@
+voiceover_gen.py
+vite.config.ts
+QueuePage.tsx

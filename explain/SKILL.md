@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Make the user genuinely understand something — plain language, ZERO jargon, ADHD-friendly formatting. Two gears. Quick explain (default for "explain X", "what's going on with Y", "walk me through Z") gives one clean, jargon-free answer. Deep teach (only on explicit "teach me X", "make sure I understand", "quiz me", "I want to really get this") runs a teaching loop — a running checklist, restate-first, fill the gaps, quiz with AskUserQuestion, and doesn't end until understanding is proven. Use when the user wants to understand, not just be told.
+description: Make the user genuinely understand something — plain language, ZERO jargon, ADHD-friendly formatting. Two gears. Quick explain (default for "explain X", "what's going on with Y", "walk me through Z") gives one clean, jargon-free answer. Deep teach (only on explicit "deep teach", "interview me", "teach me X", "make sure I understand", "quiz me", "I want to really get this") runs a story walk — a progress map on top of every turn, one short one-idea chapter per turn (why it started → what's done → where we are → what's left → finish line), then offers an AskUserQuestion quiz where wrong answers get explained, never re-guessed, ending with a "brief a new person" test. Use when the user wants to understand, not just be told.
 ---
 
 # Explain
@@ -20,9 +20,9 @@ Output: one clean, jargon-free answer. No checklist, no quiz. Just the basics be
 
 **Deep teach — only when asked for.**
 
-Fires ONLY on explicit asks: "teach me X", "make sure I understand", "quiz me", "I want to really get this", "drill me on this".
+Fires ONLY on explicit asks: "deep teach", "interview me", "teach me X", "make sure I understand", "quiz me", "I want to really get this", "drill me on this". The phrase can appear anywhere in the message.
 
-Output: the full teaching loop further down. A real tutoring session that doesn't end until you've proven you get it.
+Output: the story walk further down. A guided tour, one small chapter per turn, then an optional quiz.
 
 > If you're unsure which gear, default to **quick**. Never force a quiz on someone who just wanted a fast answer.
 
@@ -79,7 +79,7 @@ One visual-break mechanism per block, not two stacked.
 
 ### Goal compass + confidence/risk footer — the closing block, every time
 
-Every explain response ends with this footer. It opens with the NET line, then four sections, with ONE BLANK LINE between every field (no two fields on adjacent lines — that's the wall the user asked to kill):
+Every quick-explain response ends with this footer. **Deep teach turns do NOT** — they end on the chapter's "questions, or next?" line or on a quiz popup (see Deep teach). The footer buried the learner's question on 2026-09-29. It opens with the NET line, then four sections, with ONE BLANK LINE between every field (no two fields on adjacent lines — that's the wall the user asked to kill):
 
 ```
 NET: <one sentence — where things stand RIGHT NOW after this turn: result gap first, then gains and changes. Not a forecast.>
@@ -301,60 +301,89 @@ If a non-technical friend wouldn't recognize a word, rewrite it.
 - Topic in the user's wheelhouse (Python, ffmpeg, video pipelines) → go practitioner, use the real terms.
 
 
-## Deep teach — the teaching loop
+## Deep teach — the story walk
 
-Only when explicitly asked (see Two gears). You are a wise, genuinely effective teacher. The goal is that the user **deeply understands** — both the high level (why this matters) and the low level (the actual logic, the edge cases).
+Only when explicitly asked (see Two gears). The goal: the user understands the topic well enough that **a brand-new person could walk in, hear them explain it, and carry the work on** — where it started, what's done, where things stand, what's left, where the finish line is.
 
-### 1. Open a running checklist file
+Designed 2026-09-29 from a live practice run with the user. What that run proved: one-idea chapters were understood first try (4/4); chapters that bundled several unrelated items were missed 3 times each, because the items blended together. Re-asking a missed question produced guesses, not learning.
 
-Write a markdown checklist to `.claude/explain-notes/<short-topic>-<YYYY-MM-DD>.md` so it survives the session and can be reopened. Three buckets to fill:
+### 0. No topic named
+
+"/explain deep teach me" with no topic → teach **the work this session is doing**: the project in the current folder, read from its status file, plan, SPEC.md and findings. The story runs from where it started to the finish line. Only if the session has no project and no work in progress, ask one question: "Teach you what?"
+
+### 1. Read the real sources first
+
+Before chapter 1, read what the story is built from — the project's status/plan files, SPEC.md, findings (`note.py --recent`), the code. Every fact in a chapter comes from something read this session. Never teach from memory of the project.
+
+### 2. Plan the chapters — ONE idea each
+
+Default arc for an ongoing project or session (adapt the stops to the topic):
 
 ```
-# Understanding: <topic>   (<date>)
-
-## 1. The problem
-- [ ] what the problem is
-- [ ] why the problem existed
-- [ ] the different branches / paths involved
-
-## 2. The solution
-- [ ] what the fix is
-- [ ] why it was solved this way
-- [ ] the design decisions
-- [ ] the edge cases
-
-## 3. The broader context
-- [ ] why this matters
-- [ ] what the changes will impact
+WHY → WHERE IT STARTED → DONE SO FAR → NOW → WHAT'S LEFT → FINISH
 ```
 
-Tick items off as they're truly understood. Keep the file updated each turn.
+- **WHY:** the problem this exists to solve, and who suffered it before.
+- **WHERE IT STARTED / DONE SO FAR:** each finished step, with what proves it.
+- **NOW:** the step happening right now.
+- **WHAT'S LEFT:** in order, plus the decisions that only the user can make.
+- **FINISH:** what "done" looks like, and the two ways the story can end from here.
 
-### 2. Teach one bucket at a time
+**Split any stop that holds more than one idea** into several stops. "Now: a fix, a discovery, a planned test" is three chapters, not one. More dots on the map is fine; a crowded chapter is not.
 
-Don't dump all three at once. Finish bucket 1, **confirm mastery**, then move to bucket 2. Cover both the high level (motivation) and the low level (business logic, edge cases).
+Key files get explained **inside the chapter where they first matter** (e.g. "Prep\ = the binder of plans; nothing in it runs"), not in a separate glossary.
 
-### 3. Drill the "why" — then what and how
+### 3. The map — top of every turn
 
-Make sure they understand **why**, and keep drilling into deeper whys. Then make sure they understand **what** and **how** too. Understanding the problem well is the part that matters most.
+Every deep-teach turn opens (after the rainbow row) with the map in a code fence, same shape every time — never change its layout mid-session:
 
-### 4. Restate-first
+```
+  WHY ── RUN 1 ── RUN 2 ── NOW ── WHAT'S LEFT ── FINISH
+   ✓      ✓       [●]      ○         ○             ○
+```
 
-Before explaining, proactively have the user **restate their current understanding**. That shows where they actually are. Then fill the gaps from there. They may ask questions, or ask for ELI5 / ELI14 / ELII.
+`✓` = covered, `[●]` = this turn, `○` = ahead. During the quiz, `✗` marks a missed chapter.
 
-### 5. Quiz with AskUserQuestion
+### 4. One chapter per turn
 
-Check understanding with open-ended or multiple-choice questions using AskUserQuestion.
+- A short chapter: plain words, one idea, a few short lines, ends with **"In short:"** + one sentence.
+- End the turn with: **"Any questions about this part, or next?"** — then stop and wait.
+- A user question gets answered inside the same chapter; the map doesn't advance until they say next.
+- **No footer** in deep teach — the map is the progress report. (The quick-explain footer buried the question.)
+- The last chapter ends with the whole trip in one line (start → … → now → finish).
 
+### 5. Offer the quiz — don't force it
+
+After the last chapter, ask: **"Want the quiz, or are you good?"** Offer both:
+
+- **Quiz:** one AskUserQuestion popup per chapter (max 4 per call — batch them), then the new-person test.
+- **I'm good:** stop there.
+
+### 6. The quiz
+
+- Multiple choice via AskUserQuestion, one question per chapter.
 - **Shuffle the position of the correct answer** between questions.
+- **Option descriptions must not hint** at which one is right.
+- **Don't reveal answers until they submit.**
 
-- **Don't reveal the answer until after they submit.**
+**A wrong answer (or "idk") gets EXPLAINED, never re-guessed** — user rule, 2026-09-29: "just explain the right answer to me so I can actually learn instead of forcing me to guess." For each miss, in this order:
 
-- Show them real code, or have them use the debugger, when it helps it land.
+- ✅ **The right answer**, plainly.
+- **Why it's right** — one or two lines tied back to the story.
+- ❌ **Why their pick was tempting but wrong** — this is the part that untangles the mix-up (e.g. "the fix and the trap were both found tonight, so they blended — but they're separate").
+- Optionally a one-line memory hook ("overnight = you sleep; delete proof = you visit PC4").
 
-### 6. Don't end until it's proven
+Then move straight on. **No retry popup** on the same item.
 
-The session does not end until you've verified the user has **demonstrated** understanding of every item on the checklist — not just nodded along. Then close the file with everything ticked.
+After scoring, redraw the map with ✓ / ✗ and give the score.
+
+### 7. The new-person test (last step of the quiz)
+
+Ask the user to type 3–4 lines **as if briefing a fresh chat that has to carry the work on**. Check it against the real status/plan files and name anything important missing or wrong — explained, same as a quiz miss. Then end.
+
+### 8. Notes file (optional)
+
+For a long topic, keep the chapter list and scores in `.claude/explain-notes/<short-topic>-<YYYY-MM-DD>.md` so it can be reopened. If the user says "I'm good", offer to save their new-person briefing there.
 
 
 ## Hard NOs
@@ -369,7 +398,9 @@ The session does not end until you've verified the user has **demonstrated** und
 
 - **No HTML in the output — ever.** `&nbsp;`, `<br>`, `&amp;` and friends do NOT render in the terminal; they print literally and shred the block. Indent with a fenced code block or with real leading spaces in a markdown list. This killed the USER OPTION menu on 8/28/26 — every option line showed as `&nbsp;&nbsp;1.` instead of an indent.
 
-- No forced quiz in quick mode. Deep teach only happens when asked.
+- No forced quiz in quick mode. Deep teach only happens when asked, and even there the quiz is offered, not forced.
+
+- No retry popups in deep teach. A missed quiz answer gets explained, then move on.
 
 
 ## Final check before sending
@@ -385,5 +416,7 @@ The session does not end until you've verified the user has **demonstrated** und
 - Length matches the question — short question, short answer.
 
 - Right gear: quick unless the user explicitly asked to be taught or quizzed.
+
+- Deep teach turn? Map on top, one-idea chapter, ends on "questions, or next?" or a popup — and NO footer (the next item is quick-explain only).
 
 - Ends with the full footer — NET → CURRENT STAGE (BEFORE/NOW/CHANGED/NEXT/MEANT TO/FEYNMAN) → ULTIMATE GOAL → USER OPTION (only when the turn puts a decision to you: each option with its cost, balanced `+`/`−`, a HOLDS UP durability read, exactly one ← RECOMMENDED, then IF YOU SAY NOTHING + WHY THAT DEFAULT — omitted entirely when there is no fork) → SUGGESTED ACTION (PASTE THIS, which MUST name the ← RECOMMENDED option when a USER OPTION block is present, + → TOWARD THE GOAL + → HEAVEN'S NET + FEYNMAN) → GRADE → TIMELINE (debrief-style staged timeline for the whole project, this turn's step marked ← YOU ARE HERE, last step is the finish line) — one blank line between every field, each grade followed by its evidence, and CONFIDENCE is not HIGH if anything in the answer is unverified or still in flight.

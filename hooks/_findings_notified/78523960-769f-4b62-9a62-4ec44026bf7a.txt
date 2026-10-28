@@ -1,0 +1,5 @@
+finding.txt
+finding2.txt
+finding3.txt
+finding4.txt
+smoke_blind_spot.py

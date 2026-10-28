@@ -1,0 +1,4 @@
+setup.ps1
+README.md
+finding.txt
+project_shadowpc_default_disk_only.md

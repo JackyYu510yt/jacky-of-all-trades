@@ -2,3 +2,12 @@ fleet.py
 autoscaler.py
 RUN.md
 test_fleet.py
+help_texts.py
+config.py
+fleet.html
+app.py
+base.html
+test_fleet_safe.py
+prep-active-rig-dashboard.txt
+prep-stagger-vast-fleet.txt
+plan_appendix.txt

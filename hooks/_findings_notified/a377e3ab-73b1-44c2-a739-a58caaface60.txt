@@ -1,0 +1,9 @@
+finding.txt
+pc4_why_silent.ps1
+admin_copy_launcher_evidence.ps1
+finding2.txt
+finding3.txt
+install_keep_admin_desktop_live.ps1
+finding4.txt
+admin-desktop-live-tscon.md
+f_pc4_freeze2.txt

@@ -3,3 +3,6 @@
 Thumbs.db
 *.log
 *.tmp
+
+# Has its own separate repo -- keep it out of this one.
+quiz-solver/

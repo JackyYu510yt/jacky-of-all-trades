@@ -1,0 +1,10 @@
+checksum_guard.py
+scheduled_reaper_uploader.py
+test_sidecar_cleanup.py
+update.ps1
+UPLOADING-PC-SETUP.md
+verify.ps1
+install.ps1
+CLONER-STATE-2026-10-02.md
+uploader-pc-reaper.md
+MEMORY.md

@@ -185,6 +185,23 @@ The sibling `log.txt` is written by the PostToolUse hook
 in a session whose marker names this slug. `(generated)` — see "What
 changed" for the fix that makes this reliable.
 
+**Date everything this run writes down (added 2026-09-18).** Any finding
+filed via `note.py`, any new reference/summary doc the run produces, and the
+RUN.md Findings/Big Lesson text itself must carry an explicit absolute date
+IN THE TEXT — not just note.py's own auto-generated header timestamp.
+`(judgment)`. Reason: a finding's header dates the FILE, but the finding gets
+read out of context later (quoted, copied, surfaced by the point-of-need
+hook) — the date needs to travel with the words, or a future reader can't
+tell a fresh result from a stale one. Same rule for any consolidated doc
+this run creates (see the file-creation-findings habit below).
+
+**File a finding the moment this run creates a reusable reference doc
+(added 2026-09-18).** If a step produces a new consolidated/summary doc
+meant to be read again later (not a routine code/test file) — file a
+`note.py` finding about it in the SAME turn, dated, naming what it
+supersedes (e.g. "read this instead of re-grepping REPORT.md"). Don't wait
+to be asked.
+
 ## Execute steps: one transient retry, else stop dead
 
 This replaces the old skill's five-approach rotation loop. Per step:

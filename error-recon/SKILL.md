@@ -61,6 +61,8 @@ Mismatch → the counter is an UNKNOWN signal: capture, park, stop loud, bench n
 
 ## The Anti-Guessing Rules (always on)
 
+Canonical cross-reference: Rule 5 and Rule 6 here are the error-recon-specific form of `principles` skill **P15 — state the error verbatim before classifying**. P15 is the general statement (applies to any failure, in or out of a recon run); read it when the failure is outside a mapped tool.
+
 Born from real misreads (umbrella "FAILED/cooked" labels, a transitional URL treated as a verdict, hidden HTML contradicting the visible page, 498 ledger rows that were really 192 accounts). Hard rules, not suggestions:
 
 1. **No umbrella labels.** Every state a tool reports maps 1:1 to a map entry ID. A bare "FAILED" is forbidden — print `soft-block [E05]`, never a scary catch-all word. (Real example: `gemini_worker`'s `all_accounts_at_limit` lumps 4 distinct causes into one label — exactly what this rule forbids.)
@@ -77,7 +79,7 @@ Born from real misreads (umbrella "FAILED/cooked" labels, a transitional URL tre
 
 5. **The map is the only interpreter.** Once a map exists, nothing improvises — not the tool, not Claude in a later session. A signal either matches an entry (act per its protocol) or it doesn't (UNMAPPED: capture, park, stop loud). Never paraphrase an error message — verbatim or nothing.
 
-6. **No anchoring — the first plausible reading is a candidate, not the verdict.** Before assigning a state's meaning, name the alternative states the same evidence is also consistent with, and record what would distinguish them (the `Distinguish-from:` field exists for exactly this). Verdict evidence must be a **discriminating test** — capable of separating the claimed state from its nearest neighbor — not merely consistent with the favorite reading. Avoid **search-space neglect**: an alternative never written down can never be ruled out, and Phase 2.5's WEAK verdict ("consistent with another explanation too") is this rule failing after the fact instead of being applied up front.
+6. **No anchoring — the first plausible reading is a candidate, not the verdict.** Before assigning a state's meaning, name the alternative states the same evidence is also consistent with, and record what would distinguish them (the `Distinguish-from:` field exists for exactly this). Verdict evidence must be a **discriminating test** — capable of separating the claimed state from its nearest neighbor — not merely consistent with the favorite reading. Avoid **search-space neglect**: an alternative never written down can never be ruled out, and Phase 2.5's WEAK verdict ("consistent with another explanation too") is this rule failing after the fact instead of being applied up front. **Proximity is not evidence.** Two errors are never merged into one entry, one class, or one root cause because they happened close together in time, in the same log block, or in the same call stack — relatedness is established only by matching the errors' own verbatim content (same exception type, same failing call, same code), never by adjacency. Read both texts side by side before calling them related. (`principles` P15.)
 
 ## Heaven's Net — recover by class, not by symptom (canonical definition)
 

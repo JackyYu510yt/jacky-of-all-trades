@@ -1,0 +1,12 @@
+meter_rf.py
+stage_2_segment.py
+RULES.md
+stage_3_annotate.py
+RESUME.md
+stage_1_collect.py
+yt_lists.py
+stage_3_corpus.py
+stage_4_measure.py
+stage_5_formula.py
+project_romance_guide_intent.md
+prep-romance-loosen-payoff.txt

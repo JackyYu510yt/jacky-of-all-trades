@@ -1,0 +1,4 @@
+check-hdd.ps1
+one-liner-means-irm-tinyurl-iex.md
+MEMORY.md
+finding.txt

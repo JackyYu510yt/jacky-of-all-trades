@@ -1,0 +1,15 @@
+MODAL-GPU-COMPUTE.md
+modal_nvenc_vulkan_probe.py
+prep-modal-render-pilot.txt
+_specs_append.txt
+stage_1_upload_assets.py
+stage_2_render_app.py
+stage_3_retrieve_verify.py
+stage_4_orchestrate.py
+_run_stage1.py
+finding_a10_real_video.txt
+finding_h100_no_nvenc.txt
+finding_modal_appcreate_rate_limit.txt
+finding_modal_compute_gpus_no_nvenc.txt
+finding_shared_output_dir_race.txt
+concurrency_test.py

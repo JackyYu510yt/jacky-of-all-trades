@@ -1,0 +1,5 @@
+project_vast_removal_checklist.md
+MEMORY.md
+_production_tasks.ps1
+START_STAGGER.bat
+production_control.ps1

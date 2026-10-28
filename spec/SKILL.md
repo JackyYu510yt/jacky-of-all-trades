@@ -609,6 +609,13 @@ any step runs.
    newest-first under a lock, and advances the marker — for a BOUND session the
    block goes to the bound spec + a pointer line in SPEC.md):
 
+   **Date it in the words too (added 2026-09-18).** The tool's own stamp dates
+   the BLOCK; if `context`/`before`/`after` names a measured number, a new
+   doc, or anything else that could go stale, repeat the absolute date inline
+   there ("as of 2026-09-18") — a block gets quoted or summarized elsewhere
+   later, and the words should carry their own freshness, not depend on
+   whoever reads it also seeing the stamp.
+
    ```
    python "C:\Users\Shadow\.claude\skills\spec\spec_tool.py" log --sid <your-sid>
    ```

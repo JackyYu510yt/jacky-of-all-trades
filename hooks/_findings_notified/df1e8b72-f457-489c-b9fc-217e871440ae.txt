@@ -1,0 +1,7 @@
+plainAlert.ts
+test_meter_fix.py
+run_mutations_stage_3.py
+stage_3_watcher_recovery.py
+test_install_252.py
+RUN2-STATUS-2026-09-29.md
+UPLOADING-PC-SETUP.md

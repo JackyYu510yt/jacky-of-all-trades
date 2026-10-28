@@ -9,6 +9,13 @@ A guided, collaborative workflow for creating new scripts from a blank page. Unl
 
 **File layout (see `~/.claude/CLAUDE.md`, "Project file layout convention"):** planning artifacts (prep plan files, interview notes) go in `Prep/`; a prototype under pentest goes in `Tests and Probing/<timestamped subfolder>/`; once a design is real, its stage files (`stage_1_...py`, `stage_2_...py`, ...) go in the project's active folder, not loose alongside planning material.
 
+**Stages are files, not sections (added 2026-09-22, user directive: "instead of one single python script that has a lot of functions built into it, I want stages").** A `/prep` build is never one script with many functions inside it. Phase 4 groups the function list into named STAGES, and each stage is its own file — `stage_1_<name>.py`, `stage_2_<name>.py`, ... — built and tested independently, then composed by a thin orchestrator that calls them in order (mirrors the Jacky Rush tool: `stage_1_timestamp.py` ... `stage_8_rendering.py`). This is the default shape for every `/prep` build, not just the final placement once a design is "real" — the prototype under pentest is already stage files, just living in its timestamped `Tests and Probing/` subfolder until promoted. Each stage file is independently inspectable and editable: to change how sourcing works, open `stage_3_sourcer.py` — never hunt through one large file for the right function.
+
+**Extending an EXISTING staged pipeline uses decimal stages in a subfolder (added 2026-09-22, user directive).** When `/prep` is building an addition to a pipeline that already has numbered stage files on disk — not a fresh build — do not renumber the existing stages to make room. Two rules together:
+
+- New stage files that insert BETWEEN existing stages are numbered with a decimal: inserting after `stage_2_plan.py` and before `stage_3_sourcer.py` is `stage_2.1_<name>.py` (a second insertion in the same gap is `stage_2.2_<name>.py`, and so on). This preserves execution order in the filename without touching any file that already works.
+- These new files land in a subfolder scoped to the addition (e.g. `stage_2.1_<name>/` or a name describing the feature), not loose in the active folder — so a reader can immediately tell "these files are an addition to the pipeline" from "these files are the pipeline." The orchestrator wires the subfolder's stage(s) into the run order; existing stage files are not edited to accommodate the insertion unless the addition genuinely changes what an existing stage must hand off.
+
 ## When to Use This Skill
 
 - User wants to plan or design a new script or tool from scratch
@@ -552,8 +559,8 @@ single batched offer with a recommendation and a stated default, never bare.
 Write a one-page sketch of the script's shape:
 
 - A short **plain-language walkthrough** — 4–8 sentences describing what the script does when it runs, start to finish, like telling a friend.
-- A **function list** — 5–15 functions, each with a one-line purpose. Group by stage (setup / main work / cleanup / reporting).
-- A **data flow diagram in text** — "A reads X, passes to B, B writes Y, C reads Y and does Z."
+- A **stage list** — name each pipeline stage as a future file (`stage_1_<name>.py`, `stage_2_<name>.py`, ...), 3–10 stages depending on the goal's shape. Under each stage, list its functions (5–15 total across the whole plan), each with a one-line purpose. Every function belongs to exactly one stage file — no function floats outside a stage. If the build is an ADDITION to an existing staged pipeline (stage files already on disk), name the new stage(s) with the decimal convention (`stage_2.1_<name>.py`) instead of renumbering, and note the subfolder they land in.
+- A **data flow diagram in text** — "A reads X, passes to B, B writes Y, C reads Y and does Z." — annotate which stage file each of A/B/C lives in.
 
 Example plain-language walkthrough:
 
@@ -615,7 +622,7 @@ Use the **card-stack format** (Style C). Every section is its own bounded card w
 6. **TESTING CONDITIONS** — Phase 9 production-reality sentence + specific failure injections + explicit NOT-testing list (P1)
 7. **SUCCESS CONDITIONS** — MUST-hold checklist, SHOULD-hold checklist, hard-fail signals
 8. **Plain-language walkthrough** — the Phase-4 friend-explanation
-9. **Function list** — name, purpose, risky?, agreed behavior
+9. **Function list** — grouped by stage file (`stage_N_<name>.py`); per function: name, purpose, risky?, agreed behavior
 10. **Data flow** — text diagram
 11. **Self-healing mechanisms** — where retries / checkpoints / atomic writes live
 12. **Files the script reads/writes** — explicit paths and formats
@@ -644,6 +651,16 @@ Phase 6 emits this card empty. Phase 8 (build cycle) and Phase 9 (pentest) appen
 ```
 
 The `Result` is the proven part; the `Suspected verdict` is always flagged as a guess (evidence-first). A verdict confirmed by a decisive check — one experiment that isolates the cause, "pin the fix, don't guess" — is far stronger than one inferred from a single outcome; name the check in the verdict when one was run.
+
+**Date it in the words, not just the header (added 2026-09-18).** The `<ISO
+timestamp>` is an absolute date, never "today"/"just now" — but a finding
+often gets copied or quoted out of this card later, so if `Context` or
+`Result` names a file, doc, or measured number that could go stale (a cost
+figure, a doc snapshotting current code), repeat the date inline there too
+("as of 2026-09-18") rather than relying on readers to scroll back to the
+header. If Phase 8/9 creates a new reference/summary doc as part of a
+finding, file it the same way — dated in its own text, not just its
+filesystem timestamp.
 
 ### BUILD STATUS card format
 
@@ -931,7 +948,7 @@ Append the 17-field block to the plan file. Phase 7.5 ends when every risky func
 
 ### Phase 8 — Build the prototype
 
-Build one function at a time. Each function goes through a tiered cycle keyed off its Phase 5 risk tag.
+Build one function at a time, but every function is written into its assigned stage file (Phase 4's stage list), never into one shared monolithic script. A stage file (`stage_1_<name>.py`, `stage_2_<name>.py`, ...) holds the leaf-level functions for that stage plus its own entry point; a thin orchestrator (also its own file) imports each stage and calls them in order. Building an addition to an already-staged pipeline writes into the decimal-numbered stage file(s) in their own subfolder (see the File layout section above) — existing stage files are left untouched unless the addition genuinely changes their handoff contract. Each function goes through a tiered cycle keyed off its Phase 5 risk tag.
 
 **RISKY function — full Red → Green → Mutate → Real → Audit cycle**
 
@@ -1191,6 +1208,7 @@ Use these primitives when writing the plan and the prototype. Prefer simple vers
 Same list as the `optimize` skill, plus these specific to Phase 8:
 
 - Do not write the whole script in one pass before the user has approved each function.
+- Do not collapse the pipeline into a single monolithic script with many functions in it — each stage is its own `stage_N_<name>.py` file (or `stage_N.M_<name>.py` in its own subfolder when extending an existing staged pipeline).
 - Do not skip Phase 7 (AUDITOR audit) because "the plan looks fine to me." The author brain never grades its own plan.
 - Do not declare Phase 9 done while any pentest check is failing.
 - Do not invent requirements the user did not ask for — if uncertain, ask.

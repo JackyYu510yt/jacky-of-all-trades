@@ -1,0 +1,3 @@
+launcher_alert_autoclear.py
+vite.config.ts
+test_autoclear.py

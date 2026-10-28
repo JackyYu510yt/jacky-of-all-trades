@@ -1,0 +1,14 @@
+launcher_alert_autoclear.py
+leftover_block.py
+patch_watcher.py
+test_autoclear.py
+test_confirmed_leftovers.py
+install_watcher_253.py
+pc4_install_253.template.ps1
+build_pc4_install_253.py
+pc4_finish_253.ps1
+grant_shadow_read_launcher_logs.ps1
+test_compute_demand.py
+repack_render_payload.ps1
+launcher-logs-readable.md
+render-pc-payload-repack.md

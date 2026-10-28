@@ -1,0 +1,6 @@
+lean_bridge.py
+HANDOFF-2026-10-18-crossover-unblock.md
+agent.mjs
+HANDOFF-2026-10-18-thumbnail-backup-model-setting.md
+fix_modal_admin.ps1
+prep-brief-daily-slice-one-truth.md
