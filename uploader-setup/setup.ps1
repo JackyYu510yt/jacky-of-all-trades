@@ -25,8 +25,9 @@
 #   FRESH           Enter at the payload prompt: NEW identity (render PCs
 #                   must then be re-pointed - instructions printed).
 #
-# No-prompt variant: set $env:UPLOADER_SOURCE_PW (and optionally
-# $env:TS_AUTHKEY) before the irm line.
+# No-prompt variant: set $env:UPLOADER_SOURCE_PW and $env:TS_AUTHKEY before
+# the irm line - then nothing is asked. If WSL needs a reboot, the box
+# reboots and finishes on its own.
 #
 # Safe to re-run - finished steps are skipped.
 
@@ -381,6 +382,12 @@ if ($Restore) {
     $merged = $cur + @($old | Where-Object { $cur -notcontains $_ })
     [Environment]::SetEnvironmentVariable('Path', ($merged -join ';'), 'User')
     Write-Host 'User PATH merged.'
+    $ghFile = Join-Path $P 'github-cred.json'
+    if (Test-Path $ghFile) {
+        $gh = Get-Content $ghFile -Raw | ConvertFrom-Json
+        cmdkey /generic:git:https://github.com /user:$($gh.user) /pass:$($gh.token) | Out-Null
+        Write-Host 'GitHub credential restored.'
+    }
 }
 
 # --- 9. Start Syncthing ------------------------------------------------------
@@ -463,12 +470,29 @@ if ($WslDisk -and (Test-Path $WslDisk)) {
     wsl --status *> $null
     if ($LASTEXITCODE -ne 0) {
         wsl --install --no-distribution
-        Warn 'WSL was just installed - REBOOT, then re-run this setup to attach the Ubuntu disk (everything else is skipped).'
+        # WSL needs a reboot. Re-run this setup on its own afterwards (at boot, and
+        # again at logon in case WSL refuses to work without a session) - every
+        # other step is already done, so the re-run only attaches Ubuntu.
+        $cmd = "Start-Transcript -Append '$Work\resume.log'; [Net.ServicePointManager]::SecurityProtocol='Tls12'; irm https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup/setup.ps1 | iex"
+        $action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"$cmd`""
+        $triggers  = @((New-ScheduledTaskTrigger -AtStartup), (New-ScheduledTaskTrigger -AtLogOn -User "$env:COMPUTERNAME\$env:USERNAME"))
+        $principal = New-ScheduledTaskPrincipal -UserId "$env:COMPUTERNAME\$env:USERNAME" -LogonType S4U -RunLevel Highest
+        $set       = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+        Register-ScheduledTask -TaskName 'UploaderSetupResume' -Action $action -Trigger $triggers -Principal $principal -Settings $set -Force | Out-Null
+        foreach ($w in $script:Warnings) { Write-Host "WARNING: $w" -ForegroundColor Yellow }
+        Write-Host "`nWSL installed - rebooting in 30s. Setup finishes on its own after the reboot (log: $Work\resume.log)." -ForegroundColor Yellow
+        Start-Sleep 30
+        Restart-Computer -Force
+        return
     } elseif (-not (@(wsl -l -q) -contains 'Ubuntu')) {
         wsl --import-in-place Ubuntu $WslDisk
         wsl --set-default Ubuntu
         Write-Host 'Ubuntu attached from the old uploader''s disk.'
     } else { Write-Host 'Ubuntu already registered.' }
+    if ((@(wsl -l -q) -contains 'Ubuntu') -and (Get-ScheduledTask -TaskName 'UploaderSetupResume' -ErrorAction SilentlyContinue)) {
+        Unregister-ScheduledTask -TaskName 'UploaderSetupResume' -Confirm:$false
+        Write-Host 'Post-reboot resume finished - resume task removed.'
+    }
 }
 
 # --- Done --------------------------------------------------------------------
