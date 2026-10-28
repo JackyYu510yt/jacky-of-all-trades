@@ -6,6 +6,7 @@
 #      both folders, GUI key) + the exact Syncthing binary
 #    - C:\Tools (uploader reaper + its Supabase config) and the checksum guard
 #    - the scheduled task definitions, pip package list, user PATH, Run keys
+#    - the GitHub credential (so the new box can re-pack/upload without a login)
 #    - small app settings (ClipAngel, VS Code, Windows Terminal, WinRAR)
 #  Same lock as render-setup/pack_payload.ps1 (AES-256, PBKDF2-SHA256 600k),
 #  so payload.enc is safe to host publicly.
@@ -76,6 +77,29 @@ Stage "$env:APPDATA\Code\User\keybindings.json"       'settings\Code-User\keybin
 Stage "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json" 'settings\WindowsTerminal\settings.json'
 Stage "$env:APPDATA\WinRAR"                   'settings\WinRAR'
 
+# GitHub credential (lets the new box re-pack/upload without a login)
+Add-Type -Namespace W -Name Cred -MemberDefinition @'
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+public struct CREDENTIAL { public int Flags; public int Type; public string TargetName; public string Comment;
+  public long LastWritten; public int CredentialBlobSize; public IntPtr CredentialBlob; public int Persist;
+  public int AttributeCount; public IntPtr Attributes; public string TargetAlias; public string UserName; }
+[DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+public static extern bool CredRead(string target, int type, int flags, out IntPtr cred);
+public static string Get(string target) {
+  IntPtr p; if (!CredRead(target, 1, 0, out p)) return null;
+  var c = (CREDENTIAL)Marshal.PtrToStructure(p, typeof(CREDENTIAL));
+  return Marshal.PtrToStringUni(c.CredentialBlob, c.CredentialBlobSize / 2); }
+public static string User(string target) {
+  IntPtr p; if (!CredRead(target, 1, 0, out p)) return null;
+  return ((CREDENTIAL)Marshal.PtrToStructure(p, typeof(CREDENTIAL))).UserName; }
+'@
+$ghToken = [W.Cred]::Get('git:https://github.com')
+if ($ghToken) {
+    $gh = [ordered]@{ user = [W.Cred]::User('git:https://github.com'); token = $ghToken }
+    [IO.File]::WriteAllText((Join-Path $stage 'github-cred.json'), ($gh | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
+    Write-Host '  + github-cred.json'
+}
+
 New-Item -ItemType Directory (Join-Path $stage 'tasks') | Out-Null
 foreach ($t in $Tasks) {
     if (Get-ScheduledTask -TaskName $t -ErrorAction SilentlyContinue) {
@@ -137,19 +161,7 @@ if (-not $Upload) {
 }
 
 # --- publish to the GitHub release (token from Windows Credential Manager) ---
-Add-Type -Namespace W -Name Cred -MemberDefinition @'
-[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-public struct CREDENTIAL { public int Flags; public int Type; public string TargetName; public string Comment;
-  public long LastWritten; public int CredentialBlobSize; public IntPtr CredentialBlob; public int Persist;
-  public int AttributeCount; public IntPtr Attributes; public string TargetAlias; public string UserName; }
-[DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-public static extern bool CredRead(string target, int type, int flags, out IntPtr cred);
-public static string Get(string target) {
-  IntPtr p; if (!CredRead(target, 1, 0, out p)) return null;
-  var c = (CREDENTIAL)Marshal.PtrToStructure(p, typeof(CREDENTIAL));
-  return Marshal.PtrToStringUni(c.CredentialBlob, c.CredentialBlobSize / 2); }
-'@
-$token = [W.Cred]::Get('git:https://github.com')
+$token = $ghToken
 if (-not $token) { throw 'No GitHub credential in Credential Manager (git:https://github.com) - upload payload.enc by hand.' }
 $h = @{ Authorization = "token $token"; 'User-Agent' = 'uploader-pack'; Accept = 'application/vnd.github+json' }
 
