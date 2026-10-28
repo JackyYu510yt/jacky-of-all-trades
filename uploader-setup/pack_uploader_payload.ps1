@@ -33,7 +33,7 @@ $StHome     = "$env:LOCALAPPDATA\Syncthing"
 $StDir      = "$env:LOCALAPPDATA\Programs\Syncthing"
 $GuardDir   = Join-Path $env:USERPROFILE 'Desktop\Compiled Binaries\uploader_checksum_guard'
 $PyExe      = "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe"
-$Tasks      = 'Syncthing (boot, no login)', 'JackyRushChecksumGuard', 'JackyRushUploaderReaper'
+$Tasks      = 'Syncthing (boot, no login)', 'JackyRushChecksumGuard', 'JackyRushUploaderReaper', 'JackyRushReapRequests', 'Fix RDP Clipboard'
 $OutFile    = Join-Path $PSScriptRoot 'payload.enc'
 
 foreach ($f in 'cert.pem', 'key.pem', 'config.xml') {
