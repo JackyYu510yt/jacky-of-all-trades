@@ -273,6 +273,12 @@ if ($Restore -and -not $Done) {
             Copy-Tree "$OldHome\Downloads" "$env:USERPROFILE\Downloads"
             Copy-Tree "$OldHome\Documents" "$env:USERPROFILE\Documents"
             Copy-Tree "\\$Src\C$\ffmpeg"   'C:\ffmpeg'
+            Copy-Tree "\\$Src\C$\jat"      'C:\jat'
+            # Claude Code (binary in .local\bin, settings/memory in .claude) + VS Code extensions
+            Copy-Tree "$OldHome\.local"    "$env:USERPROFILE\.local"
+            Copy-Tree "$OldHome\.claude"   "$env:USERPROFILE\.claude"
+            Copy-Item "$OldHome\.claude.json" "$env:USERPROFILE\" -ErrorAction SilentlyContinue
+            Copy-Tree "$OldHome\.vscode"   "$env:USERPROFILE\.vscode"
         }
 
         if (-not (Test-Path $Marker)) {
@@ -292,6 +298,7 @@ if ($Restore -and -not $Done) {
         Step 'Pass 2 of 2 - exact mirror + in-use data'
         Copy-Bulk -Final
         Copy-Tree "$OldHome\AppData\Local\Google\Chrome\User Data" "$env:LOCALAPPDATA\Google\Chrome\User Data" -Mirror
+        Copy-Tree "$OldHome\AppData\Roaming\Mozilla" "$env:APPDATA\Mozilla" -Mirror
         Copy-Tree "$OldHome\AppData\Roaming\adspower_global" "$env:APPDATA\adspower_global" -Mirror
         Copy-Tree "\\$Src\C$\Program Files\AdsPower Global" 'C:\Program Files\AdsPower Global' -Mirror
         Copy-Tree "\\$Src\C$\.ADSPOWER_GLOBAL" 'C:\.ADSPOWER_GLOBAL' -Mirror
@@ -434,7 +441,8 @@ if ($Restore) {
         Write-Host 'ClipAngel registered in HKCU Run.'
     }
     # Same tasks as the old box (Syncthing at boot with nobody logged in, the
-    # checksum guard every 5 min, the reaper daily) - re-owned by this machine's user.
+    # checksum guard every 5 min, the reaper daily + its delete-request poll
+    # every minute, the RDP clipboard fix) - re-owned by this machine's user.
     $mySid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     foreach ($x in Get-ChildItem (Join-Path $P 'tasks') -Filter *.xml) {
         [xml]$t = Get-Content -LiteralPath $x.FullName -Raw
