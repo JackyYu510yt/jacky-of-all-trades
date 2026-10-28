@@ -34,7 +34,7 @@ $Marker    = Join-Path $StateDir 'INERT.txt'
 $RunSave   = Join-Path $StateDir 'run-syncthing.txt'
 $Log       = Join-Path $StateDir 'agent.log'
 $RawBase   = 'https://raw.githubusercontent.com/JackyYu510yt/jacky-of-all-trades/main/uploader-setup'
-$Tasks     = 'Syncthing (boot, no login)', 'JackyRushChecksumGuard', 'JackyRushUploaderReaper'
+$Tasks     = 'Syncthing (boot, no login)', 'JackyRushChecksumGuard', 'JackyRushUploaderReaper', 'JackyRushReapRequests'
 $RunKey    = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -109,7 +109,7 @@ if ($Cutover) {
         Remove-ItemProperty $RunKey -Name Syncthing
         Write-Host 'removed       : HKCU Run Syncthing (saved for -Undo)'
     }
-    foreach ($p in 'syncthing', 'AdsPower Global', 'SunBrowser', 'chrome', 'ClipAngel') {
+    foreach ($p in 'syncthing', 'AdsPower Global', 'SunBrowser', 'chrome', 'firefox', 'ClipAngel') {
         Get-Process -Name $p -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
     }
     try { wsl --shutdown } catch { }
