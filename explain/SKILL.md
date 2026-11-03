@@ -79,6 +79,8 @@ One visual-break mechanism per block, not two stacked.
 
 ### Goal compass + confidence/risk footer — the closing block, every time
 
+**Work ledger first (when work was done).** If this turn built, edited, ran, deployed or researched something, put the four-line work ledger from personal-prefs directly ABOVE the footer's NET line — `Couldn't do` / `Assumed` / `Built` / `Next`, gaps first, one blank line between lines. Pure explanations skip it. (Added 2026-11-02, user-picked.)
+
 Every quick-explain response ends with this footer. **Deep teach turns do NOT** — they end on the chapter's "questions, or next?" line or on a quiz popup (see Deep teach). The footer buried the learner's question on 2026-09-29. It opens with the NET line, then four sections, with ONE BLANK LINE between every field (no two fields on adjacent lines — that's the wall the user asked to kill):
 
 ```

@@ -299,6 +299,11 @@ Lane released: <yes/no>
 check_exit: <PASS -- stamped | the FAIL lines, if you are reporting despite
              a failure, which should not happen>
 
+Couldn't do: <asked/planned but not done, and why -- "nothing" if none>
+Assumed:     <taken as true WITHOUT checking -- each one checkable later>
+Built:       <what now exists or changed, with the proof in a few words>
+Next:        <the one next move, and who does it -- you or me>
+
 NET: <one sentence -- where things actually stand>
 
 CURRENT STAGE
@@ -342,6 +347,12 @@ SUGGESTED ACTION
 `(judgment)` for the prose fields; the Criteria block and `check_exit:` line
 are copied straight from RUN.md and check_exit.py's own output — never
 re-typed, never summarized into something check_exit didn't say.
+
+**Work ledger (added 2026-11-02, user-picked).** The four lines above NET are
+the same work ledger personal-prefs defines -- gaps first. `Assumed` must list
+every unverified choice the run made (it is the honest twin of the Criteria
+evidence: a criterion can't be [✓] on something that only appears under
+Assumed). `(judgment)`
 
 `Finish line:` is REACHED only when Status is DONE and check_exit passed --
 never inferred from progress or effort. On STOPPED it is always NOT REACHED,

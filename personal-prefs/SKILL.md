@@ -73,6 +73,17 @@ A task is COMPLETE only when the user-visible result exists and was verified by 
 
 - A section may end with one indented `Why:` line giving the reason in plain words.
 
+- Any turn that DID work (built, edited, ran, deployed, researched) adds the **work ledger** right above `NET:` — four labelled lines, gaps first:
+
+  ```
+  Couldn't do: <asked or attempted but not done, and why — "nothing" if none>
+  Assumed:     <what was decided or taken as true WITHOUT checking — each one checkable later>
+  Built:       <what now exists or changed, with the proof in a few words>
+  Next:        <the one next move, and who does it — you or me>
+  ```
+
+  Skip it on pure Q&A or explanations where nothing was done. "Assumed" is where the ASSUMED tags go; never hide a guess inside "Built". Why: user-picked 2026-11-02 from the AI-receptionist one-shot ("this report thing is actually pretty useful"); order flipped to gaps-first to match P12.
+
 - Always end with `NET:` — one concise sentence covering net gains, losses, and changes.
 
 - Length rule: shortest complete answer — compress by cutting filler, never by dropping load-bearing facts.
