@@ -1,0 +1,8 @@
+store.tsx
+setlistParse.ts
+SetlistPage.tsx
+App.tsx
+NavBar.tsx
+tail.tsx
+splice.py
+p5_hp.txt

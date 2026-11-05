@@ -1,0 +1,7 @@
+stage_1_script.py
+stage_4_assemble.py
+stage_3_find.py
+HANDOFF-sleep-smooth-next-2026-11-04.md
+synapse-clip-repeats-ok.md
+synapse-clip-source-open.md
+prep-sleep-smooth-auto-2026-11-05.txt

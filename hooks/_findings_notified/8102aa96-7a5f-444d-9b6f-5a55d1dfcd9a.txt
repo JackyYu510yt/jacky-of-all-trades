@@ -1,0 +1,6 @@
+prep-chess-modal.txt
+make_games.py
+m0_app.py
+compare.py
+HANDOFF-chess-modal-2026-10-30.md
+project_chess_modal.md

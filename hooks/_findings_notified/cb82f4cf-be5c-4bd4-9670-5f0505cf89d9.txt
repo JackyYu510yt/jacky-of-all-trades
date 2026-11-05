@@ -1,0 +1,8 @@
+chess_slow_mode.py
+chess_video_gen.py
+patch_slow.py
+finding_slow.txt
+patch_lane.py
+deploy_chess_now.py
+vite.config.ts
+finding_modal_slow.txt

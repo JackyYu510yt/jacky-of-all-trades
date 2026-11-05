@@ -1,0 +1,6 @@
+drama3_modal.py
+JackyTalks pricing.html
+prep-jackytalks.txt
+START-PROMPT-jackytalks.txt
+project_jackytalks.md
+README.txt

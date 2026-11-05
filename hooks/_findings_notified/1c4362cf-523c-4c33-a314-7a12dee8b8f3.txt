@@ -1,0 +1,6 @@
+agent.mjs
+thumbnail-delivery-location.md
+uploader_thumb_check.ps1
+uploader_skip_receipts.ps1
+setup_uploading_pc.ps1
+test_setup_syncthing.ps1

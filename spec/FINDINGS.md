@@ -14,3 +14,11 @@ why: audit/SKILL.md was rewritten (now a YES/NO single-answer review) and the br
 context: /prep Phase 7 on Prep/prep-gemini-reader-fix.txt (Jacky's Production Factory). The brief was rebuilt from the 10-category list in memory/feedback_redteam_scenario_attack.md for this run.
 before: Belief: the RED-TEAM brief can be read from audit/SKILL.md at dispatch time.
 after: It cannot. /prep, /auto, /spec readers must fall back to the 10-category list in feedback_redteam_scenario_attack.md until the brief is restored somewhere stable.
+
+## 2026-11-04 23:34  id: 445df4f8
+big_lesson: A skill that says "read the canonical X in another skill's file" breaks silently when that file is rewritten; check the pointer still resolves before relying on it, and keep a fallback copy of anything load-bearing.
+change: TRAP 2026-11-04. ~/.claude/skills/prep/SKILL.md (Phase 7) says the canonical RED-TEAM brief lives in ~/.claude/skills/audit/SKILL.md under "The brief handed to the RED-TEAM". As of 2026-11-04 that file has no "RED-TEAM" text at all (grep -i red-team: 0 hits).
+why: A /prep run for the Synapse long-cartoon lane needed the brief; it was rebuilt from the 10 attack categories /prep itself lists.
+context: /prep, Synapse/Prep/prep-long-cartoon-lane.txt, 2026-11-04 ~23:58 PST.
+before: /prep assumed the audit skill still carries the RED-TEAM brief.
+after: Brief missing; fallback = the 10 categories in prep SKILL.md (mid-op death, check-then-act races, half-done re-entry, flapping, two actors, boundaries, time windows, recovery-fails, poison pill, lying success) with HANDLED/DEGRADES/BREAKS/UNKNOWN verdicts.

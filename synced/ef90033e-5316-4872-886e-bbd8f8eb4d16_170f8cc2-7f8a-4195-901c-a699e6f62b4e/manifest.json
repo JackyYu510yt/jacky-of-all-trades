@@ -1,5 +1,5 @@
 {
-  "lastUpdated": 1793128151400,
+  "lastUpdated": 1793792549877,
   "skills": [
     {
       "skillId": "docs",
@@ -21,7 +21,7 @@
       "name": "computer-use",
       "description": "Read this skill before the first step of any request to do something in an app on the person's own computer (Notes, Finder, System Settings, any desktop app), to look at their screen, or for \"computer use\". Computer use (desktop control) lets Claude take screenshots of the person's desktop and control it with clicks, typing and scrolling through the Claude desktop app; its tools are named mcp__computer-use__* when the session runs in the desktop app and mcp__remote-devices__computer_* when a cloud session is linked to the person's computer; before computer use is turned on for a conversation there may be no such tools, only an enable__mcp__remote-devices__computer tool, which turns it on. It covers turning it on, picking the right tool, the access flow, and the safety rules for tiered apps, links and financial actions. It is not for websites, which go through Claude in Chrome or the built-in browser and their own skills.",
       "source": "anthropic-example",
-      "updatedAt": "2026-10-08T17:34:24.164396Z"
+      "updatedAt": "2026-10-28T18:00:31.869646Z"
     },
     {
       "skillId": "chrome-browser",
@@ -60,15 +60,14 @@
       "name": "pdf",
       "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill.",
       "source": "anthropic",
-      "updatedAt": "2026-07-10T19:23:15.432550Z",
-      "creatorType": "anthropic"
+      "updatedAt": "2026-11-03T08:00:21.562085Z"
     },
     {
       "skillId": "skill-creator",
       "name": "skill-creator",
       "description": "Create new skills, modify and improve existing skills, and measure skill performance. Use when users want to create a skill from scratch, edit, or optimize an existing skill, run evals to test a skill, benchmark skill performance with variance analysis, or optimize a skill's description for better triggering accuracy.",
       "source": "anthropic-example",
-      "updatedAt": "2026-10-21T20:47:56.610025Z"
+      "updatedAt": "2026-10-28T17:00:24.127636Z"
     },
     {
       "skillId": "xlsx",
@@ -82,7 +81,7 @@
       "name": "docx",
       "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx) or Word templates (.dotx). Triggers include: any mention of Microsoft Word Documents, such as 'Word doc', 'word document', '.docx', '.dotx', 'microsoft doc'. Also use when extracting or reorganizing content from .docx or .dotx files, inserting or replacing images in documents, find-and-replace in Word files, working with tracked changes or comments, or converting content into a polished Word document. If the user asks for a deliverable as a Word or .docx file (to download, email or print), use this skill. However, if they ask for a document, page, report, memo, or notes WITHOUT naming a file format and the session offers Claude's own dedicated document or page skill or connector, use that instead, even if they will email or print it. Do NOT use for PDFs, spreadsheets, Google Docs, or coding unrelated to document generation.",
       "source": "anthropic",
-      "updatedAt": "2026-09-30T02:00:31.677168Z"
+      "updatedAt": "2026-11-03T06:00:23.958841Z"
     },
     {
       "skillId": "pptx",
@@ -121,6 +120,30 @@
       "source": "plugin",
       "updatedAt": "2026-10-21T11:55:12.691319Z",
       "backingPluginId": "plugin_012dwmCjGMwMptjLywiLvooE"
+    },
+    {
+      "skillId": "skill_016HVqpJC1CbE81UxU2qJrfE",
+      "name": "ideation-jacky",
+      "description": "Use when the user sends a YouTube channel list or outlier data and wants pattern analysis plus new What If crossover titles in a chosen style, distributed across channels as a setlist.",
+      "source": "plugin",
+      "updatedAt": "2026-10-31T08:41:40.630512Z",
+      "backingPluginId": "plugin_01HgRMQe3orZKeXGqc9JqbmX"
+    },
+    {
+      "skillId": "skill_016fmzig5XNrv6Fg4XtuhWua",
+      "name": "universal-title-test",
+      "description": "Test a scraped YouTube channel's titles for the Universal Horizontally Scalable Titles bank: find speculative outliers, template them, stress-test on four franchises, update the bank JSON.",
+      "source": "plugin",
+      "updatedAt": "2026-10-29T07:16:32.423787Z",
+      "backingPluginId": "plugin_01XZJuEsnP3dgoKkVheKec7V"
+    },
+    {
+      "skillId": "skill_014WXwoz9hVKCfE3ufgJkFZ7",
+      "name": "ideation-jacky-v3",
+      "description": "Use instead of ideation-jacky: same outlier analysis and setlist workflow, plus a Sleep Lore style with the 7 data-backed fall-asleep lore title formats for sleep channels.",
+      "source": "plugin",
+      "updatedAt": "2026-11-04T08:26:02.044416Z",
+      "backingPluginId": "plugin_01KmopKHkdmcKGj33ocomnyw"
     }
   ]
 }
