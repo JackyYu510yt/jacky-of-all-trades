@@ -1,9 +1,15 @@
 ---
 name: prep
 description: Interactively plan, prototype, and pentest a new script from scratch. Captures the end goal, breaks it into specifics, derives the preferences it can and states them for veto rather than interviewing, proposes a plain-language structure, surfaces only the risky-function choices that are genuinely the user's to make (irreversible actions, budget, risk appetite) as one batched offer, drafts a full plan, runs an independent AUDITOR second-brain review and iterates on its feedback, then builds a first prototype and pentests each part. Use when the user says "let's plan X", "prep a new script", "help me design Y", "plan a project", or wants a collaborative plan + auditor-review + build + test loop. Every artifact this skill produces must be smooth, consistent, reliable, self-healing, and optimized for speed.
+model: claude-opus-5-5
+effort: xhigh
 ---
 
 # Prep
+
+**FIRST MESSAGE OF EVERY /prep RUN — say this line to the user, word for word, before anything else:**
+
+> Note: /prep is pinned to Opus 5.5, xhigh thinking (set 2026-11-06). If a newer model is out, update `model:` and `effort:` at the top of `~/.claude/skills/prep/SKILL.md`.
 
 A guided, collaborative workflow for creating new scripts from a blank page. Unlike `optimize`, which improves existing code, `prep` starts with nothing but an end goal and walks the user through a disciplined path: clarify → structure → explain in plain terms → interview on risky pieces → plan → AUDITOR review loop → prototype → pentest.
 
@@ -695,7 +701,11 @@ The audit is run in-house by an **AUDITOR** — a fresh, independent reviewer pa
 
 **How to run the AUDITOR (in priority order):**
 
-**Model routing — these dispatches KEEP Opus. Leave `model:` unset.**
+**Model routing — every dispatch runs on Opus 5.5 at xhigh effort.** _(Owner rule
+2026-11-06: "prep always runs on opus 5.5 xhigh thinking". The skill itself is pinned
+by `model:`/`effort:` in the frontmatter; every `Agent` call this skill makes —
+AUDITOR, RED-TEAM, FnReview — passes `model: "opus"` and `effort: "xhigh"`
+explicitly, so a cheaper session default can never leak into the reviewers.)_
 _(Added 2026-08-30 during a cost review of `/auto`, which found that skill naming
 no model on any dispatch and paying Opus for a per-tick Navigator whose job is
 reading files. The same sweep checked `/prep` and `/audit` and found NO cheap-tier
